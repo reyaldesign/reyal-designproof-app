@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { statusDot, thumb, timeAgo } from '@/lib/format';
+import { typeInfo } from '@/lib/types';
 import ClientGrid, { type ClientCard } from './ClientGrid';
 
 export const dynamic = 'force-dynamic';
@@ -31,7 +32,10 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       name: c.name,
       thumb: first ? thumb(first) : null,
       open: mine.length,
-      dots: c.projects.slice(0, 5).map((p) => ({ ...statusDot(p.status), title: `${p.title}: ${p.status}` })),
+      dots: c.projects.slice(0, 5).map((p) => {
+        const t = typeInfo(p.type);
+        return t ? { letter: t.letter, cls: `kt-${t.value}`, title: `${p.title}: ${t.label}, ${p.status}` } : { ...statusDot(p.status), title: `${p.title}: ${p.status}` };
+      }),
       ago: timeAgo(last),
     };
   });

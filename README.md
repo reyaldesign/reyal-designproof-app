@@ -60,6 +60,11 @@ Each client includes a number of revision rounds per proof (default **2**). Chan
 - Comments carry a status: **Needs team** (no reply yet), **Replied**, **Done** (resolved).
 - On a proof page, **Client view** opens exactly what the client sees. **Send to client** gives the link with a copy button and an email draft (opened in your own mail app, nothing is sent automatically) and can mark the proof as Sent.
 
+## Proof types and deleting proofs
+
+- When you create a proof you choose its **type**: Website, Social media, Menu or Prints. It shows as a lettered circle on the cards (W, S, M, P) and can be changed in the proof's settings. Proofs made before types existed show "?" until you set one. The type is stored so the lists can be filtered by it.
+- Hover a proof card on the client page and click the trash icon to delete just that proof. You are asked to confirm. This removes its versions, comments and uploaded image files from disk. Deleting a client does the same for all of their proofs.
+
 ## Not built yet
 
 - Real-time updates (admin page refreshes on load; add Pusher or SSE if needed)

@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { MAX_IMAGE_MB, MAX_PDF_MB, MAX_PDF_PAGES } from './limits';
 
@@ -53,4 +53,14 @@ export async function saveImages(files: File[]) {
     if (ext && f.size <= MAX_IMAGE) await write(Buffer.from(await f.arrayBuffer()), ext);
   }
   return names;
+}
+
+/** Deletes stored images and their cached thumbnails. Missing files are ignored. */
+export async function removeUploads(names: string[]) {
+  await Promise.all(
+    names
+      .filter((n) => /^[\w-]+\.(jpg|png|webp|gif)$/.test(n))
+      .flatMap((n) => [n, `thumbs/320-${n}.jpg`, `thumbs/640-${n}.jpg`])
+      .map((rel) => unlink(path.join(uploadDir(), rel)).catch(() => {})),
+  );
 }
