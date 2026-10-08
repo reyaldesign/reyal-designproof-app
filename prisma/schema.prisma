@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// SQLite keeps the VPS to one container. To move to Postgres, change provider and DATABASE_URL, then re-run migrate.
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id        String    @id @default(cuid())
+  slug      String    @unique
+  title     String
+  client    String
+  status    String    @default("Draft") // Draft | Sent | Feedback Received | Approved
+  password  String?
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  versions  Version[]
+}
+
+model Version {
+  id        String    @id @default(cuid())
+  projectId String
+  number    Int
+  label     String
+  createdAt DateTime  @default(now())
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  images    Image[]
+  comments  Comment[]
+
+  @@unique([projectId, number])
+}
+
+model Image {
+  id        String    @id @default(cuid())
+  versionId String
+  file      String
+  position  Int
+  version   Version   @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  comments  Comment[]
+}
+
+model Comment {
+  id           String    @id @default(cuid())
+  versionId    String
+  imageId      String?
+  parentId     String?
+  author       String
+  text         String
+  x            Float?
+  y            Float?
+  pin          Int?
+  resolved     Boolean   @default(false)
+  fromDesigner Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  version      Version   @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  image        Image?    @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  parent       Comment?  @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      Comment[] @relation("Replies")
+}

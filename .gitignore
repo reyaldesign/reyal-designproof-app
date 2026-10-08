@@ -1,0 +1,8 @@
+node_modules
+.next
+.env
+data/*
+!data/.gitkeep
+*.db
+*.db-journal
+next-env.d.ts

@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: file:/data/app.db
+      DATA_DIR: /data
+    volumes:
+      - ./data:/data
+    # Bound to localhost; nginx proxies the public domain to it.
+    ports:
+      - "127.0.0.1:3100:3000"
