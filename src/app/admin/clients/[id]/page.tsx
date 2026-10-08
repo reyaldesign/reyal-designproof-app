@@ -3,9 +3,11 @@ import { notFound } from 'next/navigation';
 import FilePicker from '@/components/FilePicker';
 import SubmitButton from '@/components/SubmitButton';
 import { db } from '@/lib/db';
-import { statusDot, thumb, timeAgo } from '@/lib/format';
+import { thumb, timeAgo } from '@/lib/format';
+import { PROOF_TYPES, typeInfo } from '@/lib/types';
+import ConfirmDelete from '../../ConfirmDelete';
 import { clientActivity } from '@/lib/activity';
-import { createProject, deleteClient, updateClient } from '../../actions';
+import { createProject, deleteClient, deleteProject, updateClient } from '../../actions';
 import Dialog from '../../Dialog';
 
 export const dynamic = 'force-dynamic';
@@ -56,6 +58,12 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
           <Dialog label="+ New proof" title={`New proof for ${client.name}`} defaultOpen={!!error} wide>
             <form action={createProject} style={{ display: 'grid', gap: 12 }}>
               <input type="hidden" name="clientId" value={client.id} />
+              <label className="muted">Type
+                <select className="input" style={{ marginTop: 4 }} name="type" required defaultValue="">
+                  <option value="" disabled>Choose a type…</option>
+                  {PROOF_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </label>
               <input className="input" name="title" placeholder="Proof title (e.g. Menu - Main)" required />
               <input className="input" name="label" placeholder='Version label (e.g. "changes #40")' />
               <input className="input" name="password" placeholder="Password (optional)" />
@@ -79,9 +87,11 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
         {client.projects.map((p) => {
           const open = p.versions.reduce((n, v) => n + v.comments.length, 0);
           const first = p.versions[0]?.images[0]?.file;
-          const dot = statusDot(p.status);
+          const t = typeInfo(p.type);
           return (
-            <Link key={p.id} href={`/admin/${p.id}`} className="client-card">
+            <div key={p.id} className="proof-wrap">
+            <ConfirmDelete id={p.id} name={p.title} action={deleteProject} />
+            <Link href={`/admin/${p.id}`} className="client-card">
               <div className="cc-thumb">{first ? <img src={thumb(first)} alt="" loading="lazy" /> : <span className="cc-mono">{p.title.charAt(0)}</span>}</div>
               <div className="cc-body">
                 <div className="cc-row">
@@ -89,11 +99,15 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
                   {open > 0 && <span className="chip chip-needs" title="Open client comments">{open} request{open === 1 ? '' : 's'}</span>}
                 </div>
                 <div className="cc-row">
-                  <span className="cc-dots"><span className={`kb ${dot.cls}`} title={p.status}>{dot.letter}</span><span className="ago">{p.status} · v{p.versions[0]?.number}</span></span>
+                  <span className="cc-dots">
+                    {t ? <span className={`kb kt-${t.value}`} title={t.label}>{t.letter}</span> : <span className="kb" title="No type set">?</span>}
+                    <span className="ago">{t?.label ?? 'No type'} · {p.status} · v{p.versions[0]?.number}</span>
+                  </span>
                   <span className="ago">{timeAgo(p.createdAt)}</span>
                 </div>
               </div>
             </Link>
+            </div>
           );
         })}
       </div>

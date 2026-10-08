@@ -9,6 +9,7 @@ import SubmitButton from '@/components/SubmitButton';
 import PinCrop from './PinCrop';
 import ProofViewer from './ProofViewer';
 import { commentStatus } from '@/lib/format';
+import { PROOF_TYPES } from '@/lib/types';
 import { revisionInfo } from '@/lib/revisions';
 import SendToClient from './SendToClient';
 import { addVersion, deleteProject, reopenApproval, replyTo, setResolved, updateProject } from '../actions';
@@ -76,6 +77,10 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
         <form action={updateProject} className="grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="id" value={p.id} />
           <input className="input" name="title" defaultValue={p.title} required />
+          <select className="input" name="type" defaultValue={p.type ?? ''} aria-label="Type">
+            <option value="">Type: not set</option>
+            {PROOF_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
           <select className="input" name="status" defaultValue={p.status}>
             {STATUSES.map((s) => <option key={s}>{s}</option>)}
           </select>

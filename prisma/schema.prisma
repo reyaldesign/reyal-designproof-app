@@ -34,6 +34,7 @@ model Project {
   approvedBy      String?
   approvedVersion Int?
   revisionsIncluded Int? // blank means use the client's number
+  type      String? // website | social | menu | print. Empty on proofs made before types existed.
   versions  Version[]
   submissions Submission[]
 }

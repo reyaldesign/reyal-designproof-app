@@ -7,7 +7,8 @@ import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { MAX_IMAGE_MB, MAX_PDF_MB, MAX_UPLOAD_MB } from '@/lib/limits';
-import { saveImages } from '@/lib/storage';
+import { removeUploads, saveImages } from '@/lib/storage';
+import { isProofType } from '@/lib/types';
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 const files = (f: FormData) => f.getAll('files').filter((x): x is File => x instanceof File && x.size > 0);
@@ -55,7 +56,10 @@ export async function updateClient(f: FormData) {
 
 export async function deleteClient(f: FormData) {
   await requireAdmin();
-  await db.client.delete({ where: { id: str(f, 'id') } });
+  const id = str(f, 'id');
+  const files = (await db.image.findMany({ where: { version: { project: { clientId: id } } }, select: { file: true } })).map((i) => i.file);
+  await db.client.delete({ where: { id } });
+  await removeUploads(files);
   redirect('/admin');
 }
 
@@ -65,11 +69,13 @@ export async function createProject(f: FormData) {
   const { rows: images, error } = await imageRows(f);
   const fail = (msg: string) => redirect(`/admin/clients/${clientId}?error=${encodeURIComponent(msg)}`);
   if (!str(f, 'title')) fail('Enter a proof title.');
+  if (!isProofType(str(f, 'type'))) fail('Choose what type of proof this is.');
   if (error) fail(error);
   const p = await db.project.create({
     data: {
       slug: randomBytes(16).toString('base64url'),
       title: str(f, 'title'),
+      type: str(f, 'type'),
       clientId,
       password: str(f, 'password') || null,
       expiresAt: date(str(f, 'expires')),
@@ -87,6 +93,7 @@ export async function updateProject(f: FormData) {
     data: {
       title: str(f, 'title'),
       status: str(f, 'status'),
+      type: isProofType(str(f, 'type')) ? str(f, 'type') : null,
       revisionsIncluded: str(f, 'revisionsIncluded') === '' ? null : revisions(str(f, 'revisionsIncluded')),
       ...(str(f, 'status') !== 'Approved' && { approvedAt: null, approvedBy: null, approvedVersion: null }),
       password: str(f, 'password') || null,
@@ -143,7 +150,10 @@ export async function reopenApproval(f: FormData) {
 
 export async function deleteProject(f: FormData) {
   await requireAdmin();
-  const p = await db.project.delete({ where: { id: str(f, 'id') } });
+  const id = str(f, 'id');
+  const files = (await db.image.findMany({ where: { version: { projectId: id } }, select: { file: true } })).map((i) => i.file);
+  const p = await db.project.delete({ where: { id } });
+  await removeUploads(files);
   redirect(`/admin/clients/${p.clientId}`);
 }
 
