@@ -63,12 +63,11 @@ fi
 
 cat <<NEXT
 
-Server is ready for the first deploy. Still to do:
+Server is ready for the first start. Still to do:
   1. Edit $BASE/.env (ADMIN_EMAIL, Google keys, SMTP).
-  2. Let this server pull the private image. As $DEPLOY_USER, once:
-       echo YOUR_GITHUB_TOKEN | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
-     (a token with only the read:packages scope; it is stored in ~/.docker/config.json)
-  3. Add the deploy SSH key and the GitHub secrets VPS_HOST, VPS_USER, VPS_SSH_KEY (see README), then push to main.
+  2. Log out and back in once, so $DEPLOY_USER gets Docker access.
+  3. Build and start:  cd $BASE && docker compose build && docker compose up -d
   4. HTTPS once the DNS record for $DOMAIN points here:
        sudo apt-get install -y certbot python3-certbot-nginx && sudo certbot --nginx -d $DOMAIN
+  Later updates:  bash $BASE/deploy/update.sh
 NEXT
