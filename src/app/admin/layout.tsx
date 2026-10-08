@@ -1,4 +1,5 @@
 import './studio.css';
+import Script from 'next/script';
 import { currentUser, requireAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { logout } from './actions';
@@ -19,6 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Urbanist:wght@400;500;600;700;800&display=swap" />
       <Sidebar name={user.name} email={user.email} open={open} signOut={logout} />
       <main className="main">{children}</main>
+      <Script src="/spotlight.js" strategy="afterInteractive" />
     </div>
   );
 }

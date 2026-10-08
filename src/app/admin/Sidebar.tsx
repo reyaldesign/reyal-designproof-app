@@ -22,7 +22,7 @@ export default function Sidebar({ name, email, open, signOut }: { name: string; 
   };
 
   return (
-    <aside className="side">
+    <aside className="side" data-spotlight>
       <div className="side-top">
         <Link href="/admin" className="brand" aria-label="Reyal Proof home">
           <span className="brand-mark">R</span>
