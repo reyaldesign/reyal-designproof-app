@@ -1,13 +1,13 @@
 import { randomBytes } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { MAX_IMAGE_MB, MAX_PDF_MB, MAX_PDF_PAGES } from './limits';
 
 export const uploadDir = () => path.resolve(process.env.DATA_DIR || './data', 'uploads');
 const EXT: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
 export const MIME = Object.fromEntries(Object.entries(EXT).map(([m, e]) => [e, m]));
-const MAX_IMAGE = 25 * 1024 * 1024;
-const MAX_PDF = 80 * 1024 * 1024;
-const MAX_PDF_PAGES = 60;
+const MAX_IMAGE = MAX_IMAGE_MB * 1024 * 1024;
+const MAX_PDF = MAX_PDF_MB * 1024 * 1024;
 const PDF_PAGE_WIDTH = 4500; // px each PDF page is rendered at, so zooming in up to ~4x stays sharp
 const PDF_MAX_SIDE = 9000; // keeps very tall pages from producing huge files
 

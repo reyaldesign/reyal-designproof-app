@@ -22,7 +22,7 @@ npm run dev                 # http://localhost:3100, sign in at /login
 
 ## Using it (designers)
 
-1. Sign in, fill in **New proof** (title, client, optional password and expiry, images). Multi-page proofs are multiple images, or a PDF (each page is rendered to an image, up to 60 pages).
+1. Sign in, fill in **New proof** (title, client, optional password and expiry, images). Multi-page proofs are multiple images, or a PDF (each page is rendered to an image, up to 60 pages). Proofs are previews: images up to 10 MB each, PDFs up to 30 MB, 40 MB per upload. The form blocks bigger files with a message before sending.
 2. Open the project, copy the **Share link**, send it to the client. Set status to Sent.
 3. When the client presses Send now, status becomes Feedback Received and you get an email (or a console log if SMTP is not set).
 4. On the project page: Resolve or Reopen each comment, and Reply. Clients see replies on their next visit.
