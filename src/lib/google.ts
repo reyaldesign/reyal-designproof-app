@@ -1,4 +1,7 @@
-export const googleEnabled = () => !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+// Trimmed because a pasted key often carries a trailing newline, which Google rejects.
+export const clientId = () => (process.env.GOOGLE_CLIENT_ID ?? '').trim();
+export const clientSecret = () => (process.env.GOOGLE_CLIENT_SECRET ?? '').trim();
+export const googleEnabled = () => !!(clientId() && clientSecret());
 
 const base = (req: Request) => process.env.APP_URL || new URL(req.url).origin;
 export const redirectUri = (req: Request) => `${base(req)}/api/auth/google/callback`;

@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { cookieOpts, safeEq, sign } from '@/lib/auth';
-import { googleEnabled, isAllowed, redirectUri, to } from '@/lib/google';
+import { clientId, clientSecret, googleEnabled, isAllowed, redirectUri, to } from '@/lib/google';
 
 export async function GET(req: Request) {
   if (!googleEnabled()) return to(req, '/login');
@@ -17,8 +17,8 @@ export async function GET(req: Request) {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       code,
-      client_id: process.env.GOOGLE_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      client_id: clientId(),
+      client_secret: clientSecret(),
       redirect_uri: redirectUri(req),
       grant_type: 'authorization_code',
     }),
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
   const claims = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64url').toString()) as {
     email?: string; email_verified?: boolean; aud?: string;
   };
-  if (claims.aud !== process.env.GOOGLE_CLIENT_ID || !claims.email || claims.email_verified !== true) return to(req, '/login?error=google');
+  if (claims.aud !== clientId() || !claims.email || claims.email_verified !== true) return to(req, '/login?error=google');
   if (!isAllowed(claims.email)) return to(req, '/login?error=denied');
 
   jar.set('rp_admin', sign('admin'), cookieOpts);
