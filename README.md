@@ -29,28 +29,22 @@ npm run dev                 # http://localhost:3100, sign in at /login
 5. **Upload a new version** to add v2, v3. Clients switch versions from the top bar dropdown.
 6. Clients can press **Approve this version**. They read a short terms pop-up, type their name and tick the box. The version is then locked (no more comments), status becomes Approved, and the project page shows who approved and when. Use **Reopen for changes** to undo it, or upload a new version.
 
-## Deploy to the VPS (client.reyaldesign.com, Docker + GitHub)
+## Deploy to the VPS (client.reyaldesign.com, Docker)
 
-Every push to `main` runs `.github/workflows/deploy.yml`: type-check, build the Docker image, publish it to GitHub Container Registry (`ghcr.io/reyaldesign/reyal-designproof-app`), then the VPS pulls it, restarts, health-checks `/login` and rolls back to the previous image if it fails. The app listens on `127.0.0.1:3100` and nginx proxies the domain to it. Data (database and uploads) lives in `/opt/reyal-proof/data` on the server, outside the image, and the deploy keeps the last 10 database copies in `/opt/reyal-proof/backups`.
+The server pulls this repo from GitHub and builds the Docker image itself. It listens on `127.0.0.1:3100` and nginx proxies the domain to it. Everything lives in `/opt/reyal-proof` (the repo, `.env`, `data/` with the database and uploads, `backups/`). It is one Docker Compose project named `reyal-proof`, so it never touches the other apps on the server.
 
-Run the same image locally with `docker compose up --build` if you want to test it.
+**First time (on the server)**
+1. Give the server read access to the private repo: create a key with `ssh-keygen -t ed25519 -f ~/.ssh/reyal_proof_github -N ""`, add an `~/.ssh/config` block for host `github-reyal-proof` that uses it, and add the public key under the repo's Settings, Deploy keys (read-only).
+2. `git clone git@github-reyal-proof:reyaldesign/reyal-designproof-app.git /opt/reyal-proof`
+3. `sudo DEPLOY_USER=ubuntu bash /opt/reyal-proof/deploy/setup-vps.sh` (checks that port 3100 is free, creates `.env`, adds the nginx site after testing it).
+4. Edit `/opt/reyal-proof/.env` (admin email, Google keys, SMTP).
+5. `cd /opt/reyal-proof && docker compose build && docker compose up -d`
+6. DNS `A` record `client` to the server IP, then `sudo certbot --nginx -d client.reyaldesign.com`.
+7. Add `https://client.reyaldesign.com/api/auth/google/callback` as an authorized redirect URI in the Google OAuth client.
 
-**One time**
-1. DNS: add an `A` record `client` pointing to the server IP (the same one as `studio.reyaldesign.com`).
-2. Run the setup on the server as someone with sudo. `DEPLOY_USER` is the account GitHub will log in as and must be allowed to use Docker:
-   ```bash
-   scp -r deploy you@SERVER:~/reyal-proof-deploy
-   ssh you@SERVER "sudo DEPLOY_USER=you bash ~/reyal-proof-deploy/setup-vps.sh"
-   ```
-3. Edit `/opt/reyal-proof/.env` on the server (admin email, Google keys, SMTP).
-4. Let the server pull the private image: create a GitHub token with only `read:packages`, then on the server run `docker login ghcr.io -u <github-user>` and paste the token.
-5. Make a deploy key and add it: `ssh-keygen -t ed25519 -f ~/.ssh/reyal_proof_deploy -N ""`, append the `.pub` to the deploy user's `~/.ssh/authorized_keys` on the server, and add GitHub repo secrets `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (the private key).
-6. Push to `main`, or run the **Deploy** workflow by hand.
-7. HTTPS once DNS is live: `sudo apt-get install -y certbot python3-certbot-nginx && sudo certbot --nginx -d client.reyaldesign.com`.
+**Every update after that:** `bash /opt/reyal-proof/deploy/update.sh`. It backs up the database (last 10 kept), pulls `main`, rebuilds, restarts, checks `/login`, and restores the previous image if the new one fails.
 
-Add `https://client.reyaldesign.com/api/auth/google/callback` as an authorized redirect URI in the Google OAuth client.
-
-**Every update after that:** push to `main`. Back up `/opt/reyal-proof/data`.
+**Optional push-to-deploy:** the Deploy workflow always builds and publishes the image to ghcr.io. It only deploys to the server if the repo variable `AUTO_DEPLOY` is `true` and the secrets `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` are set. Not needed for the flow above.
 
 ## Not built yet
 

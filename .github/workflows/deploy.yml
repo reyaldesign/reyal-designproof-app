@@ -44,7 +44,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # Optional push-button deploy. Off unless the repo variable AUTO_DEPLOY is set to true (Settings > Secrets and variables > Actions > Variables).
   deploy:
+    if: ${{ vars.AUTO_DEPLOY == 'true' }}
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
