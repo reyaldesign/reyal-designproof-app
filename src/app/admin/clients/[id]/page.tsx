@@ -61,7 +61,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
           <label className="text-sm text-zinc-400">Expires (optional)
             <input className="input mt-1" name="expires" type="date" />
           </label>
-          <label className="text-sm text-zinc-400 sm:col-span-2">Images or PDF (JPG, PNG, WebP, GIF up to 25 MB; PDF up to 80 MB, 60 pages)
+          <label className="text-sm text-zinc-400 sm:col-span-2">Images or PDF. Proofs are previews, not final artwork: JPG, PNG, WebP or GIF up to 10 MB each, PDF up to 30 MB and 60 pages, 40 MB per upload
             <FilePicker />
           </label>
           {error && <p className="text-sm text-red-400 sm:col-span-2">{error}</p>}

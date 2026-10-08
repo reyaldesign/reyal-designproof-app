@@ -7,7 +7,7 @@ export default {
   serverExternalPackages: ['mupdf'],
   experimental: {
     serverActions: {
-      bodySizeLimit: '100mb',
+      bodySizeLimit: '60mb',
       allowedOrigins: [publicHost, 'client.reyaldesign.com', 'localhost:3100', 'localhost:3000'].filter(Boolean),
     },
   },

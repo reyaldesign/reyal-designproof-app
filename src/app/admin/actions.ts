@@ -6,6 +6,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { MAX_IMAGE_MB, MAX_PDF_MB, MAX_UPLOAD_MB } from '@/lib/limits';
 import { saveImages } from '@/lib/storage';
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
@@ -15,10 +16,12 @@ const date = (s: string) => (s ? new Date(`${s}T23:59:59`) : null);
 /** Saves the uploaded files. Returns the rows, or an error message the page can show. */
 async function imageRows(f: FormData, start = 0): Promise<{ rows: { file: string; position: number }[]; error?: string }> {
   const picked = files(f);
+  const totalMb = picked.reduce((n, x) => n + x.size, 0) / 1048576;
+  if (totalMb > MAX_UPLOAD_MB) return { rows: [], error: `That upload is ${totalMb.toFixed(0)} MB. Keep each upload under ${MAX_UPLOAD_MB} MB and export web-sized previews, not final artwork.` };
   try {
     const names = await saveImages(picked);
     if (!names.length) {
-      return { rows: [], error: picked.length ? 'None of those files could be used. Use JPG, PNG, WebP, GIF (up to 25 MB) or a readable PDF (up to 80 MB, not password protected).' : 'Choose at least one image or PDF.' };
+      return { rows: [], error: picked.length ? `None of those files could be used. Use JPG, PNG, WebP or GIF (up to ${MAX_IMAGE_MB} MB each) or a readable PDF (up to ${MAX_PDF_MB} MB, not password protected).` : 'Choose at least one image or PDF.' };
     }
     return { rows: names.map((file, i) => ({ file, position: start + i })) };
   } catch (e) {
