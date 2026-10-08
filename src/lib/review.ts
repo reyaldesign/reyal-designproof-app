@@ -8,7 +8,7 @@ export const reviewToken = (slug: string, password: string) => sign(`review:${sl
 export type Access = 'ok' | 'locked' | 'expired' | 'missing';
 
 export async function loadProject(slug: string) {
-  const project = await db.project.findUnique({ where: { slug }, include: { versions: { orderBy: { number: 'desc' } } } });
+  const project = await db.project.findUnique({ where: { slug }, include: { client: true, versions: { orderBy: { number: 'desc' } } } });
   if (!project) return { project: null, access: 'missing' as Access };
   if (await isAdmin()) return { project, access: 'ok' as Access };
   if (project.expiresAt && project.expiresAt < new Date()) return { project, access: 'expired' as Access };

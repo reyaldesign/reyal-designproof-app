@@ -1,16 +1,16 @@
 import Link from 'next/link';
 import { requireAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { createProject, logout } from './actions';
+import { createClient, logout } from './actions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   await requireAdmin();
   const { error } = await searchParams;
-  const projects = await db.project.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: { versions: { include: { comments: { where: { parentId: null, resolved: false, fromDesigner: false } } } } },
+  const clients = await db.client.findMany({
+    orderBy: { name: 'asc' },
+    include: { projects: { include: { versions: { include: { comments: { where: { parentId: null, resolved: false, fromDesigner: false } } } } } } },
   });
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
@@ -20,21 +20,18 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       </header>
 
       <section className="mb-10">
-        <h2 className="mb-3 text-sm font-medium text-zinc-400">Projects</h2>
+        <h2 className="mb-3 text-sm font-medium text-zinc-400">Clients</h2>
         <div className="divide-y divide-zinc-800 rounded-xl border border-zinc-800">
-          {projects.length === 0 && <p className="p-5 text-sm text-zinc-500">No projects yet. Create the first one below.</p>}
-          {projects.map((p) => {
-            const open = p.versions.reduce((n, v) => n + v.comments.length, 0);
+          {clients.length === 0 && <p className="p-5 text-sm text-zinc-500">No clients yet. Add the first one below.</p>}
+          {clients.map((c) => {
+            const open = c.projects.reduce((n, p) => n + p.versions.reduce((m, v) => m + v.comments.length, 0), 0);
             return (
-              <Link key={p.id} href={`/admin/${p.id}`} className="flex items-center justify-between gap-4 p-4 hover:bg-zinc-900">
+              <Link key={c.id} href={`/admin/clients/${c.id}`} className="flex items-center justify-between gap-4 p-4 hover:bg-zinc-900">
                 <div>
-                  <div className="font-medium">{p.title}</div>
-                  <div className="text-sm text-zinc-500">{p.client || 'No client'} · {p.versions.length} version{p.versions.length === 1 ? '' : 's'}</div>
+                  <div className="font-medium">{c.name}</div>
+                  <div className="text-sm text-zinc-500">{c.projects.length} proof{c.projects.length === 1 ? '' : 's'}{c.email && ` · ${c.email}`}</div>
                 </div>
-                <div className="flex items-center gap-3 text-sm">
-                  {open > 0 && <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-amber-300">{open} open</span>}
-                  <span className="text-zinc-400">{p.status}</span>
-                </div>
+                {open > 0 && <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-sm text-amber-300">{open} open</span>}
               </Link>
             );
           })}
@@ -42,20 +39,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-medium text-zinc-400">New proof</h2>
-        <form action={createProject} className="card grid gap-3 sm:grid-cols-2">
-          <input className="input" name="title" placeholder="Title (e.g. Menu - Main)" required />
-          <input className="input" name="client" placeholder="Client name" />
-          <input className="input" name="label" placeholder='Version label (e.g. "changes #40")' />
-          <input className="input" name="password" placeholder="Password (optional)" />
-          <label className="text-sm text-zinc-400">Expires (optional)
-            <input className="input mt-1" name="expires" type="date" />
-          </label>
-          <label className="text-sm text-zinc-400">Images (JPG, PNG, WebP, GIF, up to 25 MB each)
-            <input className="input mt-1" name="files" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple required />
-          </label>
+        <h2 className="mb-3 text-sm font-medium text-zinc-400">New client</h2>
+        <form action={createClient} className="card grid gap-3 sm:grid-cols-2">
+          <input className="input" name="name" placeholder="Client name" required />
+          <input className="input" name="email" type="email" placeholder="Contact email (optional)" />
+          <input className="input sm:col-span-2" name="notes" placeholder="Notes (optional)" />
           {error && <p className="text-sm text-red-400 sm:col-span-2">{error}</p>}
-          <button className="btn sm:col-span-2">Create proof</button>
+          <button className="btn sm:col-span-2">Add client</button>
         </form>
       </section>
     </main>

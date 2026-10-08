@@ -10,17 +10,17 @@ Stack: Next.js 15 (App Router), TypeScript, Tailwind 3, Prisma + SQLite, react-z
 npm install
 cp .env.example .env        # set SESSION_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD
 npx prisma migrate dev
-npm run dev                 # http://localhost:3000, sign in at /login
+npm run dev                 # http://localhost:3100, sign in at /login
 ```
 
 ## Using it (designers)
 
-1. Sign in, fill in **New proof** (title, client, optional password and expiry, images). Multi-page proofs are multiple images.
+1. Sign in, fill in **New proof** (title, client, optional password and expiry, images). Multi-page proofs are multiple images, or a PDF (each page is rendered to an image, up to 60 pages).
 2. Open the project, copy the **Share link**, send it to the client. Set status to Sent.
 3. When the client presses Send now, status becomes Feedback Received and you get an email (or a console log if SMTP is not set).
 4. On the project page: Resolve or Reopen each comment, and Reply. Clients see replies on their next visit.
 5. **Upload a new version** to add v2, v3. Clients switch versions from the top bar dropdown.
-6. Clients can press **Approve this version**, which sets status to Approved.
+6. Clients can press **Approve this version**. They read a short terms pop-up, type their name and tick the box. The version is then locked (no more comments), status becomes Approved, and the project page shows who approved and when. Use **Reopen for changes** to undo it, or upload a new version.
 
 ## Deploy to the VPS (Docker + nginx)
 
@@ -40,7 +40,6 @@ Data (database and uploads) lives in `./data` on the VPS, outside the image. Bac
 
 ## Not built yet
 
-- PDF to image conversion (export pages as images first)
 - Real-time updates (admin page refreshes on load; add Pusher or SSE if needed)
 - Offline viewing, version comparison, CSV or PDF export, white-label, view analytics
 - Multiple designer accounts (one login from `.env`)

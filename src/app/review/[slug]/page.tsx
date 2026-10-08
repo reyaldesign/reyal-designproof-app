@@ -55,8 +55,9 @@ export default async function Review({
     <ReviewClient
       slug={slug}
       title={project.title}
-      client={project.client}
-      approved={project.status === 'Approved'}
+      client={project.client.name}
+      approval={project.approvedVersion != null ? { by: project.approvedBy ?? '', at: project.approvedAt?.toISOString() ?? '', version: project.approvedVersion } : null}
+      latest={project.versions[0].number}
       versions={project.versions.map((x) => ({ number: x.number, label: x.label }))}
       current={{ id: data.id, number: data.number, label: data.label }}
       images={data.images.map((i) => ({ id: i.id, file: i.file }))}

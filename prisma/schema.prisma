@@ -8,15 +8,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Client {
+  id        String    @id @default(cuid())
+  name      String
+  email     String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  projects  Project[]
+}
+
 model Project {
   id        String    @id @default(cuid())
   slug      String    @unique
   title     String
-  client    String
+  clientId  String
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   status    String    @default("Draft") // Draft | Sent | Feedback Received | Approved
   password  String?
   expiresAt DateTime?
   createdAt DateTime  @default(now())
+  // Set when the client approves. The approved version is locked from further comments.
+  approvedAt      DateTime?
+  approvedBy      String?
+  approvedVersion Int?
   versions  Version[]
 }
 

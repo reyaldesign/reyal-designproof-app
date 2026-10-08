@@ -17,15 +17,30 @@ async function imageRows(f: FormData, start = 0) {
   return names.map((file, i) => ({ file, position: start + i }));
 }
 
+export async function createClient(f: FormData) {
+  await requireAdmin();
+  const name = str(f, 'name');
+  if (!name) redirect('/admin?error=Enter a client name.');
+  const c = await db.client.create({ data: { name, email: str(f, 'email') || null, notes: str(f, 'notes') || null } });
+  redirect(`/admin/clients/${c.id}`);
+}
+
+export async function deleteClient(f: FormData) {
+  await requireAdmin();
+  await db.client.delete({ where: { id: str(f, 'id') } });
+  redirect('/admin');
+}
+
 export async function createProject(f: FormData) {
   await requireAdmin();
+  const clientId = str(f, 'clientId');
   const images = await imageRows(f);
-  if (!str(f, 'title') || !images.length) redirect('/admin?error=Add a title and at least one image (JPG, PNG, WebP or GIF).');
+  if (!str(f, 'title') || !images.length) redirect(`/admin/clients/${clientId}?error=Add a title and at least one image or PDF.`);
   const p = await db.project.create({
     data: {
       slug: randomBytes(16).toString('base64url'),
       title: str(f, 'title'),
-      client: str(f, 'client'),
+      clientId,
       password: str(f, 'password') || null,
       expiresAt: date(str(f, 'expires')),
       versions: { create: { number: 1, label: str(f, 'label') || 'Version 1', images: { create: images } } },
@@ -41,8 +56,8 @@ export async function updateProject(f: FormData) {
     where: { id },
     data: {
       title: str(f, 'title'),
-      client: str(f, 'client'),
       status: str(f, 'status'),
+      ...(str(f, 'status') !== 'Approved' && { approvedAt: null, approvedBy: null, approvedVersion: null }),
       password: str(f, 'password') || null,
       expiresAt: date(str(f, 'expires')),
     },
@@ -58,7 +73,7 @@ export async function addVersion(f: FormData) {
   const last = await db.version.findFirst({ where: { projectId }, orderBy: { number: 'desc' } });
   const number = (last?.number ?? 0) + 1;
   await db.version.create({ data: { projectId, number, label: str(f, 'label') || `Version ${number}`, images: { create: images } } });
-  await db.project.update({ where: { id: projectId }, data: { status: 'Sent' } });
+  await db.project.update({ where: { id: projectId }, data: { status: 'Sent', approvedAt: null, approvedBy: null, approvedVersion: null } });
   revalidatePath(`/admin/${projectId}`);
 }
 
@@ -79,10 +94,17 @@ export async function replyTo(f: FormData) {
   revalidatePath(`/admin/${parent.version.projectId}`);
 }
 
+export async function reopenApproval(f: FormData) {
+  await requireAdmin();
+  const id = str(f, 'id');
+  await db.project.update({ where: { id }, data: { status: 'Sent', approvedAt: null, approvedBy: null, approvedVersion: null } });
+  revalidatePath(`/admin/${id}`);
+}
+
 export async function deleteProject(f: FormData) {
   await requireAdmin();
-  await db.project.delete({ where: { id: str(f, 'id') } });
-  redirect('/admin');
+  const p = await db.project.delete({ where: { id: str(f, 'id') } });
+  redirect(`/admin/clients/${p.clientId}`);
 }
 
 export async function logout() {

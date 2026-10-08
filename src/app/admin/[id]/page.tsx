@@ -3,7 +3,10 @@ import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import { requireAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { addVersion, deleteProject, replyTo, setResolved, updateProject } from '../actions';
+import CardShell from './CardShell';
+import PinCrop from './PinCrop';
+import ProofViewer from './ProofViewer';
+import { addVersion, deleteProject, reopenApproval, replyTo, setResolved, updateProject } from '../actions';
 
 export const dynamic = 'force-dynamic';
 const STATUSES = ['Draft', 'Sent', 'Feedback Received', 'Approved'];
@@ -15,6 +18,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const p = await db.project.findUnique({
     where: { id },
     include: {
+      client: true,
       versions: {
         orderBy: { number: 'desc' },
         include: { images: { orderBy: { position: 'asc' } }, comments: { orderBy: { createdAt: 'asc' } } },
@@ -27,10 +31,23 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const link = `${base}/review/${p.slug}`;
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10">
-      <Link href="/admin" className="text-sm text-zinc-400 hover:text-white">← All projects</Link>
+    <main className="mx-auto max-w-6xl px-4 py-10">
+      <Link href={`/admin/clients/${p.clientId}`} className="text-sm text-zinc-400 hover:text-white">← {p.client.name}</Link>
       <h1 className="mb-1 mt-3 text-xl font-semibold">{p.title}</h1>
-      <p className="mb-6 text-sm text-zinc-500">{p.client}</p>
+      <p className="mb-6 text-sm text-zinc-500">{p.client.name}</p>
+
+      {p.approvedAt && (
+        <section className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-600/50 bg-emerald-950/40 p-4">
+          <div>
+            <div className="font-medium text-emerald-300">Approved by {p.approvedBy} · version {p.approvedVersion}</div>
+            <div className="text-sm text-emerald-200/70">{when(p.approvedAt)} · Terms accepted. The client can no longer comment on this version.</div>
+          </div>
+          <form action={reopenApproval}>
+            <input type="hidden" name="id" value={p.id} />
+            <button className="btn-ghost">Reopen for changes</button>
+          </form>
+        </section>
+      )}
 
       <section className="card mb-8 space-y-4">
         <div>
@@ -43,7 +60,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         <form action={updateProject} className="grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="id" value={p.id} />
           <input className="input" name="title" defaultValue={p.title} required />
-          <input className="input" name="client" defaultValue={p.client} placeholder="Client" />
           <select className="input" name="status" defaultValue={p.status}>
             {STATUSES.map((s) => <option key={s}>{s}</option>)}
           </select>
@@ -60,46 +76,59 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         <form action={addVersion} className="flex flex-wrap gap-3">
           <input type="hidden" name="projectId" value={p.id} />
           <input className="input max-w-xs" name="label" placeholder="Label (e.g. changes #41)" />
-          <input className="input max-w-xs" name="files" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple required />
+          <input className="input max-w-xs" name="files" type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" multiple required />
           <button className="btn">Upload version</button>
         </form>
       </section>
 
       {p.versions.map((v) => {
         const roots = v.comments.filter((c) => !c.parentId);
+        const pins = roots.filter((c) => c.x != null && c.imageId).map((c) => ({ id: c.id, imageId: c.imageId, x: c.x!, y: c.y!, pin: c.pin, resolved: c.resolved, text: c.text }));
         return (
-          <section key={v.id} className="mb-8">
+          <section key={v.id} className="mb-10">
             <h2 className="mb-3 font-medium">v{v.number} · {v.label} <span className="text-sm text-zinc-500">· {when(v.createdAt)} · {v.images.length} page{v.images.length === 1 ? '' : 's'}</span></h2>
-            <div className="mb-4 flex gap-2 overflow-x-auto">
-              {v.images.map((i) => <img key={i.id} src={`/files/${i.file}`} alt="" className="h-24 rounded border border-zinc-800" />)}
-            </div>
             {roots.length === 0 && <p className="text-sm text-zinc-500">No comments on this version.</p>}
-            <div className="space-y-3">
-              {roots.map((c) => (
-                <div key={c.id} className={`card ${c.resolved ? 'opacity-50' : ''}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <span className="mr-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-rose-500 px-1.5 text-xs font-semibold text-white">{c.pin ?? '•'}</span>
-                      <span className="text-sm font-medium">{c.author}</span>
-                      <span className="ml-2 text-xs text-zinc-500">{when(c.createdAt)}{c.x != null && ` · ${c.x.toFixed(0)}%, ${c.y!.toFixed(0)}%`}</span>
-                      <p className="mt-2 whitespace-pre-wrap text-sm">{c.text}</p>
-                    </div>
-                    <form action={setResolved}>
-                      <input type="hidden" name="id" value={c.id} />
-                      <input type="hidden" name="resolved" value={c.resolved ? '0' : '1'} />
-                      <button className="btn-ghost whitespace-nowrap">{c.resolved ? 'Reopen' : 'Resolve'}</button>
-                    </form>
-                  </div>
-                  {v.comments.filter((r) => r.parentId === c.id).map((r) => (
-                    <p key={r.id} className="mt-3 border-l-2 border-zinc-700 pl-3 text-sm text-zinc-300"><b>{r.author}:</b> {r.text}</p>
-                  ))}
-                  <form action={replyTo} className="mt-3 flex gap-2">
-                    <input type="hidden" name="id" value={c.id} />
-                    <input className="input" name="text" placeholder="Reply (client sees it on their next visit)" />
-                    <button className="btn-ghost">Reply</button>
-                  </form>
-                </div>
-              ))}
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+              <div className="lg:sticky lg:top-4 lg:self-start">
+                <ProofViewer versionId={v.id} images={v.images.map((i) => ({ id: i.id, file: i.file }))} pins={pins} />
+              </div>
+              <div className="space-y-3">
+                {roots.map((c) => {
+                  const page = v.images.findIndex((i) => i.id === c.imageId);
+                  const img = v.images[page];
+                  return (
+                    <CardShell key={c.id} versionId={v.id} commentId={c.id} imageId={img && c.x != null ? c.imageId : null} resolved={c.resolved}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <span className="mr-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-rose-500 px-1.5 text-xs font-semibold text-white">{c.pin ?? '•'}</span>
+                          <span className="text-sm font-medium">{c.author}</span>
+                          <span className="ml-2 text-xs text-zinc-500">{when(c.createdAt)}</span>
+                          <div className="mt-1 text-xs text-amber-300">
+                            {img && c.x != null
+                              ? `Page ${page + 1} of ${v.images.length} · ${c.x.toFixed(0)}% from left, ${c.y!.toFixed(0)}% from top · click to show on page`
+                              : 'General comment (not placed on the design)'}
+                          </div>
+                          {img && c.x != null && <div className="mt-2"><PinCrop src={`/files/${img.file}`} x={c.x} y={c.y!} pin={c.pin} /></div>}
+                          <p className="mt-2 whitespace-pre-wrap text-sm">{c.text}</p>
+                        </div>
+                        <form action={setResolved}>
+                          <input type="hidden" name="id" value={c.id} />
+                          <input type="hidden" name="resolved" value={c.resolved ? '0' : '1'} />
+                          <button className="btn-ghost whitespace-nowrap">{c.resolved ? 'Reopen' : 'Resolve'}</button>
+                        </form>
+                      </div>
+                      {v.comments.filter((r) => r.parentId === c.id).map((r) => (
+                        <p key={r.id} className="mt-3 border-l-2 border-zinc-700 pl-3 text-sm text-zinc-300"><b>{r.author}:</b> {r.text}</p>
+                      ))}
+                      <form action={replyTo} className="mt-3 flex gap-2">
+                        <input type="hidden" name="id" value={c.id} />
+                        <input className="input" name="text" placeholder="Reply (client sees it on their next visit)" />
+                        <button className="btn-ghost">Reply</button>
+                      </form>
+                    </CardShell>
+                  );
+                })}
+              </div>
             </div>
           </section>
         );

@@ -1,1 +1,4 @@
-export default { experimental: { serverActions: { bodySizeLimit: '100mb' } } };
+export default {
+  serverExternalPackages: ['mupdf'],
+  experimental: { serverActions: { bodySizeLimit: '100mb' } },
+};

@@ -10,7 +10,8 @@ type C = {
 };
 type Draft = { tid: string; imageId: string | null; x: number | null; y: number | null; text: string };
 type Props = {
-  slug: string; title: string; client: string; approved: boolean;
+  slug: string; title: string; client: string;
+  approval: { by: string; at: string; version: number } | null; latest: number;
   versions: { number: number; label: string }[];
   current: { id: string; number: number; label: string };
   images: { id: string; file: string }[];
@@ -24,10 +25,15 @@ const store = {
 const uid = () => Math.random().toString(36).slice(2, 10);
 const ago = (iso: string) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-export default function ReviewClient({ slug, title, client, approved, versions, current, images, comments }: Props) {
+export default function ReviewClient({ slug, title, client, approval, latest, versions, current, images, comments }: Props) {
   const router = useRouter();
   const draftKey = `rp:draft:${current.id}`;
   const [mode, setMode] = useState<'comment' | 'view'>('comment');
+  const [terms, setTerms] = useState(false);
+  const [agree, setAgree] = useState(false);
+  const [aname, setAname] = useState('');
+  const [aerr, setAerr] = useState('');
+  const [abusy, setAbusy] = useState(false);
   const [idx, setIdx] = useState(0);
   const [scale, setScale] = useState(1);
   const [drafts, setDrafts] = useState<Draft[]>([]);
@@ -48,6 +54,8 @@ export default function ReviewClient({ slug, title, client, approved, versions, 
   const down = useRef({ x: 0, y: 0 });
 
   const img = images[idx];
+  const locked = approval?.version === current.number; // approved versions take no more comments
+  const canApprove = !approval && current.number === latest;
   const roots = comments.filter((c) => !c.parentId);
   const maxPin = Math.max(0, ...roots.map((c) => c.pin ?? 0));
 
@@ -81,7 +89,7 @@ export default function ReviewClient({ slug, title, client, approved, versions, 
   const draftPin = (tid: string) => maxPin + pinned.findIndex((d) => d.tid === tid) + 1;
 
   function place(e: React.PointerEvent) {
-    if (mode !== 'comment' || !imgRef.current) return;
+    if (locked || mode !== 'comment' || !imgRef.current) return;
     if (Math.hypot(e.clientX - down.current.x, e.clientY - down.current.y) > 6) return; // it was a pan, not a tap
     const r = imgRef.current.getBoundingClientRect();
     const x = ((e.clientX - r.left) / r.width) * 100;
@@ -119,9 +127,22 @@ export default function ReviewClient({ slug, title, client, approved, versions, 
     setDone(`${ordered.length} comment${ordered.length === 1 ? '' : 's'} sent`);
     router.refresh();
   }
+  function openTerms() {
+    setAname(name);
+    setAgree(false);
+    setAerr('');
+    setTerms(true);
+  }
   async function approve() {
-    if (!confirm('Approve this version? Reyal Design will be notified.')) return;
-    await fetch(`/api/review/${slug}/approve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+    setAbusy(true); setAerr('');
+    const r = await fetch(`/api/review/${slug}/approve`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: aname, agreed: agree, versionNumber: current.number }),
+    }).catch(() => null);
+    setAbusy(false);
+    if (!r?.ok) return setAerr(((await r?.json().catch(() => null)) as { error?: string } | null)?.error || 'Could not approve. Please try again.');
+    store.set('rp:name', aname);
+    setTerms(false);
     setDone('Approved');
     router.refresh();
   }
@@ -159,7 +180,7 @@ export default function ReviewClient({ slug, title, client, approved, versions, 
           </select>
           <div className="flex overflow-hidden rounded-lg border border-zinc-700 text-sm">
             {(['view', 'comment'] as const).map((m) => (
-              <button key={m} onClick={() => setMode(m)} className={`px-3 py-1.5 capitalize ${mode === m ? 'bg-white text-black' : 'hover:bg-zinc-800'}`}>{m}</button>
+              <button key={m} onClick={() => setMode(m)} disabled={locked && m === 'comment'} className={`px-3 py-1.5 capitalize disabled:opacity-30 ${(locked ? 'view' : mode) === m ? 'bg-white text-black' : 'hover:bg-zinc-800'}`}>{m}</button>
             ))}
           </div>
         </div>
@@ -174,7 +195,7 @@ export default function ReviewClient({ slug, title, client, approved, versions, 
             >
               <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: stage.w, height: stage.h, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div
-                  style={{ position: 'relative', ...size, cursor: mode === 'comment' ? 'crosshair' : 'grab' }}
+                  style={{ position: 'relative', ...size, cursor: mode === 'comment' && !locked ? 'crosshair' : 'grab' }}
                   onPointerDown={(e) => (down.current = { x: e.clientX, y: e.clientY })}
                   onPointerUp={place}
                 >
@@ -225,8 +246,12 @@ export default function ReviewClient({ slug, title, client, approved, versions, 
         <aside className="flex h-[48dvh] shrink-0 flex-col border-t border-zinc-800 bg-zinc-950 lg:h-auto lg:w-[360px] lg:border-l lg:border-t-0">
           <div className="border-b border-zinc-800 p-4">
             <h2 className="font-semibold">Your comments</h2>
-            <p className="mt-1 text-xs text-zinc-500">Tap any part of the design to comment on it, or write a general comment below.</p>
-            <div className="mt-3 flex gap-2">
+            {locked ? (
+              <p className="mt-1 text-xs text-emerald-400">Approved. This version is closed to further comments.</p>
+            ) : (
+              <p className="mt-1 text-xs text-zinc-500">Tap any part of the design to comment on it, or write a general comment below.</p>
+            )}
+            <div className={`mt-3 flex gap-2 ${locked ? 'hidden' : ''}`}>
               <textarea
                 rows={2} value={general} onChange={(e) => setGeneral(e.target.value)} className="input resize-none" placeholder="General comment"
                 aria-label="General comment"
@@ -268,16 +293,46 @@ export default function ReviewClient({ slug, title, client, approved, versions, 
           </div>
 
           <div className="space-y-2 border-t border-zinc-800 p-4">
-            <input className="input" placeholder="Your name (optional)" value={name} onChange={(e) => setName(e.target.value)} />
-            {err && <p className="text-xs text-red-400">{err}</p>}
-            <button className="btn w-full !py-3 text-base" disabled={busy || !drafts.some((d) => d.text)} onClick={send}>
-              {busy ? 'Sending…' : 'Send now'}
-            </button>
-            {!approved && <button className="btn-ghost w-full" onClick={approve}>Approve this version</button>}
-            {approved && <p className="text-center text-xs text-emerald-400">This proof has been approved.</p>}
+            {locked ? (
+              <div className="rounded-lg border border-emerald-600/50 bg-emerald-950/40 p-3 text-sm">
+                <div className="font-medium text-emerald-300">Approved by {approval!.by}</div>
+                <div className="text-xs text-emerald-200/70">{ago(approval!.at)} · No further revisions can be applied to this version.</div>
+              </div>
+            ) : (
+              <>
+                <input className="input" placeholder="Your name (optional)" value={name} onChange={(e) => setName(e.target.value)} />
+                {err && <p className="text-xs text-red-400">{err}</p>}
+                <button className="btn w-full !py-3 text-base" disabled={busy || !drafts.some((d) => d.text)} onClick={send}>
+                  {busy ? 'Sending…' : 'Send now'}
+                </button>
+                {canApprove && <button className="btn-ghost w-full" onClick={openTerms}>Approve this version</button>}
+              </>
+            )}
           </div>
         </aside>
       </div>
+
+      {terms && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-labelledby="terms-h">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-6">
+            <h2 id="terms-h" className="text-lg font-semibold">Approve this version</h2>
+            <div className="mt-3 space-y-2 text-sm text-zinc-300">
+              <p>By approving, you confirm that you have reviewed every page of <b>{current.label}</b> and that the design, text, images and details are correct.</p>
+              <p><b>No more revisions can be applied after approval.</b> This version will be treated as final, and any later change will need to be requested as a new job.</p>
+            </div>
+            <input className="input mt-4" placeholder="Your full name" value={aname} onChange={(e) => setAname(e.target.value)} autoComplete="name" />
+            <label className="mt-3 flex items-start gap-2 text-sm">
+              <input type="checkbox" className="mt-1" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
+              <span>I have reviewed this proof and agree to these terms.</span>
+            </label>
+            {aerr && <p className="mt-2 text-xs text-red-400">{aerr}</p>}
+            <div className="mt-5 flex justify-end gap-2">
+              <button className="btn-ghost" onClick={() => setTerms(false)}>Cancel</button>
+              <button className="btn" disabled={abusy || !agree || aname.trim().length < 2} onClick={approve}>{abusy ? 'Approving…' : 'Approve and finalize'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {done && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/80" role="dialog" aria-live="polite">

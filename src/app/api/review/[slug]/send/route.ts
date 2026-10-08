@@ -14,6 +14,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   const version = await db.version.findFirst({ where: { id: body.versionId, projectId: project.id }, include: { images: true } });
   const items = (body.comments ?? []).slice(0, 100).filter((c) => c.text?.trim());
   if (!version || !items.length) return Response.json({ error: 'Nothing to send' }, { status: 400 });
+  if (project.approvedVersion === version.number) return Response.json({ error: 'This version has been approved and is closed for revisions.' }, { status: 403 });
 
   const author = (body.name ?? '').trim().slice(0, 80) || 'Guest';
   let pin = (await db.comment.aggregate({ where: { versionId: version.id }, _max: { pin: true } }))._max.pin ?? 0;
@@ -36,9 +37,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   ]);
 
   const base = process.env.APP_URL || '';
+  const ordered = [...version.images].sort((a, b) => a.position - b.position);
+  const pageOf = (id: string | null) => ordered.findIndex((i) => i.id === id) + 1;
   await notify(
-    `${author} sent ${rows.length} comment${rows.length === 1 ? '' : 's'} on ${project.title}`,
-    `${rows.map((r) => `${r.pin ? `#${r.pin}` : 'General'}: ${r.text}`).join('\n')}\n\n${base}/admin`,
+    `${author} sent ${rows.length} comment${rows.length === 1 ? '' : 's'} on ${project.client.name} / ${project.title}`,
+    `${rows.map((r) => `${r.pin ? `#${r.pin} (page ${pageOf(r.imageId)}, ${r.x!.toFixed(0)}% from left, ${r.y!.toFixed(0)}% from top)` : 'General'}: ${r.text}`).join('\n')}\n\nSee each change marked on the design: ${base}/admin/${project.id}`,
   );
   return Response.json({ ok: true, count: rows.length });
 }
