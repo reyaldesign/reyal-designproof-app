@@ -13,6 +13,8 @@ model Client {
   name      String
   email     String?
   notes     String?
+  // How many revision rounds each of this client's proofs includes. A proof can override it.
+  revisionsIncluded Int @default(2)
   createdAt DateTime  @default(now())
   projects  Project[]
 }
@@ -31,7 +33,9 @@ model Project {
   approvedAt      DateTime?
   approvedBy      String?
   approvedVersion Int?
+  revisionsIncluded Int? // blank means use the client's number
   versions  Version[]
+  submissions Submission[]
 }
 
 model Version {
@@ -43,6 +47,7 @@ model Version {
   project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   images    Image[]
   comments  Comment[]
+  submissions Submission[]
 
   @@unique([projectId, number])
 }
@@ -56,9 +61,26 @@ model Image {
   comments  Comment[]
 }
 
+// One press of "Send now" by the client. Each one uses up one revision.
+model Submission {
+  id        String    @id @default(cuid())
+  projectId String
+  versionId String
+  number    Int
+  author    String
+  createdAt DateTime  @default(now())
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  version   Version   @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  comments  Comment[]
+
+  @@unique([projectId, number])
+}
+
 model Comment {
   id           String    @id @default(cuid())
   versionId    String
+  submissionId String?
+  submission   Submission? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
   imageId      String?
   parentId     String?
   author       String
