@@ -46,6 +46,20 @@ The server pulls this repo from GitHub and builds the Docker image itself. It li
 
 **Optional push-to-deploy:** the Deploy workflow always builds and publishes the image to ghcr.io. It only deploys to the server if the repo variable `AUTO_DEPLOY` is `true` and the secrets `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` are set. Not needed for the flow above.
 
+## Revisions
+
+Each client includes a number of revision rounds per proof (default **2**). Change it with **Edit client** on the client page. A single proof can override it under its settings (leave blank to use the client's number).
+
+- Every time a client presses **Send now**, one revision is used. Before it goes through they get a pop-up: "Use revision 1 of 2?" asking them to confirm that this is everything they need changed for that round. It appears every time, and warns when it is the last included revision.
+- When a client has used all of them, **Send now** is replaced by a notice to contact Reyal Design. The server enforces this too. Raise the number to let them send again.
+- The proof page shows "Revisions 1 of 2 used". Approving does not use a revision.
+
+## Activity, statuses and sending
+
+- Each client page has an **Activity** feed: proofs created, versions uploaded, each revision sent, replies, approvals.
+- Comments carry a status: **Needs team** (no reply yet), **Replied**, **Done** (resolved).
+- On a proof page, **Client view** opens exactly what the client sees. **Send to client** gives the link with a copy button and an email draft (opened in your own mail app, nothing is sent automatically) and can mark the proof as Sent.
+
 ## Not built yet
 
 - Real-time updates (admin page refreshes on load; add Pusher or SSE if needed)

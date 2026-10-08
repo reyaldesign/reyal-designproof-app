@@ -12,6 +12,7 @@ type Draft = { tid: string; imageId: string | null; x: number | null; y: number 
 type Props = {
   slug: string; title: string; client: string;
   approval: { by: string; at: string; version: number } | null; latest: number;
+  revisions: { used: number; included: number };
   versions: { number: number; label: string }[];
   current: { id: string; number: number; label: string };
   images: { id: string; file: string }[];
@@ -25,11 +26,12 @@ const store = {
 const uid = () => Math.random().toString(36).slice(2, 10);
 const ago = (iso: string) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-export default function ReviewClient({ slug, title, client, approval, latest, versions, current, images, comments }: Props) {
+export default function ReviewClient({ slug, title, client, approval, latest, revisions, versions, current, images, comments }: Props) {
   const router = useRouter();
   const draftKey = `rp:draft:${current.id}`;
   const [mode, setMode] = useState<'comment' | 'view'>('comment');
   const [terms, setTerms] = useState(false);
+  const [confirmSend, setConfirmSend] = useState(false);
   const [agree, setAgree] = useState(false);
   const [aname, setAname] = useState('');
   const [aerr, setAerr] = useState('');
@@ -56,6 +58,9 @@ export default function ReviewClient({ slug, title, client, approval, latest, ve
   const img = images[idx];
   const locked = approval?.version === current.number; // approved versions take no more comments
   const canApprove = !approval && current.number === latest;
+  const nextRev = revisions.used + 1; // the revision this Send now would use
+  const outOfRevisions = revisions.used >= revisions.included;
+  const unsent = drafts.filter((d) => d.text).length;
   const roots = comments.filter((c) => !c.parentId);
   const maxPin = Math.max(0, ...roots.map((c) => c.pin ?? 0));
 
@@ -119,12 +124,16 @@ export default function ReviewClient({ slug, title, client, approval, latest, ve
     const ordered = [...pinned, ...drafts.filter((d) => d.x == null)].filter((d) => d.text);
     const r = await fetch(`/api/review/${slug}/send`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ versionId: current.id, name, comments: ordered }),
+      body: JSON.stringify({ versionId: current.id, name, comments: ordered, confirmed: true }),
     }).catch(() => null);
     setBusy(false);
-    if (!r?.ok) return setErr('Could not send. Check your connection and try again. Your comments are saved.');
+    setConfirmSend(false);
+    if (!r?.ok) {
+      const msg = ((await r?.json().catch(() => null)) as { error?: string } | null)?.error;
+      return setErr(msg || 'Could not send. Check your connection and try again. Your comments are saved.');
+    }
     setDrafts([]);
-    setDone(`${ordered.length} comment${ordered.length === 1 ? '' : 's'} sent`);
+    setDone(`Revision ${nextRev} sent (${ordered.length} comment${ordered.length === 1 ? '' : 's'})`);
     router.refresh();
   }
   function openTerms() {
@@ -302,15 +311,42 @@ export default function ReviewClient({ slug, title, client, approval, latest, ve
               <>
                 <input className="input" placeholder="Your name (optional)" value={name} onChange={(e) => setName(e.target.value)} />
                 {err && <p className="text-xs text-red-400">{err}</p>}
-                <button className="btn w-full !py-3 text-base" disabled={busy || !drafts.some((d) => d.text)} onClick={send}>
-                  {busy ? 'Sending…' : 'Send now'}
-                </button>
+                <div className="flex items-center justify-between text-xs text-zinc-400">
+                  <span>Revisions</span>
+                  <span className={outOfRevisions ? 'text-amber-300' : ''}>{Math.min(revisions.used, revisions.included)} of {revisions.included} used</span>
+                </div>
+                {outOfRevisions ? (
+                  <p className="rounded-lg border border-amber-500/40 bg-amber-950/30 p-3 text-xs text-amber-200">
+                    All {revisions.included} included revisions have been used. Please contact Reyal Design to arrange more revisions.
+                  </p>
+                ) : (
+                  <button className="btn w-full !py-3 text-base" disabled={busy || !unsent} onClick={() => setConfirmSend(true)}>
+                    {busy ? 'Sending…' : 'Send now'}
+                  </button>
+                )}
                 {canApprove && <button className="btn-ghost w-full" onClick={openTerms}>Approve this version</button>}
               </>
             )}
           </div>
         </aside>
       </div>
+
+      {confirmSend && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-labelledby="rev-h">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-6">
+            <h2 id="rev-h" className="text-lg font-semibold">Use revision {nextRev} of {revisions.included}?</h2>
+            <div className="mt-3 space-y-2 text-sm text-zinc-300">
+              <p>You are about to send <b>{unsent} comment{unsent === 1 ? '' : 's'}</b>. Sending counts as one of your {revisions.included} included revisions.</p>
+              <p>Please confirm this is <b>everything you need changed for revision {nextRev}</b>. Once it is sent you cannot add more to this round, and anything else will need a later revision.</p>
+              {nextRev === revisions.included && <p className="rounded-lg border border-amber-500/40 bg-amber-950/30 p-2 text-amber-200">This is your last included revision.</p>}
+            </div>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button className="btn-ghost" onClick={() => setConfirmSend(false)} disabled={busy}>Go back and add more</button>
+              <button className="btn" onClick={send} disabled={busy}>{busy ? 'Sending…' : `Yes, send revision ${nextRev}`}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {terms && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-labelledby="terms-h">

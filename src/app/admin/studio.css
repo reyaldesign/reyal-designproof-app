@@ -113,3 +113,16 @@ html.side-collapsed .side-top { display: flex; justify-content: center; }
   .side-bottom { margin-top: 0; border: 0; padding: 0; margin-left: auto; }
   .page { padding: 20px 16px 56px; }
 }
+
+/* status chips and activity feed */
+.chip { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 99px; font: 700 11px/1.5 var(--sans); white-space: nowrap; }
+.chip-needs { background: rgba(255,211,8,.16); color: var(--yellow); }
+.chip-replied { background: rgba(106,169,255,.16); color: #6aa9ff; }
+.chip-done { background: rgba(61,220,151,.14); color: var(--ok); }
+.act { display: grid; grid-template-columns: 12px 1fr auto; gap: 14px; align-items: start; padding: 11px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.act:hover { border-color: #3a3a42; }
+.act-dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 6px; background: var(--line-2); }
+.act-revision { background: var(--accent-hi); }
+.act-approved { background: var(--ok); }
+.act-reply { background: #6aa9ff; }
+.act-version, .act-proof { background: var(--yellow); }

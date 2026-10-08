@@ -38,6 +38,21 @@ export async function createClient(f: FormData) {
   redirect(`/admin/clients/${c.id}`);
 }
 
+const revisions = (v: string) => Math.min(20, Math.max(0, Math.round(Number(v)) || 0));
+
+export async function updateClient(f: FormData) {
+  await requireAdmin();
+  const id = str(f, 'id');
+  const name = str(f, 'name');
+  if (!name) redirect(`/admin/clients/${id}?error=${encodeURIComponent('Enter a client name.')}`);
+  await db.client.update({
+    where: { id },
+    data: { name, email: str(f, 'email') || null, notes: str(f, 'notes') || null, revisionsIncluded: revisions(str(f, 'revisionsIncluded')) },
+  });
+  revalidatePath(`/admin/clients/${id}`);
+  revalidatePath('/admin');
+}
+
 export async function deleteClient(f: FormData) {
   await requireAdmin();
   await db.client.delete({ where: { id: str(f, 'id') } });
@@ -72,6 +87,7 @@ export async function updateProject(f: FormData) {
     data: {
       title: str(f, 'title'),
       status: str(f, 'status'),
+      revisionsIncluded: str(f, 'revisionsIncluded') === '' ? null : revisions(str(f, 'revisionsIncluded')),
       ...(str(f, 'status') !== 'Approved' && { approvedAt: null, approvedBy: null, approvedVersion: null }),
       password: str(f, 'password') || null,
       expiresAt: date(str(f, 'expires')),
@@ -107,6 +123,15 @@ export async function replyTo(f: FormData) {
     data: { versionId: parent.versionId, imageId: parent.imageId, parentId: parent.id, author: 'Reyal Design', text, fromDesigner: true },
   });
   revalidatePath(`/admin/${parent.version.projectId}`);
+}
+
+/** Marks the proof as sent after the designer copies the link or opens the email draft. Nothing is emailed from here. */
+export async function markSent(f: FormData) {
+  await requireAdmin();
+  const id = str(f, 'id');
+  const p = await db.project.findUniqueOrThrow({ where: { id } });
+  if (p.status === 'Draft') await db.project.update({ where: { id }, data: { status: 'Sent' } });
+  revalidatePath(`/admin/${id}`);
 }
 
 export async function reopenApproval(f: FormData) {
