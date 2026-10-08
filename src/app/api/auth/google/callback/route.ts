@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { cookieOpts, safeEq, sign } from '@/lib/auth';
+import { cookieOpts, rememberUser, safeEq, sign } from '@/lib/auth';
 import { clientId, clientSecret, googleEnabled, isAllowed, redirectUri, to } from '@/lib/google';
 
 export async function GET(req: Request) {
@@ -33,5 +33,6 @@ export async function GET(req: Request) {
   if (!isAllowed(claims.email)) return to(req, '/login?error=denied');
 
   jar.set('rp_admin', sign('admin'), cookieOpts);
+  await rememberUser(claims.email);
   return to(req, '/admin');
 }

@@ -4,7 +4,7 @@ const publicHost = (() => {
 })();
 
 export default {
-  serverExternalPackages: ['mupdf'],
+  serverExternalPackages: ['mupdf', 'sharp'],
   experimental: {
     serverActions: {
       bodySizeLimit: '60mb',

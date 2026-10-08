@@ -28,3 +28,13 @@ export async function isAdmin() {
 export async function requireAdmin() {
   if (!(await isAdmin())) redirect('/login');
 }
+
+/** Remembers who signed in so the sidebar can show them. Display only, never used for access. */
+export async function rememberUser(email: string) {
+  (await cookies()).set('rp_user', email, { ...cookieOpts, httpOnly: false });
+}
+export async function currentUser() {
+  const email = (await cookies()).get('rp_user')?.value ?? process.env.ADMIN_EMAIL ?? '';
+  const first = email.split('@')[0].split(/[._-]/)[0] || 'Designer';
+  return { email, name: first.charAt(0).toUpperCase() + first.slice(1) };
+}

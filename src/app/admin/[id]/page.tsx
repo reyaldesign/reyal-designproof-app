@@ -34,10 +34,15 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const link = `${base}/review/${p.slug}`;
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10">
-      <Link href={`/admin/clients/${p.clientId}`} className="text-sm text-zinc-400 hover:text-white">← {p.client.name}</Link>
-      <h1 className="mb-1 mt-3 text-xl font-semibold">{p.title}</h1>
-      <p className="mb-6 text-sm text-zinc-500">{p.client.name}</p>
+    <div className="page">
+      <div className="crumbs"><Link href="/admin">Clients</Link> <span className="muted"> / </span> <Link href={`/admin/clients/${p.clientId}`}>{p.client.name}</Link></div>
+      <div className="page-head">
+        <div>
+          <div className="eyebrow">{p.status}</div>
+          <h1 className="h1">{p.title}</h1>
+          <p className="muted" style={{ marginTop: 8 }}>{p.client.name}</p>
+        </div>
+      </div>
 
       {p.approvedAt && (
         <section className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-600/50 bg-emerald-950/40 p-4">
@@ -142,6 +147,6 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
         <input type="hidden" name="id" value={p.id} />
         <button className="text-sm text-red-400 hover:text-red-300">Delete project and all comments</button>
       </form>
-    </main>
+    </div>
   );
 }

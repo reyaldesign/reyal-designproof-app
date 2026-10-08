@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import Script from 'next/script';
 import { redirect } from 'next/navigation';
-import { cookieOpts, safeEq, sign } from '@/lib/auth';
+import { cookieOpts, rememberUser, safeEq, sign } from '@/lib/auth';
 import { googleEnabled } from '@/lib/google';
 
 async function login(formData: FormData) {
@@ -11,6 +11,7 @@ async function login(formData: FormData) {
     safeEq(String(formData.get('password') || ''), process.env.ADMIN_PASSWORD || '');
   if (!ok) redirect('/login?error=1');
   (await cookies()).set('rp_admin', sign('admin'), cookieOpts);
+  await rememberUser(String(formData.get('email') || '').trim().toLowerCase());
   redirect('/admin');
 }
 
