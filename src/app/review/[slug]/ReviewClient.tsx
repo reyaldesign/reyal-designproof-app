@@ -58,7 +58,7 @@ export default function ReviewClient({ slug, title, client, approval, latest, re
   const img = images[idx];
   const locked = approval?.version === current.number; // approved versions take no more comments
   const canApprove = !approval && current.number === latest;
-  const nextRev = revisions.used + 1; // the revision this Send now would use
+  const nextRev = revisions.used + 1; // the revision this Send Revision would use
   const outOfRevisions = revisions.used >= revisions.included;
   const unsent = drafts.filter((d) => d.text).length;
   const roots = comments.filter((c) => !c.parentId);
@@ -321,7 +321,7 @@ export default function ReviewClient({ slug, title, client, approval, latest, re
                   </p>
                 ) : (
                   <button className="btn w-full !py-3 text-base" disabled={busy || !unsent} onClick={() => setConfirmSend(true)}>
-                    {busy ? 'Sending…' : 'Send now'}
+                    {busy ? 'Sending…' : 'Send Revision'}
                   </button>
                 )}
                 {canApprove && <button className="btn-ghost w-full" onClick={openTerms}>Approve this version</button>}

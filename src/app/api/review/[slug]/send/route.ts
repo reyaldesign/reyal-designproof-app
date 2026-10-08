@@ -17,7 +17,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   if (!version || !items.length) return Response.json({ error: 'Nothing to send' }, { status: 400 });
   if (project.approvedVersion === version.number) return Response.json({ error: 'This version has been approved and is closed for revisions.' }, { status: 403 });
 
-  // Each Send now uses one revision. The client must have confirmed it, and there must be one left.
+  // Each Send Revision uses one revision. The client must have confirmed it, and there must be one left.
   if (body.confirmed !== true) return Response.json({ error: 'Please confirm this revision before sending.' }, { status: 400 });
   const rev = await revisionInfo(project.id);
   if (rev.left <= 0) return Response.json({ error: `All ${rev.included} included revisions have been used. Please contact Reyal Design to arrange more.` }, { status: 403 });

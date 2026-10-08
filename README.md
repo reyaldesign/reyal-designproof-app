@@ -1,6 +1,6 @@
 # Reyal Proof
 
-Client design proofing. Designers upload images and share a link. Clients click the design to drop numbered pins, comment, and press Send now. No client account needed.
+Client design proofing. Designers upload images and share a link. Clients click the design to drop numbered pins, comment, and press Send Revision. No client account needed.
 
 Stack: Next.js 15 (App Router), TypeScript, Tailwind 3, Prisma + SQLite, react-zoom-pan-pinch, sharp (card thumbnails), mupdf (PDF pages). Images live on disk under `DATA_DIR/uploads`.
 
@@ -24,7 +24,7 @@ npm run dev                 # http://localhost:3100, sign in at /login
 
 1. Sign in, fill in **New proof** (title, client, optional password and expiry, images). Multi-page proofs are multiple images, or a PDF (each page is rendered to an image, up to 60 pages). Proofs are previews: images up to 10 MB each, PDFs up to 30 MB, 40 MB per upload. The form blocks bigger files with a message before sending.
 2. Open the project, copy the **Share link**, send it to the client. Set status to Sent.
-3. When the client presses Send now, status becomes Feedback Received and you get an email (or a console log if SMTP is not set).
+3. When the client presses Send Revision, status becomes Feedback Received and you get an email (or a console log if SMTP is not set).
 4. On the project page: Resolve or Reopen each comment, and Reply. Clients see replies on their next visit.
 5. **Upload a new version** to add v2, v3. Clients switch versions from the top bar dropdown.
 6. Clients can press **Approve this version**. They read a short terms pop-up, type their name and tick the box. The version is then locked (no more comments), status becomes Approved, and the project page shows who approved and when. Use **Reopen for changes** to undo it, or upload a new version.
@@ -50,8 +50,8 @@ The server pulls this repo from GitHub and builds the Docker image itself. It li
 
 Each client includes a number of revision rounds per proof (default **2**). Change it with **Edit client** on the client page. A single proof can override it under its settings (leave blank to use the client's number).
 
-- Every time a client presses **Send now**, one revision is used. Before it goes through they get a pop-up: "Use revision 1 of 2?" asking them to confirm that this is everything they need changed for that round. It appears every time, and warns when it is the last included revision.
-- When a client has used all of them, **Send now** is replaced by a notice to contact Reyal Design. The server enforces this too. Raise the number to let them send again.
+- Every time a client presses **Send Revision**, one revision is used. Before it goes through they get a pop-up: "Use revision 1 of 2?" asking them to confirm that this is everything they need changed for that round. It appears every time, and warns when it is the last included revision.
+- When a client has used all of them, **Send Revision** is replaced by a notice to contact Reyal Design. The server enforces this too. Raise the number to let them send again.
 - The proof page shows "Revisions 1 of 2 used". Approving does not use a revision.
 
 ## Activity, statuses and sending
