@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { cookieOpts, safeEq } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { loadProject, reviewCookie, reviewToken } from '@/lib/review';
+import { revisionInfo } from '@/lib/revisions';
 import ReviewClient from './ReviewClient';
 
 export const dynamic = 'force-dynamic';
@@ -51,6 +52,7 @@ export default async function Review({
     where: { id: version.id },
     include: { images: { orderBy: { position: 'asc' } }, comments: { orderBy: { createdAt: 'asc' } } },
   });
+  const rev = await revisionInfo(project.id);
   return (
     <ReviewClient
       slug={slug}
@@ -58,6 +60,7 @@ export default async function Review({
       client={project.client.name}
       approval={project.approvedVersion != null ? { by: project.approvedBy ?? '', at: project.approvedAt?.toISOString() ?? '', version: project.approvedVersion } : null}
       latest={project.versions[0].number}
+      revisions={{ used: rev.used, included: rev.included }}
       versions={project.versions.map((x) => ({ number: x.number, label: x.label }))}
       current={{ id: data.id, number: data.number, label: data.label }}
       images={data.images.map((i) => ({ id: i.id, file: i.file }))}

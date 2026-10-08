@@ -8,6 +8,9 @@ import FilePicker from '@/components/FilePicker';
 import SubmitButton from '@/components/SubmitButton';
 import PinCrop from './PinCrop';
 import ProofViewer from './ProofViewer';
+import { commentStatus } from '@/lib/format';
+import { revisionInfo } from '@/lib/revisions';
+import SendToClient from './SendToClient';
 import { addVersion, deleteProject, reopenApproval, replyTo, setResolved, updateProject } from '../actions';
 
 export const dynamic = 'force-dynamic';
@@ -32,6 +35,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const h = await headers();
   const base = process.env.APP_URL || `${h.get('x-forwarded-proto') || 'http'}://${h.get('host')}`;
   const link = `${base}/review/${p.slug}`;
+  const rev = await revisionInfo(p.id);
 
   return (
     <div className="page">
@@ -40,7 +44,11 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
         <div>
           <div className="eyebrow">{p.status}</div>
           <h1 className="h1">{p.title}</h1>
-          <p className="muted" style={{ marginTop: 8 }}>{p.client.name}</p>
+          <p className="muted" style={{ marginTop: 8 }}>{p.client.name} · <span className={rev.left === 0 ? 'chip chip-needs' : ''}>Revisions {Math.min(rev.used, rev.included)} of {rev.included} used</span></p>
+        </div>
+        <div className="head-actions">
+          <a className="btn" href={link} target="_blank" rel="noreferrer">Client view</a>
+          <SendToClient id={p.id} link={link} title={p.title} clientName={p.client.name} clientEmail={p.client.email} status={p.status} />
         </div>
       </div>
 
@@ -74,6 +82,9 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
           <input className="input" name="password" defaultValue={p.password ?? ''} placeholder="Password (optional)" />
           <label className="text-sm text-zinc-400">Expires
             <input className="input mt-1" name="expires" type="date" defaultValue={p.expiresAt?.toISOString().slice(0, 10)} />
+          </label>
+          <label className="text-sm text-zinc-400">Included revisions for this proof
+            <input className="input mt-1" name="revisionsIncluded" type="number" min={0} max={20} defaultValue={p.revisionsIncluded ?? ''} placeholder={`Client default: ${p.client.revisionsIncluded}`} />
           </label>
           <div className="flex items-end"><button className="btn">Save settings</button></div>
         </form>
@@ -112,6 +123,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                           <span className="mr-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-rose-500 px-1.5 text-xs font-semibold text-white">{c.pin ?? '•'}</span>
                           <span className="text-sm font-medium">{c.author}</span>
                           <span className="ml-2 text-xs text-zinc-500">{when(c.createdAt)}</span>
+                          {(() => { const st = commentStatus(c, v.comments.some((r) => r.parentId === c.id)); return <span className={`chip ${st.cls} ml-2`}>{st.label}</span>; })()}
                           <div className="mt-1 text-xs text-amber-300">
                             {img && c.x != null
                               ? `Page ${page + 1} of ${v.images.length} · ${c.x.toFixed(0)}% from left, ${c.y!.toFixed(0)}% from top · click to show on page`
