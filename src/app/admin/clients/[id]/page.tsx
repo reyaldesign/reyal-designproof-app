@@ -49,7 +49,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
               <label className="muted">Included revisions per proof
                 <input className="input" style={{ marginTop: 4 }} name="revisionsIncluded" type="number" min={0} max={20} defaultValue={client.revisionsIncluded} required />
               </label>
-              <p className="muted" style={{ fontSize: 12 }}>Each time this client presses Send now, one revision is used. When they run out they can no longer send, until you raise this number. A single proof can override it in its settings.</p>
+              <p className="muted" style={{ fontSize: 12 }}>Each time this client presses Send Revision, one revision is used. When they run out they can no longer send, until you raise this number. A single proof can override it in its settings.</p>
               <SubmitButton className="btn btn-primary" pending="Saving…">Save client</SubmitButton>
             </form>
           </Dialog>
