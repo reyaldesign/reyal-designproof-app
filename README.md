@@ -2,7 +2,7 @@
 
 Client design proofing. Designers upload images and share a link. Clients click the design to drop numbered pins, comment, and press Send now. No client account needed.
 
-Stack: Next.js 15 (App Router), TypeScript, Tailwind 3, Prisma + SQLite, react-zoom-pan-pinch. Images live on disk under `DATA_DIR/uploads`.
+Stack: Next.js 15 (App Router), TypeScript, Tailwind 3, Prisma + SQLite, react-zoom-pan-pinch, sharp (card thumbnails), mupdf (PDF pages). Images live on disk under `DATA_DIR/uploads`.
 
 ## Run locally
 

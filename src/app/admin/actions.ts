@@ -124,5 +124,6 @@ export async function deleteProject(f: FormData) {
 
 export async function logout() {
   (await cookies()).delete('rp_admin');
+  (await cookies()).delete('rp_user');
   redirect('/login');
 }
