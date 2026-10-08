@@ -1,5 +1,7 @@
+# Used on the VPS (copied to /opt/reyal-proof by deploy). Locally you can also run: docker compose up --build
 services:
   app:
+    image: ghcr.io/reyaldesign/reyal-designproof-app:${TAG:-latest}
     build: .
     restart: unless-stopped
     env_file: .env
@@ -8,6 +10,6 @@ services:
       DATA_DIR: /data
     volumes:
       - ./data:/data
-    # Bound to localhost; nginx proxies the public domain to it.
+    # nginx on the host proxies client.reyaldesign.com to this port.
     ports:
       - "127.0.0.1:3100:3000"
