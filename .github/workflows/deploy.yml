@@ -71,11 +71,16 @@ jobs:
           [ -f data/app.db ] && cp data/app.db "backups/app-$(date -u +%Y%m%d-%H%M%S).db"
           ls -1t backups/app-*.db 2>/dev/null | tail -n +11 | xargs -r rm -f
           TAG=$SHA docker compose pull
-          TAG=$SHA docker compose up -d --remove-orphans
+          TAG=$SHA docker compose up -d
           for _ in $(seq 1 30); do
             sleep 2
             code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:3100/login || true)
-            if [ "$code" = 200 ]; then echo "$SHA" > .tag; docker image prune -f >/dev/null; echo 'Reyal Proof is up.'; exit 0; fi
+            if [ "$code" = 200 ]; then
+              echo "$SHA" > .tag
+              # Tidy only this app's old image tags (keep the current and the previous one).
+              docker images --format '{{.Repository}}:{{.Tag}}' | grep '^ghcr.io/reyaldesign/reyal-designproof-app:' | grep -v -e ":$SHA" -e ":latest" -e ":${prev:-none}" | xargs -r docker rmi >/dev/null 2>&1 || true
+              echo 'Reyal Proof is up.'; exit 0
+            fi
           done
           echo 'New version did not come up.' >&2
           docker compose logs --tail 40 app >&2 || true

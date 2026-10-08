@@ -11,6 +11,13 @@ BASE=/opt/reyal-proof
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
 id "$DEPLOY_USER" >/dev/null
+# This server hosts other apps. Refuse to continue if our port is taken, so nothing existing is disturbed.
+if ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE '[:.]3100$'; then
+  echo 'Port 3100 is already in use by something else. Pick a free port: change it in docker-compose.yml and deploy/nginx-proof.conf, then rerun.' >&2; exit 1
+fi
+if [ -e /etc/nginx/sites-enabled/reyal-proof ] || ! grep -rqs "client.reyaldesign.com" /etc/nginx 2>/dev/null; then :; else
+  echo 'nginx already has a server_name client.reyaldesign.com. Not adding a second one.' >&2; exit 1
+fi
 command -v docker >/dev/null || { echo 'Docker is not installed on this server.' >&2; exit 1; }
 docker compose version >/dev/null || { echo 'The "docker compose" plugin is missing.' >&2; exit 1; }
 command -v nginx >/dev/null || apt-get install -y nginx
@@ -43,9 +50,16 @@ ENV
   echo "Created $BASE/.env with a random session secret and admin password. Edit it next."
 fi
 
+# Add our site, test the WHOLE nginx config, and only then reload. If the test fails, undo our change and leave nginx untouched.
 install -m 644 "$HERE/nginx-proof.conf" /etc/nginx/sites-available/reyal-proof
 ln -sf /etc/nginx/sites-available/reyal-proof /etc/nginx/sites-enabled/reyal-proof
-nginx -t && systemctl reload nginx
+if nginx -t 2>/tmp/reyal-proof-nginx-test.txt; then
+  systemctl reload nginx
+else
+  rm -f /etc/nginx/sites-enabled/reyal-proof
+  echo 'nginx config test failed, so our site was removed and nginx was NOT reloaded. Details:' >&2
+  cat /tmp/reyal-proof-nginx-test.txt >&2; exit 1
+fi
 
 cat <<NEXT
 
