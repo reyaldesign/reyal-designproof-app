@@ -4,6 +4,8 @@ import { headers } from 'next/headers';
 import { requireAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
 import CardShell from './CardShell';
+import FilePicker from '@/components/FilePicker';
+import SubmitButton from '@/components/SubmitButton';
 import PinCrop from './PinCrop';
 import ProofViewer from './ProofViewer';
 import { addVersion, deleteProject, reopenApproval, replyTo, setResolved, updateProject } from '../actions';
@@ -12,9 +14,10 @@ export const dynamic = 'force-dynamic';
 const STATUSES = ['Draft', 'Sent', 'Feedback Received', 'Approved'];
 const when = (d: Date) => d.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
-export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {
   await requireAdmin();
   const { id } = await params;
+  const { error } = await searchParams;
   const p = await db.project.findUnique({
     where: { id },
     include: {
@@ -73,11 +76,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
       <section className="card mb-8">
         <h2 className="mb-3 text-sm font-medium text-zinc-400">Upload a new version</h2>
+        {error && <p className="mb-3 text-sm text-red-400">{error}</p>}
         <form action={addVersion} className="flex flex-wrap gap-3">
           <input type="hidden" name="projectId" value={p.id} />
           <input className="input max-w-xs" name="label" placeholder="Label (e.g. changes #41)" />
-          <input className="input max-w-xs" name="files" type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" multiple required />
-          <button className="btn">Upload version</button>
+          <div className="max-w-xs"><FilePicker className="input" /></div>
+          <SubmitButton pending="Uploading…">Upload version</SubmitButton>
         </form>
       </section>
 

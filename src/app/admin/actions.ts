@@ -12,9 +12,19 @@ const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 const files = (f: FormData) => f.getAll('files').filter((x): x is File => x instanceof File && x.size > 0);
 const date = (s: string) => (s ? new Date(`${s}T23:59:59`) : null);
 
-async function imageRows(f: FormData, start = 0) {
-  const names = await saveImages(files(f));
-  return names.map((file, i) => ({ file, position: start + i }));
+/** Saves the uploaded files. Returns the rows, or an error message the page can show. */
+async function imageRows(f: FormData, start = 0): Promise<{ rows: { file: string; position: number }[]; error?: string }> {
+  const picked = files(f);
+  try {
+    const names = await saveImages(picked);
+    if (!names.length) {
+      return { rows: [], error: picked.length ? 'None of those files could be used. Use JPG, PNG, WebP, GIF (up to 25 MB) or a readable PDF (up to 80 MB, not password protected).' : 'Choose at least one image or PDF.' };
+    }
+    return { rows: names.map((file, i) => ({ file, position: start + i })) };
+  } catch (e) {
+    console.error('upload failed', e);
+    return { rows: [], error: 'The server could not save the upload. Please try again, and tell the admin if it keeps happening.' };
+  }
 }
 
 export async function createClient(f: FormData) {
@@ -34,8 +44,10 @@ export async function deleteClient(f: FormData) {
 export async function createProject(f: FormData) {
   await requireAdmin();
   const clientId = str(f, 'clientId');
-  const images = await imageRows(f);
-  if (!str(f, 'title') || !images.length) redirect(`/admin/clients/${clientId}?error=Add a title and at least one image or PDF.`);
+  const { rows: images, error } = await imageRows(f);
+  const fail = (msg: string) => redirect(`/admin/clients/${clientId}?error=${encodeURIComponent(msg)}`);
+  if (!str(f, 'title')) fail('Enter a proof title.');
+  if (error) fail(error);
   const p = await db.project.create({
     data: {
       slug: randomBytes(16).toString('base64url'),
@@ -68,8 +80,8 @@ export async function updateProject(f: FormData) {
 export async function addVersion(f: FormData) {
   await requireAdmin();
   const projectId = str(f, 'projectId');
-  const images = await imageRows(f);
-  if (!images.length) redirect(`/admin/${projectId}`);
+  const { rows: images, error } = await imageRows(f);
+  if (error) redirect(`/admin/${projectId}?error=${encodeURIComponent(error)}`);
   const last = await db.version.findFirst({ where: { projectId }, orderBy: { number: 'desc' } });
   const number = (last?.number ?? 0) + 1;
   await db.version.create({ data: { projectId, number, label: str(f, 'label') || `Version ${number}`, images: { create: images } } });
