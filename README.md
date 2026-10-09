@@ -46,6 +46,10 @@ The server pulls this repo from GitHub and builds the Docker image itself. It li
 
 **Optional push-to-deploy:** the Deploy workflow always builds and publishes the image to ghcr.io. It only deploys to the server if the repo variable `AUTO_DEPLOY` is `true` and the secrets `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` are set. Not needed for the flow above.
 
+## The proof page
+
+A single-screen workspace. The header shows the title, type and a status track (Draft, Sent, Feedback received, Approved) that advances on its own, with one main button for the stage: **Send to client** while it is a draft or sent, **Upload vN** once feedback is in, none once approved. A bar under it has a tab per version, **+ New version**, and the share link with **Copy link**. Below, the page rail, the zoomable viewer and the comments panel (Open, Resolved, All). Each comment shows a zoomed crop of where the pin is, with **Reply** and **Resolve** inline. Settings (title, type, password, expiry, included revisions, status by hand) and **Delete proof** live in the **Settings** drawer. The client view is one click away with **Client view**.
+
 ## The designer dashboard
 
 - **Clients page:** a "Waiting on you" strip with the proofs that have open client comments, sort tabs (Needs attention, Recent, A-Z), type filter chips, and a search across client names and proof titles. Each client card shows their status in words (feedback, with client, draft, approved), open comments and last activity.
