@@ -105,6 +105,7 @@ model AiClient {
   id         String       @id @default(cuid())
   name       String
   notes      String?
+  logoFile   String? // the client's icon, stored in uploads/ai
   createdAt  DateTime     @default(now())
   categories AiCategory[]
   criteria   AiCriterion[]

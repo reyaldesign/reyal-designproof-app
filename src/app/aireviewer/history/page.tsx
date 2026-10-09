@@ -7,11 +7,11 @@ function parse<T>(s: string, fallback: T): T {
 }
 
 export default async function HistoryPage() {
-  const rows = await db.aiReview.findMany({ orderBy: { createdAt: 'desc' }, take: 500 });
+  const rows = await db.aiReview.findMany({ orderBy: { createdAt: 'desc' }, take: 500, include: { client: { select: { logoFile: true } } } });
   const data: HistoryRow[] = rows.map((r) => ({
     id: r.id, imageFile: r.imageFile, filename: r.originalFilename, score: r.score, verdict: r.verdict as Verdict, summary: r.summary,
     actionItems: parse<string[]>(r.actionItems, []), checks: parse<Check[]>(r.checks, []),
-    clientName: r.clientName, categoryName: r.categoryName, createdAt: r.createdAt.toISOString(),
+    clientName: r.clientName, clientLogo: r.client?.logoFile ?? null, categoryName: r.categoryName, createdAt: r.createdAt.toISOString(),
   }));
   return <HistoryList rows={data} />;
 }

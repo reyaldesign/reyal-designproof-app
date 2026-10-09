@@ -54,6 +54,9 @@ A separate tool at `/aireviewer` (sidebar item, plus a tile on the dashboard) th
 - **History:** every review, grouped by day, filterable by result, client, image type and file name. Change a result by hand, or delete a review (its image goes too).
 - **Clients:** per-client checklists. Criteria for every image type sit on top, and each of the six default types (Reel/Animation, Flyer, Photo Resize, Carousel, Story/IG Cover, Profile Logo) adds its own. Rename, reorder and add types freely.
 
+- **Client icons:** upload a logo or icon per client on the Clients screen (PNG, JPG, WebP or GIF up to 2 MB, cropped to a 256px square). Until you do, a colored initial is shown. Icons appear in the client list, the review picker and History. Replacing or removing an icon, or deleting the client, deletes the old file.
+- **AI status:** an **AI active / AI slow / AI down** indicator in the page header and the session panel, with the reason on hover (no key set, key rejected, Anthropic unreachable or having problems, rate limited, out of credits). It checks by listing models, which costs no tokens, once a minute and right after a failed review. Click it to check again.
+
 **Switch and settings (in `.env`):** the whole tool is hidden (404, no sidebar item) unless `AI_REVIEWER_ENABLED="true"`. It needs `ANTHROPIC_API_KEY` from console.anthropic.com (billing on, and set a monthly spend limit there). Optional: `AI_REVIEWER_MODEL`, `AI_REVIEWER_EFFORT`, `AI_REVIEWER_MAX_TOKENS`, `AI_MAX_CONCURRENT`, and the two price variables used for the cost estimate. Each review is a paid call, so only signed-in team members can run one.
 
 ## The proof page
