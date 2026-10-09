@@ -53,7 +53,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
         </header>
 
         <section data-spotlight className="login-card">
-          <h1 className="login-title">Let&apos;s proof.</h1>
+          <h1 className="login-title">Reyal Design Studio</h1>
           <p className="login-intro">
             {google
               ? <>Sign in with your <strong>@{domain()}</strong> Google account to manage clients, proofs and feedback.</>

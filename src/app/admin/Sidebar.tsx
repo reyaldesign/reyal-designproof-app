@@ -31,7 +31,7 @@ export default function Sidebar({ name, email, open, pending, tools, home, signO
   return (
     <aside className="side" data-spotlight>
       <div className="side-top">
-        <Link href={home} className="brand" aria-label="Reyal Studio home">
+        <Link href={home} className="brand" aria-label="Reyal Design Studio home">
           <Brand />
         </Link>
       </div>

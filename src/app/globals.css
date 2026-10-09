@@ -12,7 +12,7 @@ body { background: #0b0b0c; color: #e8e8ea; font-family: ui-sans-serif, system-u
   .card { @apply rounded-xl border border-zinc-800 bg-zinc-950 p-5; }
 }
 
-/* ---------- sign in (ported from Reyal Studio) ---------- */
+/* ---------- sign in (ported from Reyal Studio (the studio app)) ---------- */
 :root { --display: Poppins, Urbanist, system-ui, sans-serif; --sans: Urbanist, system-ui, -apple-system, 'Segoe UI', sans-serif; --muted: #8b8b95; --ink-2: #c7c7cd; --line-2: #32323a; --accent-hi: #c4132f; }
 .login { min-height: 100vh; background: radial-gradient(900px 500px at 85% -10%, rgba(162,14,38,.35), transparent 60%), #000; font-family: var(--sans); }
 .login-wrap { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; padding: 24px 32px; gap: 24px; }
@@ -25,7 +25,7 @@ body { background: #0b0b0c; color: #e8e8ea; font-family: ui-sans-serif, system-u
 .brand-word b { font-weight: 700; color: var(--accent-hi); }
 .login-tag { font: 700 11px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .login-card { align-self: center; justify-self: center; width: min(480px, 100%); display: grid; gap: 18px; padding: 36px; border-radius: 24px; border: 1px solid #262626; background: #000; box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); position: relative; overflow: hidden; isolation: isolate; }
-.login-title { font: 800 clamp(48px, 7vw, 76px)/.95 var(--display); letter-spacing: -.04em; }
+.login-title { font: 800 clamp(40px, 5.2vw, 60px)/1 var(--display); letter-spacing: -.04em; }
 .login-intro { color: var(--ink-2); font-size: 15px; }
 .login-intro strong { color: #f6f6f7; }
 .login-foot { color: var(--muted); font-size: 12px; text-align: center; }
