@@ -11,7 +11,7 @@ const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 const DEFAULT_CATEGORIES = ['Reel/Animation', 'Flyer', 'Photo Resize', 'Carousel', 'Story/IG Cover', 'Profile Logo'];
 const refresh = () => { revalidatePath('/aireviewer', 'layout'); };
 
-// ----- clients (the tool's own list, unrelated to Reyal Proof clients) -----
+// ----- clients (the tool's own list, unrelated to the proofing clients) -----
 export async function createAiClient(f: FormData) {
   await requireAi('AI_CRITERIA');
   const name = str(f, 'name');

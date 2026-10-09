@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# One-time server setup for Reyal Proof (Docker). Run ON the VPS by someone with sudo:
+# One-time server setup for Reyal Design Studio (Docker). Run ON the VPS by someone with sudo:
 #   sudo DEPLOY_USER=mlara bash setup-vps.sh
 # Creates /opt/reyal-proof (data, backups, .env), gives the deploy user Docker access, and adds the nginx site for
-# client.reyaldesign.com. It does not touch Reyal Studio. Safe to run twice.
+# client.reyaldesign.com. It does not touch Reyal Design Studio. Safe to run twice.
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo 'Run with sudo.' >&2; exit 1; }
 DEPLOY_USER="${DEPLOY_USER:?Set DEPLOY_USER to the account GitHub deploys as, e.g. DEPLOY_USER=mlara}"
@@ -42,7 +42,7 @@ SMTP_HOST=""
 SMTP_PORT="587"
 SMTP_USER=""
 SMTP_PASS=""
-MAIL_FROM="Reyal Proof <proof@reyaldesign.com>"
+MAIL_FROM="Reyal Design Studio <proof@reyaldesign.com>"
 NOTIFY_EMAIL=""
 ENV
   chown "$DEPLOY_USER":"$DEPLOY_USER" "$BASE/.env"

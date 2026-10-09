@@ -1,4 +1,4 @@
-/* Designer area, in the look of Reyal Studio. Scoped to .studio so the client review page is untouched. */
+/* Designer area, in the look of Reyal Studio (the studio app). Scoped to .studio so the client review page is untouched. */
 .studio { --bg: #09090b; --bg-2: #0f0f12; --surface: #141417; --surface-2: #1b1b1f; --surface-3: #25252b; --ink: #f6f6f7; --ink-2: #c7c7cd; --muted: #8b8b95; --line: #222227; --line-2: #32323a;
   --accent: #a20e26; --accent-hi: #c4132f; --yellow: #ffd308; --ok: #3ddc97; --bad: #ff5c6c; --side-w: 228px;
   --display: Poppins, Urbanist, system-ui, sans-serif; --sans: Urbanist, system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -41,17 +41,22 @@ html.side-collapsed .studio { --side-w: 68px; }
 .side-item.on { background: var(--surface-3); color: #fff; }
 .side-item.on::before { content: ""; position: absolute; left: -12px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent-hi); }
 .side-badge { margin-left: auto; min-width: 22px; height: 20px; padding: 0 6px; border-radius: 99px; display: inline-grid; place-items: center; background: var(--accent); color: #fff; font: 800 11px/1 var(--sans); }
+.studio .side-section { padding: 16px 11px 6px; font: 700 10px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: #71717a; }
+.studio .side-badge-warn { background: var(--yellow); color: #111; }
+html.side-collapsed .side-section { display: none; }
 .side-bottom { margin-top: auto; display: grid; gap: 4px; padding-top: 10px; border-top: 1px solid var(--line); }
 .side-bottom form { margin: 0; }
 .side-user { display: flex; align-items: center; gap: 10px; padding: 6px 7px; min-width: 0; }
 .avatar { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; flex: none; background: var(--surface-3); font: 700 12px/1 var(--sans); color: var(--ink); }
 .side-user .side-label { display: grid; min-width: 0; line-height: 1.25; }
 .side-user small { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-burger { display: none; }
 .side-toggle { justify-self: end; display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--surface-2); color: var(--ink-2); cursor: pointer; transition: transform .2s; }
 .side-toggle:hover { color: var(--ink); }
 .side-label { min-width: 0; overflow: hidden; white-space: nowrap; }
 html.side-collapsed .side { padding-left: 10px; padding-right: 10px; }
-html.side-collapsed .side-label, html.side-collapsed .brand-word { display: none; }
+html.side-collapsed .side-label, html.side-collapsed .brand-word, html.side-collapsed .brand-logo { display: none; }
+html.side-collapsed .brand-icon { display: block; }
 html.side-collapsed .side-item { justify-content: center; padding: 10px; }
 html.side-collapsed .side-item.on::before { left: -10px; }
 html.side-collapsed .side-badge { position: absolute; top: 2px; right: 0; min-width: 18px; height: 16px; font-size: 10px; }
@@ -109,8 +114,26 @@ html.side-collapsed .side-top { display: flex; justify-content: center; }
 
 @media (max-width: 800px) {
   .studio { grid-template-columns: 1fr; }
-  .side { position: static; height: auto; flex-direction: row; align-items: center; flex-wrap: wrap; }
-  .side-bottom { margin-top: 0; border: 0; padding: 0; margin-left: auto; }
+  /* phones: a top bar with the logo and a menu button; the menu opens underneath */
+  .side { position: sticky; top: 0; height: auto; max-height: 100vh; overflow-y: auto; gap: 0; padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .side-top, html.side-collapsed .side-top { display: flex; align-items: center; justify-content: space-between; padding: 0; }
+  .side-burger { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 11px; border: 1px solid var(--line-2); background: var(--surface-2); color: var(--ink); cursor: pointer; }
+  .side-burger svg { width: 22px; height: 22px; }
+  .side-nav, .side-bottom { display: none; }
+  .side.menu-open .side-nav { display: grid; padding-top: 12px; }
+  .side.menu-open .side-bottom { display: grid; margin-top: 10px; }
+  .side-toggle { display: none; }
+  .side-item.on::before, html.side-collapsed .side-item.on::before { display: none; }
+  .side-item { min-height: 44px; }
+  /* the saved "collapsed" choice is for desktop only */
+  html.side-collapsed .side { padding: 10px 16px; }
+  html.side-collapsed .side-label { display: block; }
+  html.side-collapsed .side-user .side-label { display: grid; }
+  html.side-collapsed .brand-logo { display: block; }
+  html.side-collapsed .brand-icon { display: none; }
+  html.side-collapsed .side-item { justify-content: flex-start; padding: 9px 11px; }
+  html.side-collapsed .side-user { justify-content: flex-start; }
+  html.side-collapsed .side-badge { position: static; min-width: 22px; height: 20px; font-size: 11px; }
   .page { padding: 20px 16px 56px; }
 }
 

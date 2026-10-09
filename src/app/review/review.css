@@ -1,9 +1,9 @@
-/* Client review page, in the Reyal Studio look. Scoped to .review so nothing else is affected. */
+/* Client review page, in the Reyal Studio (studio app) look. Scoped to .review so nothing else is affected. */
 .review { --bg: #09090b; --stage: #0f0f12; --surface: #141417; --surface-2: #1b1b1f; --surface-3: #25252b; --line: #222227; --line-2: #32323a; --line-3: #45454e;
   --ink: #f6f6f7; --ink-2: #c7c7cd; --muted: #8b8b95; --accent: #a20e26; --accent-hi: #c4132f; --yellow: #ffd308; --yellow-ink: #ffe36b; --blue: #6aa9ff; --green: #3ddc97;
   --display: Poppins, Urbanist, system-ui, sans-serif; --sans: Urbanist, system-ui, -apple-system, 'Segoe UI', sans-serif;
   height: 100dvh; display: grid; grid-template-rows: 64px minmax(0, 1fr); background: var(--bg); color: var(--ink); font: 500 14px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
-.review button { font: inherit; color: inherit; cursor: pointer; }
+:where(.review) button { font: inherit; color: inherit; cursor: pointer; } /* :where keeps this base rule weaker than the button classes, so .rv-light keeps its dark text */
 .review button:disabled { cursor: not-allowed; }
 .review ::placeholder { color: var(--muted); }
 
@@ -188,7 +188,8 @@
   .rv-sheet-row b { font: 700 15px/1 var(--display); }
   .rv-sheet-row span { font-size: 13px; color: var(--muted); }
   .rv-sheet-row .rev { margin-left: auto; font-size: 12px; }
-  .rv-sheet .rv-list { overflow: visible; padding: 0; }
+  .rv-sheet { grid-auto-rows: max-content; } /* rows keep their full height; the sheet itself scrolls */
+  .rv-sheet .rv-list { overflow: visible; padding: 0; flex: none; min-height: auto; }
   .rv-sheet .rv-tabs { padding: 0; }
   .rv-sheet .rv-foot { padding: 0; border-top: 0; }
   .rv-sheet .rv-first { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px dashed rgba(255,211,8,.5); }

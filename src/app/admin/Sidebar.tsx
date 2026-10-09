@@ -1,8 +1,9 @@
 'use client';
 
+import Brand from '@/components/Brand';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const grid = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="13.5" width="7" height="7" rx="1.5" /></svg>;
 const inbox = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3.5 13.5 6 5.5h12l2.5 8" /><path d="M3.5 13.5v5a1 1 0 0 0 1 1h15a1 1 0 0 0 1-1v-5h-5l-1.5 2.5h-4L8.5 13.5z" /></svg>;
@@ -13,12 +14,14 @@ const out = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWid
 
 export default function Sidebar({ name, email, open, pending, tools, home, signOut, ai }: { name: string; email: string; open: number; pending: number; tools: string[]; home: string; signOut: () => Promise<void>; ai: boolean }) {
   const path = usePathname();
+  const [menu, setMenu] = useState(false); // the phone menu
   const onRequests = path.startsWith('/admin/requests');
   const onAi = path.startsWith('/aireviewer');
   const onTeam = path.startsWith('/admin/team');
   const has = (t: string) => tools.includes(t);
   const aiHref = has('AI_REVIEW') ? '/aireviewer' : '/aireviewer/clients';
 
+  useEffect(() => setMenu(false), [path]); // close the phone menu after choosing a page
   useEffect(() => {
     try { document.documentElement.classList.toggle('side-collapsed', localStorage.getItem('rp:side') === 'collapsed'); } catch { /* storage unavailable */ }
   }, []);
@@ -28,12 +31,14 @@ export default function Sidebar({ name, email, open, pending, tools, home, signO
   };
 
   return (
-    <aside className="side" data-spotlight>
+    <aside className={`side ${menu ? 'menu-open' : ''}`} data-spotlight>
       <div className="side-top">
-        <Link href={home} className="brand" aria-label="Reyal Proof home">
-          <span className="brand-mark">R</span>
-          <span className="brand-word">Reyal <b>Proof</b></span>
+        <Link href={home} className="brand" aria-label="Reyal Design Studio home">
+          <Brand />
         </Link>
+        <button className="side-burger" aria-label="Menu" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">{menu ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}</svg>
+        </button>
       </div>
       <nav className="side-nav" aria-label="Main">
         {has('PROOFS') && <Link href="/admin" className={`side-item ${!onRequests && !onAi && !onTeam ? 'on' : ''}`} title="Clients">{grid}<span className="side-label">Clients</span></Link>}

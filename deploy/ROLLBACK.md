@@ -1,4 +1,4 @@
-# Deploy and rollback runbook (Reyal Proof, AI Reviewer)
+# Deploy and rollback runbook (Reyal Design Studio, AI Reviewer)
 
 Everything here runs ON the server in `/opt/reyal-proof`. Nothing touches the other apps on the server.
 

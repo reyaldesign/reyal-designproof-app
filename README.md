@@ -1,4 +1,4 @@
-# Reyal Proof
+# Reyal Design Studio
 
 Client design proofing. Designers upload images and share a link. Clients click the design to drop numbered pins, comment, and press Send Revision. No client account needed.
 

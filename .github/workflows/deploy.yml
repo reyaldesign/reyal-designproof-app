@@ -81,7 +81,7 @@ jobs:
               echo "$SHA" > .tag
               # Tidy only this app's old image tags (keep the current and the previous one).
               docker images --format '{{.Repository}}:{{.Tag}}' | grep '^ghcr.io/reyaldesign/reyal-designproof-app:' | grep -v -e ":$SHA" -e ":latest" -e ":${prev:-none}" | xargs -r docker rmi >/dev/null 2>&1 || true
-              echo 'Reyal Proof is up.'; exit 0
+              echo 'Reyal Design Studio is up.'; exit 0
             fi
           done
           echo 'New version did not come up.' >&2
