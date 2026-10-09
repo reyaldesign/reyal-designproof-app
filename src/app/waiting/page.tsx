@@ -1,4 +1,5 @@
 import Script from 'next/script';
+import Brand from '@/components/Brand';
 import { redirect } from 'next/navigation';
 import { getMe, homeFor } from '@/lib/access';
 import { logout } from '../admin/actions';
@@ -20,7 +21,7 @@ export default async function Waiting() {
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Urbanist:wght@400;500;600;700&display=swap" />
       <main className="login-wrap">
         <header className="login-top">
-          <span className="brand"><span className="brand-mark">R</span><span className="brand-word">Reyal <b>Proof</b></span></span>
+          <span className="brand"><Brand /></span>
           <span className="login-tag">Design proofing</span>
         </header>
         <section data-spotlight className="login-card">

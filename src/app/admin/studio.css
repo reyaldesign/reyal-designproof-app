@@ -51,7 +51,8 @@ html.side-collapsed .studio { --side-w: 68px; }
 .side-toggle:hover { color: var(--ink); }
 .side-label { min-width: 0; overflow: hidden; white-space: nowrap; }
 html.side-collapsed .side { padding-left: 10px; padding-right: 10px; }
-html.side-collapsed .side-label, html.side-collapsed .brand-word { display: none; }
+html.side-collapsed .side-label, html.side-collapsed .brand-word, html.side-collapsed .brand-logo { display: none; }
+html.side-collapsed .brand-icon { display: block; }
 html.side-collapsed .side-item { justify-content: center; padding: 10px; }
 html.side-collapsed .side-item.on::before { left: -10px; }
 html.side-collapsed .side-badge { position: absolute; top: 2px; right: 0; min-width: 18px; height: 16px; font-size: 10px; }

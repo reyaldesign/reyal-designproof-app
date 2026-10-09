@@ -1,5 +1,6 @@
 'use client';
 
+import Brand from '@/components/Brand';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
@@ -30,9 +31,8 @@ export default function Sidebar({ name, email, open, pending, tools, home, signO
   return (
     <aside className="side" data-spotlight>
       <div className="side-top">
-        <Link href={home} className="brand" aria-label="Reyal Proof home">
-          <span className="brand-mark">R</span>
-          <span className="brand-word">Reyal <b>Proof</b></span>
+        <Link href={home} className="brand" aria-label="Reyal Studio home">
+          <Brand />
         </Link>
       </div>
       <nav className="side-nav" aria-label="Main">

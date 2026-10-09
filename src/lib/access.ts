@@ -112,7 +112,7 @@ export async function signIn(rawEmail: string, opts: { name?: string; via: strin
 
   if (u.status === 'PENDING') {
     await logEvent({ email, kind: first ? 'FIRST_SIGN_IN' : 'SIGNED_IN', detail: first ? 'First sign-in · waiting for a role' : 'Signed in · waiting for a role' });
-    if (first) notify(`${email} is waiting for access`, `${email} signed in to Reyal Proof for the first time and has no role yet.\n\nGive them a role: ${process.env.APP_URL || ''}/admin/team`, await adminEmails()).catch(() => {});
+    if (first) notify(`${email} is waiting for access`, `${email} signed in to Reyal Studio for the first time and has no role yet.\n\nGive them a role: ${process.env.APP_URL || ''}/admin/team`, await adminEmails()).catch(() => {});
     return { ok: true, to: '/waiting' };
   }
   await logEvent({ email, kind: 'SIGNED_IN', detail: opts.via });

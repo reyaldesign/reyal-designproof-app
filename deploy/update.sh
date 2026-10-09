@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Update Reyal Proof on the VPS from GitHub. Run ON the server, no sudo needed (user must be in the docker group):
+# Update Reyal Studio on the VPS from GitHub. Run ON the server, no sudo needed (user must be in the docker group):
 #   bash /opt/reyal-proof/deploy/update.sh
 # Backs up the database and uploads (plus a permanent database copy before any migration), pulls main, rebuilds this app's image, restarts only this app, checks /login,
 # and puts the previous image back if the new one does not come up. Other apps on the server are not touched.
@@ -38,7 +38,7 @@ docker compose up -d
 for _ in $(seq 1 30); do
   sleep 2
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:3100/login || true)
-  if [ "$code" = 200 ]; then echo "Reyal Proof is up ($(git rev-parse --short HEAD))."; exit 0; fi
+  if [ "$code" = 200 ]; then echo "Reyal Studio is up ($(git rev-parse --short HEAD))."; exit 0; fi
 done
 
 echo 'New version did not come up. Last log lines:' >&2

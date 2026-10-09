@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time server setup for Reyal Proof (Docker). Run ON the VPS by someone with sudo:
+# One-time server setup for Reyal Studio (Docker). Run ON the VPS by someone with sudo:
 #   sudo DEPLOY_USER=mlara bash setup-vps.sh
 # Creates /opt/reyal-proof (data, backups, .env), gives the deploy user Docker access, and adds the nginx site for
 # client.reyaldesign.com. It does not touch Reyal Studio. Safe to run twice.
@@ -42,7 +42,7 @@ SMTP_HOST=""
 SMTP_PORT="587"
 SMTP_USER=""
 SMTP_PASS=""
-MAIL_FROM="Reyal Proof <proof@reyaldesign.com>"
+MAIL_FROM="Reyal Studio <proof@reyaldesign.com>"
 NOTIFY_EMAIL=""
 ENV
   chown "$DEPLOY_USER":"$DEPLOY_USER" "$BASE/.env"

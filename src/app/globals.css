@@ -18,6 +18,8 @@ body { background: #0b0b0c; color: #e8e8ea; font-family: ui-sans-serif, system-u
 .login-wrap { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; padding: 24px 32px; gap: 24px; }
 .login-top { display: flex; justify-content: space-between; align-items: center; }
 .brand { display: flex; align-items: center; gap: 10px; }
+.brand-logo { display: block; height: 28px; width: auto; }
+.brand-icon { display: none; height: 30px; width: auto; }
 .brand-mark { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #fff; color: #000; font: 800 18px/1 var(--display); }
 .brand-word { font: 700 18px/1 var(--display); letter-spacing: -.02em; }
 .brand-word b { font-weight: 700; color: var(--accent-hi); }
