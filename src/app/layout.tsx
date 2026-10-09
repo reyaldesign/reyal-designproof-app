@@ -6,7 +6,7 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
 
 export default function Root({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );
