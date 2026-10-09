@@ -1,4 +1,5 @@
 import './studio.css';
+import './dashboard.css';
 import Script from 'next/script';
 import { currentUser, requireAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
