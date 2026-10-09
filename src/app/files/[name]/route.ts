@@ -3,7 +3,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 import { MIME, uploadDir } from '@/lib/storage';
 
-const THUMB_WIDTHS = new Set([320, 640]);
+const THUMB_WIDTHS = new Set([320, 640, 1280]);
 const HEADERS = { 'Cache-Control': 'private, max-age=31536000, immutable' };
 
 export async function GET(req: Request, { params }: { params: Promise<{ name: string }> }) {

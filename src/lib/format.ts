@@ -13,7 +13,7 @@ export function timeAgo(d: Date, now = new Date()) {
 export const statusDot = (status: string) => ({ letter: status.charAt(0), cls: `kb-${status.split(' ')[0]}` });
 
 /** Thumbnail URL for a stored image: a small version, never the full-size proof. */
-export const thumb = (file: string, w: 320 | 640 = 640) => `/files/${file}?w=${w}`;
+export const thumb = (file: string, w: 320 | 640 | 1280 = 640) => `/files/${file}?w=${w}`;
 
 /** Where a client comment stands: Needs team (no reply yet), Replied, or Done (resolved). */
 export function commentStatus(c: { resolved: boolean }, replied: boolean) {

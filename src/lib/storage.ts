@@ -60,7 +60,7 @@ export async function removeUploads(names: string[]) {
   await Promise.all(
     names
       .filter((n) => /^[\w-]+\.(jpg|png|webp|gif)$/.test(n))
-      .flatMap((n) => [n, `thumbs/320-${n}.jpg`, `thumbs/640-${n}.jpg`])
+      .flatMap((n) => [n, `thumbs/320-${n}.jpg`, `thumbs/640-${n}.jpg`, `thumbs/1280-${n}.jpg`])
       .map((rel) => unlink(path.join(uploadDir(), rel)).catch(() => {})),
   );
 }

@@ -92,10 +92,10 @@ export async function updateProject(f: FormData) {
     where: { id },
     data: {
       title: str(f, 'title'),
-      status: str(f, 'status'),
+      ...(['Draft', 'Sent', 'Feedback Received', 'Approved'].includes(str(f, 'status')) && { status: str(f, 'status') }),
       type: isProofType(str(f, 'type')) ? str(f, 'type') : null,
       revisionsIncluded: str(f, 'revisionsIncluded') === '' ? null : revisions(str(f, 'revisionsIncluded')),
-      ...(str(f, 'status') !== 'Approved' && { approvedAt: null, approvedBy: null, approvedVersion: null }),
+      ...(str(f, 'status') !== 'Approved' && str(f, 'status') !== '' && { approvedAt: null, approvedBy: null, approvedVersion: null }),
       password: str(f, 'password') || null,
       expiresAt: date(str(f, 'expires')),
     },
