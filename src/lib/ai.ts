@@ -1,21 +1,20 @@
 import { notFound } from 'next/navigation';
 import Anthropic from '@anthropic-ai/sdk';
 import sharp from 'sharp';
-import { isAdmin, requireAdmin } from './auth';
+import { refuseTool, requireTool, type Tool } from './access';
 
 // ----- feature switch: the whole tool is hidden unless AI_REVIEWER_ENABLED=true -----
 export const aiEnabled = () => process.env.AI_REVIEWER_ENABLED === 'true';
 
-/** For pages and server actions: signed in, and the tool is switched on. */
-export async function requireAi() {
-  await requireAdmin();
+/** For pages and server actions: the person has the given AI tool, and the tool is switched on (otherwise this whole section is a 404). */
+export async function requireAi(tool: Tool = 'AI_REVIEW') {
   if (!aiEnabled()) notFound();
+  await requireTool(tool);
 }
 /** For API routes: returns a Response to send back when the request must be refused, otherwise null. */
-export async function refuseAi(): Promise<Response | null> {
+export async function refuseAi(tool: Tool = 'AI_REVIEW'): Promise<Response | null> {
   if (!aiEnabled()) return Response.json({ error: 'Not found' }, { status: 404 });
-  if (!(await isAdmin())) return Response.json({ error: 'Please sign in again.' }, { status: 401 });
-  return null;
+  return refuseTool(tool);
 }
 
 export * from './aiShared';

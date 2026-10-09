@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
-import { cookieOpts, rememberUser, safeEq, sign } from '@/lib/auth';
-import { clientId, clientSecret, googleEnabled, isAllowed, redirectUri, to } from '@/lib/google';
+import { signIn } from '@/lib/access';
+import { safeEq } from '@/lib/auth';
+import { clientId, clientSecret, googleEnabled, redirectUri, to } from '@/lib/google';
 
 export async function GET(req: Request) {
   if (!googleEnabled()) return to(req, '/login');
@@ -27,12 +28,9 @@ export async function GET(req: Request) {
   if (!idToken) return to(req, '/login?error=google');
 
   const claims = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64url').toString()) as {
-    email?: string; email_verified?: boolean; aud?: string;
+    email?: string; email_verified?: boolean; aud?: string; name?: string;
   };
   if (claims.aud !== clientId() || !claims.email || claims.email_verified !== true) return to(req, '/login?error=google');
-  if (!isAllowed(claims.email)) return to(req, '/login?error=denied');
-
-  jar.set('rp_admin', sign('admin'), cookieOpts);
-  await rememberUser(claims.email);
-  return to(req, '/admin');
+  const res = await signIn(claims.email, { name: claims.name ?? '', via: 'Signed in with Google' });
+  return to(req, res.ok ? res.to : `/login?error=${res.error}`);
 }

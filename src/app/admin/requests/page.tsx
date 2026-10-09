@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { requireTool } from '@/lib/access';
 import { db } from '@/lib/db';
 import { commentStatus, thumb, timeAgo } from '@/lib/format';
 
@@ -6,6 +7,7 @@ export const dynamic = 'force-dynamic';
 
 /** Every open client comment across all proofs, newest first. */
 export default async function Requests() {
+  await requireTool('REQUESTS');
   const open = await db.comment.findMany({
     where: { parentId: null, resolved: false, fromDesigner: false },
     orderBy: { createdAt: 'desc' },

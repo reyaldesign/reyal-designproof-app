@@ -1,18 +1,21 @@
-import { cookies } from 'next/headers';
 import Script from 'next/script';
 import { redirect } from 'next/navigation';
-import { cookieOpts, rememberUser, safeEq, sign } from '@/lib/auth';
+import { signIn } from '@/lib/access';
+import { safeEq } from '@/lib/auth';
+import { db } from '@/lib/db';
 import { googleEnabled } from '@/lib/google';
 
 async function login(formData: FormData) {
   'use server';
-  const ok =
-    safeEq(String(formData.get('email') || '').trim().toLowerCase(), (process.env.ADMIN_EMAIL || '').toLowerCase()) &&
-    safeEq(String(formData.get('password') || ''), process.env.ADMIN_PASSWORD || '');
-  if (!ok) redirect('/login?error=1');
-  (await cookies()).set('rp_admin', sign('admin'), cookieOpts);
-  await rememberUser(String(formData.get('email') || '').trim().toLowerCase());
-  redirect('/admin');
+  const email = String(formData.get('email') || '').trim().toLowerCase();
+  const pwOk = !!process.env.ADMIN_PASSWORD && safeEq(String(formData.get('password') || ''), process.env.ADMIN_PASSWORD);
+  // The ADMIN_EMAIL password login always works and always ends up an admin, so a bad role setup can never lock everyone out.
+  const owner = pwOk && safeEq(email, (process.env.ADMIN_EMAIL || '').trim().toLowerCase());
+  // Local development only (compiled out of production builds): sign in as any existing person with the shared password, to test roles.
+  const dev = process.env.NODE_ENV !== 'production' && pwOk && !!(await db.user.findUnique({ where: { email } }));
+  if (!owner && !dev) redirect('/login?error=1');
+  const r = await signIn(email, { via: 'Signed in with password', breakGlass: owner });
+  redirect(r.ok ? r.to : `/login?error=${r.error}`);
 }
 
 const domain = () => process.env.ALLOWED_EMAIL_DOMAIN ?? 'reyaldesign.com';
@@ -20,6 +23,8 @@ const MESSAGES: Record<string, () => string> = {
   '1': () => 'Wrong email or password.',
   google: () => 'Google sign-in did not complete. Please try again.',
   denied: () => `Only @${domain()} Google accounts can sign in.`,
+  suspended: () => 'This account is suspended. Ask an admin to reactivate it.',
+  refused: () => 'An admin declined access for this account.',
 };
 
 const G = (

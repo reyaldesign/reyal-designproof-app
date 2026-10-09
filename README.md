@@ -18,7 +18,7 @@ npm run dev                 # http://localhost:3100, sign in at /login
 1. Google Cloud Console, APIs & Services, Credentials, **Create credentials > OAuth client ID**, type **Web application**.
 2. Add the redirect URI `<APP_URL>/api/auth/google/callback`, for example `http://localhost:3100/api/auth/google/callback` locally and `https://proof.yourdomain.com/api/auth/google/callback` on the VPS. Add the OAuth consent screen as **Internal** if the Google Workspace allows it.
 3. Put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env` and restart. The **Sign in with Google** button appears on `/login`.
-4. Anyone on `ALLOWED_EMAIL_DOMAIN` (default `reyaldesign.com`) or listed in `ALLOWED_EMAILS` can sign in. Email and password login stays as a fallback.
+4. Anyone on `ALLOWED_EMAIL_DOMAIN` (default `reyaldesign.com`) or listed in `ALLOWED_EMAILS` can sign in, but they can use nothing until an admin gives them a role (see Team & access). `ADMIN_EMAIL` is the first admin. Its email and password login always works and always ends up an admin, so a bad role setup can never lock the team out.
 
 ## Using it (designers)
 
@@ -59,6 +59,19 @@ A separate tool at `/aireviewer` (sidebar item, plus a tile on the dashboard) th
 
 **Switch and settings (in `.env`):** the whole tool is hidden (404, no sidebar item) unless `AI_REVIEWER_ENABLED="true"`. It needs `ANTHROPIC_API_KEY` from console.anthropic.com (billing on, and set a monthly spend limit there). Optional: `AI_REVIEWER_MODEL`, `AI_REVIEWER_EFFORT`, `AI_REVIEWER_MAX_TOKENS`, `AI_MAX_CONCURRENT`, and the two price variables used for the cost estimate. Each review is a paid call, so only signed-in team members can run one.
 
+## Team & access
+
+Admin page at `/admin/team` (sidebar, under Admin, with a yellow badge for people waiting). It controls who can use what.
+
+- **Roles:** Admin (everything), Project Manager (Clients & proofs, Requests), Designer (AI Review). The **Roles & permissions** tab is the editable grid. Admins always keep Team & access.
+- **New accounts** that sign in with Google land on an "Almost there" screen (it checks again every 15 seconds) until an admin picks Designer, Project Manager or Admin, or denies them. Admins get an email. **Pre-assign a role** gives someone a role before their first sign-in.
+- **Per person:** click a member to change their role, give or remove a single tool for just them (shown with a dashed outline), sign them out of all devices, or suspend them. Suspending signs them out on their next click. The last active admin can't be demoted or suspended.
+- **No access:** opening a page their role doesn't include shows a card with a link to their first tool and **Request access**, which emails the admins (once per tool per hour).
+- **Sign-in activity:** every sign-in, sign-out, blocked attempt (wrong domain, suspended, denied), access change and access request, kept 12 months, with filters and **Export CSV**. It shows the IP address. City lookup is not set up.
+- Access is checked on the server for every page, server action and API route, not just hidden in the sidebar. The check reads the database on each request. Tool names: `PROOFS`, `REQUESTS`, `AI_REVIEW`, `AI_CRITERIA`, `TEAM`.
+- First deploy: everyone is signed out once. `creyes@reyaldesign.com` and `ADMIN_EMAIL` are admins from the start, everyone else waits for approval.
+- Local testing: in development only, the shared `ADMIN_PASSWORD` signs in as any existing person, to try each role. This is removed from production builds.
+
 ## The proof page
 
 A single-screen workspace. The header shows the title, type and a status track (Draft, Sent, Feedback received, Approved) that advances on its own, with one main button for the stage: **Send to client** while it is a draft or sent, **Upload vN** once feedback is in, none once approved. A bar under it has a tab per version, **+ New version**, and the share link with **Copy link**. Below, the page rail, the zoomable viewer and the comments panel (Open, Resolved, All). Each comment shows a zoomed crop of where the pin is, with **Reply** and **Resolve** inline. Settings (title, type, password, expiry, included revisions, status by hand) and **Delete proof** live in the **Settings** drawer. The client view is one click away with **Client view**.
@@ -95,5 +108,4 @@ Each client includes a number of revision rounds per proof (default **2**). Chan
 
 - Real-time updates (admin page refreshes on load; add Pusher or SSE if needed)
 - Offline viewing, version comparison, CSV or PDF export, white-label, view analytics
-- Multiple designer accounts (one login from `.env`)
 - Image optimization and thumbnails (originals are served as uploaded; add `sharp` if proofs are very large)

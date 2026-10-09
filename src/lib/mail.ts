@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 
-export async function notify(subject: string, text: string) {
-  const to = process.env.NOTIFY_EMAIL || process.env.ADMIN_EMAIL;
+export async function notify(subject: string, text: string, recipients?: string[]) {
+  const to = recipients?.length ? recipients.join(', ') : process.env.NOTIFY_EMAIL || process.env.ADMIN_EMAIL;
   if (!process.env.SMTP_HOST || !to) return console.log(`[mail disabled] ${subject}\n${text}`);
   try {
     await nodemailer

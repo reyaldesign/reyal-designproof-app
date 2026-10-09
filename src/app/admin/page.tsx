@@ -1,3 +1,4 @@
+import { requireTool } from '@/lib/access';
 import { db } from '@/lib/db';
 import { thumb, timeAgo } from '@/lib/format';
 import { STATUS_ORDER } from '@/lib/status';
@@ -7,6 +8,7 @@ import ClientGrid, { type AttentionItem, type ClientCard } from './ClientGrid';
 export const dynamic = 'force-dynamic';
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const me = await requireTool('PROOFS');
   const { error } = await searchParams;
   const [clients, openComments] = await Promise.all([
     db.client.findMany({
@@ -68,5 +70,5 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       thumb: p.versions[0]?.images[0]?.file ? thumb(p.versions[0].images[0].file, 320) : null,
     }));
 
-  return <ClientGrid clients={cards} attention={attention} totalOpen={openComments.length} error={error} aiTool={aiEnabled()} />;
+  return <ClientGrid clients={cards} attention={attention} totalOpen={openComments.length} error={error} aiTool={aiEnabled() && me.tools.includes('AI_REVIEW')} />;
 }

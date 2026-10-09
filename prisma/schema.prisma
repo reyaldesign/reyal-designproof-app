@@ -156,3 +156,62 @@ model AiReview {
 
   @@index([createdAt])
 }
+
+// ----- Team & access -----
+// role: ADMIN | PM | DESIGNER (null while pending). status: PENDING | ACTIVE | SUSPENDED | DENIED.
+model User {
+  id           String             @id @default(cuid())
+  email        String             @unique
+  name         String             @default("")
+  role         String?
+  status       String             @default("PENDING")
+  createdAt    DateTime           @default(now())
+  lastSignInAt DateTime?
+  sessions     Session[]
+  overrides    UserToolOverride[]
+}
+
+// One row per signed-in browser. The cookie holds the id, so deleting the row signs that browser out right away.
+model Session {
+  id         String   @id
+  userId     String
+  userAgent  String   @default("")
+  ip         String   @default("")
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// One row per switched-on cell in the Roles grid.
+model RolePermission {
+  role String
+  tool String
+
+  @@id([role, tool])
+}
+
+// A tool given to (granted) or taken from (not granted) one person, on top of their role.
+model UserToolOverride {
+  userId  String
+  tool    String
+  granted Boolean
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, tool])
+}
+
+// kind: SIGNED_IN | SIGNED_OUT | FIRST_SIGN_IN | BLOCKED_DOMAIN | BLOCKED_SUSPENDED | BLOCKED_DENIED | ACCESS_CHANGED | ACCESS_REQUESTED
+model SignInEvent {
+  id        String   @id @default(cuid())
+  email     String
+  kind      String
+  detail    String   @default("")
+  userAgent String   @default("")
+  ip        String   @default("")
+  actor     String? // the admin who made an access change
+  at        DateTime @default(now())
+
+  @@index([at])
+}

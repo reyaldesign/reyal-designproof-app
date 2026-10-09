@@ -1,6 +1,6 @@
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { requireAdmin } from '@/lib/auth';
+import { requireTool } from '@/lib/access';
 import { db } from '@/lib/db';
 import { revisionInfo } from '@/lib/revisions';
 import './proof.css';
@@ -9,7 +9,7 @@ import ProofWorkspace from './ProofWorkspace';
 export const dynamic = 'force-dynamic';
 
 export default async function ProofPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {
-  await requireAdmin();
+  await requireTool('PROOFS');
   const { id } = await params;
   const { error } = await searchParams;
   const p = await db.project.findUnique({
