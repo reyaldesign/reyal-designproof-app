@@ -46,6 +46,10 @@ The server pulls this repo from GitHub and builds the Docker image itself. It li
 
 **Optional push-to-deploy:** the Deploy workflow always builds and publishes the image to ghcr.io. It only deploys to the server if the repo variable `AUTO_DEPLOY` is `true` and the secrets `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` are set. Not needed for the flow above.
 
+## The client review page
+
+A branded, three-part layout: a page rail with thumbnails and comment counts, the zoomable design, and a **To send / Sent** panel. A header shows who shared the proof, the status (Waiting for your review, Revision sent, Approved) and the version switcher. A dismissible "How to review" guide appears on the first visit (the **?** button reopens it). On phones the panel becomes a bottom sheet. The password and expired-link screens use the same card and cursor spotlight as the sign-in page. Styles are in `src/app/review/review.css`, scoped to `.review`.
+
 ## Revisions
 
 Each client includes a number of revision rounds per proof (default **2**). Change it with **Edit client** on the client page. A single proof can override it under its settings (leave blank to use the client's number).

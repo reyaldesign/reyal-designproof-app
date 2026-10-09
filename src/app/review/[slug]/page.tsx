@@ -1,9 +1,11 @@
 import { cookies } from 'next/headers';
+import Script from 'next/script';
 import { notFound, redirect } from 'next/navigation';
 import { cookieOpts, safeEq } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { loadProject, reviewCookie, reviewToken } from '@/lib/review';
 import { revisionInfo } from '@/lib/revisions';
+import '../review.css';
 import ReviewClient from './ReviewClient';
 
 export const dynamic = 'force-dynamic';
@@ -18,8 +20,22 @@ async function unlock(f: FormData) {
   redirect(`/review/${slug}`);
 }
 
-const Notice = ({ children }: { children: React.ReactNode }) => (
-  <main className="mx-auto mt-32 w-full max-w-sm px-4 text-center text-zinc-300">{children}</main>
+// Password and expired screens use the same card as the sign-in page, spotlight included.
+const Gate = ({ tag, children }: { tag: string; children: React.ReactNode }) => (
+  <div className="login">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Urbanist:wght@400;500;600;700&display=swap" />
+    <main className="login-wrap">
+      <header className="login-top">
+        <span className="brand"><span className="brand-mark">R</span><span className="brand-word">Reyal <b>Proof</b></span></span>
+        <span className="login-tag">{tag}</span>
+      </header>
+      <section data-spotlight className="login-card">{children}</section>
+      <footer className="login-foot">Reyal Design · Proofs, versions and client feedback in one place.</footer>
+    </main>
+    <Script src="/spotlight.js" strategy="afterInteractive" />
+  </div>
 );
 
 export default async function Review({
@@ -33,18 +49,25 @@ export default async function Review({
   const { v, bad } = await searchParams;
   const { project, access } = await loadProject(slug);
   if (!project) notFound();
-  if (access === 'expired') return <Notice>This review link has expired. Please ask Reyal Design for a new one.</Notice>;
+  if (access === 'expired')
+    return (
+      <Gate tag="Design review">
+        <h1 className="login-title" style={{ fontSize: 'clamp(34px, 5vw, 52px)' }}>Link expired</h1>
+        <p className="login-intro">This review link has expired. Please ask Reyal Design for a new one.</p>
+      </Gate>
+    );
   if (access === 'locked')
     return (
-      <Notice>
-        <h1 className="mb-4 text-lg font-semibold text-white">{project.title}</h1>
-        <form action={unlock} className="card space-y-3 text-left">
+      <Gate tag="Private proof">
+        <h1 className="login-title" style={{ fontSize: 'clamp(34px, 5vw, 52px)' }}>{project.title}</h1>
+        <p className="login-intro">This proof is password protected. Enter the password Reyal Design sent you.</p>
+        <form action={unlock} className="grid gap-3">
           <input type="hidden" name="slug" value={slug} />
           <input className="input" type="password" name="password" placeholder="Password" autoFocus required />
-          {bad && <p className="text-sm text-red-400">Wrong password.</p>}
-          <button className="btn w-full">Open proof</button>
+          {bad && <p className="login-err">Wrong password. Please try again.</p>}
+          <button className="btn-login">Open proof</button>
         </form>
-      </Notice>
+      </Gate>
     );
 
   const version = project.versions.find((x) => String(x.number) === v) ?? project.versions[0];
@@ -58,6 +81,7 @@ export default async function Review({
       slug={slug}
       title={project.title}
       client={project.client.name}
+      status={project.status}
       approval={project.approvedVersion != null ? { by: project.approvedBy ?? '', at: project.approvedAt?.toISOString() ?? '', version: project.approvedVersion } : null}
       latest={project.versions[0].number}
       revisions={{ used: rev.used, included: rev.included }}
