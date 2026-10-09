@@ -90,3 +90,13 @@
   .search { flex: 1; }
   .head-actions { width: 100%; }
 }
+
+/* tool shortcut on the dashboard */
+.tool-tile { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 14px; align-items: center; margin-bottom: 20px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; transition: border-color .2s, transform .2s; }
+.tool-tile:hover { border-color: #3a3a42; transform: translateY(-2px); }
+.tool-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: rgba(162,14,38,.2); color: var(--accent-hi); }
+.tool-ic svg { width: 20px; height: 20px; }
+.tool-text { display: grid; gap: 2px; min-width: 0; }
+.tool-text b { font: 700 15px/1.2 var(--display); }
+.tool-text span { font-size: 13px; color: var(--muted); }
+.tool-go { font: 600 13px/1 var(--sans); color: var(--ink-2); }
