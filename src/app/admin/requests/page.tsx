@@ -15,7 +15,6 @@ export default async function Requests() {
     <div className="page">
       <div className="page-head">
         <div>
-          <div className="eyebrow">Reyal Proof</div>
           <h1 className="h1">Requests <span className="count">{open.length}</span></h1>
           <p className="muted" style={{ marginTop: 8 }}>Open comments from clients. Resolve them on the proof page.</p>
         </div>

@@ -46,6 +46,11 @@ The server pulls this repo from GitHub and builds the Docker image itself. It li
 
 **Optional push-to-deploy:** the Deploy workflow always builds and publishes the image to ghcr.io. It only deploys to the server if the repo variable `AUTO_DEPLOY` is `true` and the secrets `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` are set. Not needed for the flow above.
 
+## The designer dashboard
+
+- **Clients page:** a "Waiting on you" strip with the proofs that have open client comments, sort tabs (Needs attention, Recent, A-Z), type filter chips, and a search across client names and proof titles. Each client card shows their status in words (feedback, with client, draft, approved), open comments and last activity.
+- **Client page:** status tabs (All, Needs review, With client, Draft, Approved) with counts, proof cards with a type pill, status pill, version, open comments and a revisions meter, and a capped Activity panel. Hover a proof card for **Copy review link** and **Delete**. **Delete client** now lives in Edit client, behind a confirmation.
+
 ## The client review page
 
 A branded, three-part layout: a page rail with thumbnails and comment counts, the zoomable design, and a **To send / Sent** panel. A header shows who shared the proof, the status (Waiting for your review, Revision sent, Approved) and the version switcher. A dismissible "How to review" guide appears on the first visit (the **?** button reopens it). On phones the panel becomes a bottom sheet. The password and expired-link screens use the same card and cursor spotlight as the sign-in page. Styles are in `src/app/review/review.css`, scoped to `.review`.

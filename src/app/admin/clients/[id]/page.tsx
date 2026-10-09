@@ -1,14 +1,16 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import FilePicker from '@/components/FilePicker';
 import SubmitButton from '@/components/SubmitButton';
+import { clientActivity } from '@/lib/activity';
 import { db } from '@/lib/db';
 import { thumb, timeAgo } from '@/lib/format';
-import { PROOF_TYPES, typeInfo } from '@/lib/types';
-import ConfirmDelete from '../../ConfirmDelete';
-import { clientActivity } from '@/lib/activity';
+import { PROOF_TYPES } from '@/lib/types';
 import { createProject, deleteClient, deleteProject, updateClient } from '../../actions';
+import ConfirmDelete from '../../ConfirmDelete';
 import Dialog from '../../Dialog';
+import ProofBoard, { type ProofCard } from './ProofBoard';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +23,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
       projects: {
         orderBy: { createdAt: 'desc' },
         include: {
+          _count: { select: { submissions: true } },
           versions: {
             orderBy: { number: 'desc' },
             include: { images: { orderBy: { position: 'asc' }, take: 1 }, comments: { where: { parentId: null, resolved: false, fromDesigner: false } } },
@@ -30,16 +33,38 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
     },
   });
   if (!client) notFound();
-  const activity = await clientActivity(client.id);
+  const activity = await clientActivity(client.id, 60);
+  const h = await headers();
+  const base = process.env.APP_URL || `${h.get('x-forwarded-proto') || 'http'}://${h.get('host')}`;
+
+  const proofs: ProofCard[] = client.projects.map((p) => {
+    const file = p.versions[0]?.images[0]?.file;
+    return {
+      id: p.id,
+      slug: p.slug,
+      title: p.title,
+      type: p.type,
+      status: p.status,
+      version: p.versions[0]?.number ?? 1,
+      open: p.versions.reduce((n, v) => n + v.comments.length, 0),
+      used: p._count.submissions,
+      included: p.revisionsIncluded ?? client.revisionsIncluded,
+      ago: timeAgo(p.createdAt),
+      thumb: file ? thumb(file) : null,
+    };
+  });
 
   return (
     <div className="page">
-      <div className="crumbs"><Link href="/admin">Clients</Link></div>
+      <div className="crumbs"><Link href="/admin">Clients</Link> <span className="muted">/</span></div>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Client</div>
-          <h1 className="h1">{client.name} <span className="count">{client.projects.length}</span></h1>
-          <p className="muted" style={{ marginTop: 8 }}>{[client.email, client.notes].filter(Boolean).join(' · ') || 'No contact details'} · {client.revisionsIncluded} included revision{client.revisionsIncluded === 1 ? '' : 's'} per proof</p>
+          <h1 className="h1">{client.name}</h1>
+          <p className="meta-line">
+            {client.email && <span>{client.email}</span>}
+            {client.notes && <span>{client.notes}</span>}
+            <span className="strong">{client.revisionsIncluded} revision{client.revisionsIncluded === 1 ? '' : 's'} included per proof</span>
+          </p>
         </div>
         <div className="head-actions">
           <Dialog label="Edit client" title="Edit client" ghost>
@@ -51,9 +76,13 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
               <label className="muted">Included revisions per proof
                 <input className="input" style={{ marginTop: 4 }} name="revisionsIncluded" type="number" min={0} max={20} defaultValue={client.revisionsIncluded} required />
               </label>
-              <p className="muted" style={{ fontSize: 12 }}>Each time this client presses Send Revision, one revision is used. When they run out they can no longer send, until you raise this number. A single proof can override it in its settings.</p>
+              <p className="muted" style={{ fontSize: 12 }}>Each time this client presses Send revision, one revision is used. When they run out they can no longer send, until you raise this number. A single proof can override it in its settings.</p>
               <SubmitButton className="btn btn-primary" pending="Saving…">Save client</SubmitButton>
             </form>
+            <div className="danger-zone">
+              <span className="muted">Danger zone</span>
+              <ConfirmDelete id={client.id} name={client.name} action={deleteClient} kind="client" />
+            </div>
           </Dialog>
           <Dialog label="+ New proof" title={`New proof for ${client.name}`} defaultOpen={!!error} wide>
             <form action={createProject} style={{ display: 'grid', gap: 12 }}>
@@ -82,52 +111,12 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
 
       {error && <p style={{ color: 'var(--bad)', marginBottom: 16 }}>{error}</p>}
 
-      <div className="client-grid">
-        {client.projects.length === 0 && <div className="empty-state"><h2>No proofs yet</h2><p>Create the first proof for {client.name}.</p></div>}
-        {client.projects.map((p) => {
-          const open = p.versions.reduce((n, v) => n + v.comments.length, 0);
-          const first = p.versions[0]?.images[0]?.file;
-          const t = typeInfo(p.type);
-          return (
-            <div key={p.id} className="proof-wrap">
-            <ConfirmDelete id={p.id} name={p.title} action={deleteProject} />
-            <Link href={`/admin/${p.id}`} className="client-card">
-              <div className="cc-thumb">{first ? <img src={thumb(first)} alt="" loading="lazy" /> : <span className="cc-mono">{p.title.charAt(0)}</span>}</div>
-              <div className="cc-body">
-                <div className="cc-row">
-                  <span className="cc-name">{p.title}</span>
-                  {open > 0 && <span className="chip chip-needs" title="Open client comments">{open} request{open === 1 ? '' : 's'}</span>}
-                </div>
-                <div className="cc-row">
-                  <span className="cc-dots">
-                    {t ? <span className={`kb kt-${t.value}`} title={t.label}>{t.letter}</span> : <span className="kb" title="No type set">?</span>}
-                    <span className="ago">{t?.label ?? 'No type'} · {p.status} · v{p.versions[0]?.number}</span>
-                  </span>
-                  <span className="ago">{timeAgo(p.createdAt)}</span>
-                </div>
-              </div>
-            </Link>
-            </div>
-          );
-        })}
-      </div>
-
-      <h2 className="section-title">Activity</h2>
-      <div className="req-list">
-        {!activity.length && <p className="muted">Nothing yet. Activity shows up here as proofs are created, revisions are sent and versions are approved.</p>}
-        {activity.map((a, i) => (
-          <Link key={i} href={`/admin/${a.projectId}`} className="act">
-            <span className={`act-dot act-${a.kind}`} />
-            <div><div>{a.text}</div><div className="req-meta">{a.projectTitle}</div></div>
-            <span className="ago">{timeAgo(a.at)}</span>
-          </Link>
-        ))}
-      </div>
-
-      <form action={deleteClient} style={{ marginTop: 48, paddingTop: 20, borderTop: '1px solid var(--line)' }}>
-        <input type="hidden" name="id" value={client.id} />
-        <button className="btn-ghost" style={{ color: 'var(--bad)' }}>Delete client, all their proofs and comments</button>
-      </form>
+      <ProofBoard
+        proofs={proofs}
+        activity={activity.map((a) => ({ kind: a.kind, text: a.text, projectId: a.projectId, projectTitle: a.projectTitle, ago: timeAgo(a.at) }))}
+        base={base}
+        deleteProject={deleteProject}
+      />
     </div>
   );
 }
