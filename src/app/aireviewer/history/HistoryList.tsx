@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import SubmitButton from '@/components/SubmitButton';
 import { VERDICT_LABEL, type Verdict } from '@/lib/aiShared';
 import AiNav from '../AiNav';
+import ClientIcon from '../ClientIcon';
 import ReviewDetail from '../ReviewDetail';
 import { deleteAiReview, setAiVerdict } from '../actions';
 import type { ReviewView } from '../types';
@@ -69,7 +70,7 @@ export default function HistoryList({ rows }: { rows: HistoryRow[] }) {
               return (
                 <button key={r.id} className="ai-row" onClick={() => setOpen(r.id)}>
                   <span className="ai-rthumb"><img src={`/aireviewer/img/${r.imageFile}?w=320`} alt="" loading="lazy" /></span>
-                  <span className="ai-rmain"><b>{r.filename}</b><span className="muted">{[r.clientName, r.categoryName].filter(Boolean).join(' · ') || 'No client'}</span></span>
+                  <span className="ai-rmain"><b>{r.filename}</b><span className="muted ai-rclient">{r.clientName && <ClientIcon name={r.clientName} logo={r.clientLogo} size={16} />}{[r.clientName, r.categoryName].filter(Boolean).join(' · ') || 'No client'}</span></span>
                   <span className={`ai-verdict ${v.cls}`}>{r.score} · {v.short}</span>
                   <span className="ago">{new Date(r.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
                 </button>

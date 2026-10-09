@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AI_IMAGE_TYPES, AI_MAX_IMAGE_MB, VERDICT_LABEL, type Verdict } from '@/lib/aiShared';
 import AiNav from './AiNav';
+import AiStatus from './AiStatus';
+import ClientIcon from './ClientIcon';
 import ReviewDetail from './ReviewDetail';
 import type { AiClientLite, ReviewView } from './types';
 
@@ -86,6 +88,7 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
     if (!res?.ok || !data) {
       const msg = (data as { error?: string } | null)?.error || 'Could not reach the server. Check your connection and try again.';
       setItems((cur) => cur.map((i) => (i.id === id ? { ...i, status: 'error', error: msg } : i)));
+      window.dispatchEvent(new Event('ai-status-refresh')); // a failed review: look at the AI connection again
       return;
     }
     const review: ReviewView = {
@@ -137,10 +140,13 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
         <aside className="ai-setup">
           <div className="ai-card">
             <label className="ai-label">Client
+              <span className="ai-pick">
+              {client && <ClientIcon name={client.name} logo={client.logo} size={36} />}
               <select className="input" value={clientId} onChange={(e) => { setClientId(e.target.value); setCategoryId(''); }}>
                 <option value="">No client (ad hoc checklist)</option>
                 {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+              </span>
             </label>
             {client && (
               <label className="ai-label">Image type
@@ -170,6 +176,7 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
 
           <div className="ai-card ai-usage">
             <div className="ai-h"><span>This session</span></div>
+            <AiStatus variant="row" />
             <div><span>Reviews</span><b>{done.length}</b></div>
             <div><span>Tokens in / out</span><b>{inTok.toLocaleString()} / {outTok.toLocaleString()}</b></div>
             <div><span>Estimated cost</span><b>${cost.toFixed(3)}</b></div>

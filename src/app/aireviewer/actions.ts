@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAi } from '@/lib/ai';
-import { removeAiImages } from '@/lib/aiStorage';
+import sharp from 'sharp';
+import { removeAiImages, saveAiImage } from '@/lib/aiStorage';
 import { db } from '@/lib/db';
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
@@ -33,9 +34,35 @@ export async function updateAiClient(f: FormData) {
 export async function deleteAiClient(f: FormData) {
   await requireAi();
   // Past reviews are kept (they hold their own copy of the client name), so nothing in History disappears.
-  await db.aiClient.delete({ where: { id: str(f, 'id') } });
+  const gone = await db.aiClient.delete({ where: { id: str(f, 'id') } });
+  if (gone.logoFile) await removeAiImages([gone.logoFile]);
   refresh();
   redirect('/aireviewer/clients');
+}
+
+// ----- client icon: resized to a 256px square so it is small, sharp and consistent -----
+const ICON_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+export async function setAiClientLogo(f: FormData) {
+  await requireAi();
+  const file = f.get('logo');
+  if (!(file instanceof File) || !file.size || !ICON_TYPES.includes(file.type) || file.size > 2 * 1024 * 1024) return;
+  const id = str(f, 'id');
+  const client = await db.aiClient.findUnique({ where: { id } });
+  if (!client) return;
+  const png = await sharp(Buffer.from(await file.arrayBuffer()), { limitInputPixels: 50_000_000 })
+    .rotate().resize(256, 256, { fit: 'cover' }).png().toBuffer();
+  const logoFile = await saveAiImage(png, 'image/png');
+  await db.aiClient.update({ where: { id }, data: { logoFile } });
+  if (client.logoFile) await removeAiImages([client.logoFile]);
+  refresh();
+}
+export async function removeAiClientLogo(f: FormData) {
+  await requireAi();
+  const client = await db.aiClient.findUnique({ where: { id: str(f, 'id') } });
+  if (!client?.logoFile) return;
+  await db.aiClient.update({ where: { id: client.id }, data: { logoFile: null } });
+  await removeAiImages([client.logoFile]);
+  refresh();
 }
 
 // ----- categories -----

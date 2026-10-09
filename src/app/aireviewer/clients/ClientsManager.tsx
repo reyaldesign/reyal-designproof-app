@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { useRef } from 'react';
 import SubmitButton from '@/components/SubmitButton';
 import AiNav from '../AiNav';
+import ClientIcon from '../ClientIcon';
 import {
   addAiCategory, addAiCriterion, createAiClient, deleteAiCategory, deleteAiClient, deleteAiCriterion,
-  moveAiCriterion, renameAiCategory, updateAiClient, updateAiCriterion,
+  moveAiCriterion, removeAiClientLogo, renameAiCategory, setAiClientLogo, updateAiClient, updateAiCriterion,
 } from '../actions';
 import type { AiClientLite, Crit } from '../types';
 
@@ -54,8 +55,11 @@ export default function ClientsManager({ clients, selectedId }: { clients: AiCli
           <button className="btn btn-primary" onClick={() => dlg.current?.showModal()}>+ Add client</button>
           {clients.map((c) => (
             <Link key={c.id} href={`/aireviewer/clients?c=${c.id}`} className={`ai-cside ${client?.id === c.id ? 'on' : ''}`}>
-              <b>{c.name}</b>
-              <span className="muted">{c.categories.length} types · {c.base.length + c.categories.reduce((n, x) => n + x.criteria.length, 0)} criteria</span>
+              <ClientIcon name={c.name} logo={c.logo} size={36} />
+              <span className="ai-cside-t">
+                <b>{c.name}</b>
+                <span className="muted">{c.categories.length} types · {c.base.length + c.categories.reduce((n, x) => n + x.criteria.length, 0)} criteria</span>
+              </span>
             </Link>
           ))}
           {!clients.length && <p className="muted">No clients yet.</p>}
@@ -65,6 +69,24 @@ export default function ClientsManager({ clients, selectedId }: { clients: AiCli
           {!client && <div className="empty-state"><h2>Add your first client</h2><p>Each client gets six image types to start (Reel, Flyer, Photo Resize, Carousel, Story, Profile Logo). Add checklists to each.</p></div>}
           {client && (
             <>
+              <div className="ai-card ai-iconcard">
+                <ClientIcon name={client.name} logo={client.logo} size={72} />
+                <div className="ai-iconctl">
+                  <b>Client icon</b>
+                  <span className="muted">PNG, JPG, WebP or GIF, up to 2 MB. It is cropped to a square.</span>
+                  <div className="head-actions">
+                    <form action={setAiClientLogo}>
+                      <input type="hidden" name="id" value={client.id} />
+                      <label className="btn">{client.logo ? 'Replace icon' : 'Upload icon'}
+                        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif" hidden
+                          onChange={(e) => { const f = e.currentTarget.files?.[0]; if (f && f.size > 2 * 1024 * 1024) { alert('That image is over 2 MB. Please choose a smaller one.'); e.currentTarget.value = ''; return; } e.currentTarget.form?.requestSubmit(); }} />
+                      </label>
+                    </form>
+                    {client.logo && <form action={removeAiClientLogo}><input type="hidden" name="id" value={client.id} /><button className="btn-ghost">Remove</button></form>}
+                  </div>
+                </div>
+              </div>
+
               <div className="ai-card">
                 <form action={updateAiClient} className="ai-editrow">
                   <input type="hidden" name="id" value={client.id} />

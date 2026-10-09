@@ -1,5 +1,6 @@
 import { AI_IMAGE_TYPES, AI_MAX_IMAGE_MB, AiFailure, refuseAi, reviewWithClaude, prepareForClaude, withSlot } from '@/lib/ai';
 import { saveAiImage } from '@/lib/aiStorage';
+import { recordReviewOutcome } from '@/lib/aiStatus';
 import { db } from '@/lib/db';
 
 /** Reviews one image. The page calls this once per image, so a batch shows live progress. */
@@ -36,11 +37,13 @@ export async function POST(req: Request) {
         criteriaSnapshot: JSON.stringify(criteria), inputTokens, outputTokens,
       },
     });
+    recordReviewOutcome(true);
     return Response.json({ id: saved.id, imageFile, ...result, inputTokens, outputTokens });
   } catch (e) {
     // Nothing was judged, so nothing is saved. The message is shown on that image in the batch.
     const message = e instanceof AiFailure ? e.message : 'Something went wrong while reviewing this image.';
     if (!(e instanceof AiFailure)) console.error('ai review failed', e);
+    recordReviewOutcome(false, message);
     return Response.json({ error: message }, { status: 502 });
   }
 }

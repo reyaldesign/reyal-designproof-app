@@ -14,6 +14,7 @@ export async function loadAiClients(): Promise<AiClientLite[]> {
     id: c.id,
     name: c.name,
     notes: c.notes,
+    logo: c.logoFile,
     base: c.criteria.filter((x) => x.categoryId === null).map((x) => ({ id: x.id, text: x.text })),
     categories: c.categories.map((cat) => ({ id: cat.id, name: cat.name, criteria: cat.criteria.map((x) => ({ id: x.id, text: x.text })) })),
   }));
