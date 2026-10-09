@@ -18,7 +18,7 @@ npm run dev                 # http://localhost:3100, sign in at /login
 1. Google Cloud Console, APIs & Services, Credentials, **Create credentials > OAuth client ID**, type **Web application**.
 2. Add the redirect URI `<APP_URL>/api/auth/google/callback`, for example `http://localhost:3100/api/auth/google/callback` locally and `https://proof.yourdomain.com/api/auth/google/callback` on the VPS. Add the OAuth consent screen as **Internal** if the Google Workspace allows it.
 3. Put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env` and restart. The **Sign in with Google** button appears on `/login`.
-4. Anyone on `ALLOWED_EMAIL_DOMAIN` (default `reyaldesign.com`) or listed in `ALLOWED_EMAILS` can sign in, but they can use nothing until an admin gives them a role (see Team & access). `ADMIN_EMAIL` is the first admin. Its email and password login always works and always ends up an admin, so a bad role setup can never lock the team out.
+4. Anyone on `ALLOWED_EMAIL_DOMAIN` (default `reyaldesign.com`) or listed in `ALLOWED_EMAILS` can sign in, but they can use nothing until an admin gives them a role (see Team & access). `ADMIN_EMAIL` is the first admin. Its email and password login always works and always ends up an admin, so a bad role setup can never lock the team out. After 5 wrong passwords from one address (or 10 for one email) that form locks for 15 minutes, and each wrong try shows in Sign-in activity. Use a long random `ADMIN_PASSWORD`.
 
 ## Using it (designers)
 

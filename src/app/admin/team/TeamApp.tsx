@@ -22,7 +22,7 @@ const STATUS: Record<string, { label: string; c: string }> = {
 };
 const KIND: Record<string, [string, string]> = {
   SIGNED_IN: ['#3ddc97', '#f6f6f7'], FIRST_SIGN_IN: ['#ffd308', '#ffe36b'], ACCESS_REQUESTED: ['#ffd308', '#ffe36b'],
-  BLOCKED_DOMAIN: ['#ff5c6c', '#ff8a96'], BLOCKED_SUSPENDED: ['#ff5c6c', '#ff8a96'], BLOCKED_DENIED: ['#ff5c6c', '#ff8a96'],
+  BLOCKED_DOMAIN: ['#ff5c6c', '#ff8a96'], BLOCKED_SUSPENDED: ['#ff5c6c', '#ff8a96'], BLOCKED_DENIED: ['#ff5c6c', '#ff8a96'], BLOCKED_PASSWORD: ['#ff5c6c', '#ff8a96'],
   ACCESS_CHANGED: ['#6aa9ff', '#f6f6f7'], SIGNED_OUT: ['#52525b', '#c7c7cd'],
 };
 const kindOf = (e: TeamEvent): [string, string] => (e.kind === 'SIGNED_IN' && /waiting/i.test(e.detail) ? KIND.FIRST_SIGN_IN : KIND[e.kind] ?? KIND.SIGNED_OUT);
