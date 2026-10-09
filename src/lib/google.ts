@@ -3,7 +3,7 @@ export const clientId = () => (process.env.GOOGLE_CLIENT_ID ?? '').trim();
 export const clientSecret = () => (process.env.GOOGLE_CLIENT_SECRET ?? '').trim();
 export const googleEnabled = () => !!(clientId() && clientSecret());
 
-const base = (req: Request) => process.env.APP_URL || new URL(req.url).origin;
+export const base = (req: Request) => process.env.APP_URL || new URL(req.url).origin;
 export const redirectUri = (req: Request) => `${base(req)}/api/auth/google/callback`;
 export const to = (req: Request, path: string) => Response.redirect(new URL(path, base(req)), 303);
 

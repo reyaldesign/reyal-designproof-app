@@ -163,3 +163,4 @@ html.side-collapsed .side-top { display: flex; justify-content: center; }
 @media (hover: none) { .del-btn { opacity: 1; } }
 .studio .btn-danger { background: var(--bad); border-color: var(--bad); color: #fff; }
 .studio .btn-danger:hover { filter: brightness(1.1); background: var(--bad); }
+.studio .side-badge-late { background: #25252b; color: #ff8a96; }

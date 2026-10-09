@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { ROLE_LABEL, isRole, isTool, logEvent, requireTool, toolLabel, type Role } from '@/lib/access';
 import { db } from '@/lib/db';
+import { forget } from '@/lib/clickupData';
 import { isAllowed } from '@/lib/google';
 
 type Result = { error?: string };
@@ -16,6 +17,8 @@ async function lastAdminGuard(userId: string) {
   if (u?.role !== 'ADMIN' || u.status !== 'ACTIVE') return false;
   return (await db.user.count({ where: { role: 'ADMIN', status: 'ACTIVE' } })) <= 1;
 }
+/** A suspended or denied person keeps no ClickUp connection here. They connect again if they are reactivated. */
+const dropClickup = async (userId: string) => { await db.clickupToken.deleteMany({ where: { userId } }); forget(userId, true); };
 const note = (actor: string, detail: string) => logEvent({ email: actor, kind: 'ACCESS_CHANGED', detail, actor });
 
 export async function approveUser(id: string, role: string): Promise<Result> {
@@ -30,6 +33,7 @@ export async function denyUser(id: string): Promise<Result> {
   const me = await requireTool('TEAM');
   const u = await db.user.update({ where: { id }, data: { status: 'DENIED', role: null } });
   await db.session.deleteMany({ where: { userId: id } });
+  await dropClickup(id);
   await note(me.email, `Denied access to ${who(u)}`);
   return done();
 }
@@ -77,6 +81,7 @@ export async function suspendUser(id: string): Promise<Result> {
   if (await lastAdminGuard(id)) return { error: 'This is the last admin.' };
   const u = await db.user.update({ where: { id }, data: { status: 'SUSPENDED' } });
   await db.session.deleteMany({ where: { userId: id } }); // signed out right away
+  await dropClickup(id);
   await note(me.email, `Suspended ${who(u)}`);
   return done();
 }

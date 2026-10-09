@@ -70,9 +70,13 @@ export function deviceOf(ua: string) {
   const o = /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : '';
   return o ? `${b} · ${o}` : b;
 }
-async function clientInfo() {
+/** The visitor's address as nginx saw it. X-Real-IP is set by nginx itself, so it cannot be faked the way the first X-Forwarded-For entry can. */
+export async function clientIp() {
   const h = await headers();
-  return { ip: (h.get('x-forwarded-for') ?? '').split(',')[0].trim() || h.get('x-real-ip') || '', userAgent: (h.get('user-agent') ?? '').slice(0, 300) };
+  return h.get('x-real-ip') || (h.get('x-forwarded-for') ?? '').split(',').pop()?.trim() || '';
+}
+async function clientInfo() {
+  return { ip: await clientIp(), userAgent: ((await headers()).get('user-agent') ?? '').slice(0, 300) };
 }
 export async function logEvent(e: { email: string; kind: string; detail?: string; actor?: string }) {
   await db.signInEvent.create({ data: { email: e.email, kind: e.kind, detail: e.detail ?? '', actor: e.actor, ...(await clientInfo()) } });

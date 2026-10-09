@@ -169,6 +169,15 @@ model User {
   lastSignInAt DateTime?
   sessions     Session[]
   overrides    UserToolOverride[]
+  clickup      ClickupToken?
+}
+
+// Each person's own ClickUp OAuth token, encrypted with a key derived from SESSION_SECRET. Deleted with the user.
+model ClickupToken {
+  userId    String   @id
+  token     String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // One row per signed-in browser. The cookie holds the id, so deleting the row signs that browser out right away.
@@ -202,7 +211,7 @@ model UserToolOverride {
   @@id([userId, tool])
 }
 
-// kind: SIGNED_IN | SIGNED_OUT | FIRST_SIGN_IN | BLOCKED_DOMAIN | BLOCKED_SUSPENDED | BLOCKED_DENIED | ACCESS_CHANGED | ACCESS_REQUESTED
+// kind: SIGNED_IN | SIGNED_OUT | FIRST_SIGN_IN | BLOCKED_DOMAIN | BLOCKED_SUSPENDED | BLOCKED_DENIED | BLOCKED_PASSWORD | ACCESS_CHANGED | ACCESS_REQUESTED
 model SignInEvent {
   id        String   @id @default(cuid())
   email     String

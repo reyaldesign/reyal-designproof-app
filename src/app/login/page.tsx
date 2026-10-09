@@ -1,20 +1,28 @@
 import Script from 'next/script';
 import Brand from '@/components/Brand';
 import { redirect } from 'next/navigation';
-import { signIn } from '@/lib/access';
+import { clientIp, logEvent, signIn } from '@/lib/access';
 import { safeEq } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { clearFails, isLocked, noteFail } from '@/lib/loginLimit';
 import { googleEnabled } from '@/lib/google';
 
 async function login(formData: FormData) {
   'use server';
   const email = String(formData.get('email') || '').trim().toLowerCase();
+  const ip = await clientIp();
+  if (isLocked(ip, email)) redirect('/login?error=locked'); // checked first, so a correct guess during a lockout does not get in
   const pwOk = !!process.env.ADMIN_PASSWORD && safeEq(String(formData.get('password') || ''), process.env.ADMIN_PASSWORD);
   // The ADMIN_EMAIL password login always works and always ends up an admin, so a bad role setup can never lock everyone out.
   const owner = pwOk && safeEq(email, (process.env.ADMIN_EMAIL || '').trim().toLowerCase());
   // Local development only (compiled out of production builds): sign in as any existing person with the shared password, to test roles.
   const dev = process.env.NODE_ENV !== 'production' && pwOk && !!(await db.user.findUnique({ where: { email } }));
-  if (!owner && !dev) redirect('/login?error=1');
+  if (!owner && !dev) {
+    noteFail(ip, email);
+    await logEvent({ email, kind: 'BLOCKED_PASSWORD', detail: 'Blocked · wrong email or password' });
+    redirect('/login?error=1');
+  }
+  clearFails(ip, email);
   const r = await signIn(email, { via: 'Signed in with password', breakGlass: owner });
   redirect(r.ok ? r.to : `/login?error=${r.error}`);
 }
@@ -26,6 +34,7 @@ const MESSAGES: Record<string, () => string> = {
   denied: () => `Only @${domain()} Google accounts can sign in.`,
   suspended: () => 'This account is suspended. Ask an admin to reactivate it.',
   refused: () => 'An admin declined access for this account.',
+  locked: () => 'Too many wrong tries. Wait 15 minutes, or use Continue with Google.',
 };
 
 const G = (

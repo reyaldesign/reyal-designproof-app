@@ -18,7 +18,7 @@ npm run dev                 # http://localhost:3100, sign in at /login
 1. Google Cloud Console, APIs & Services, Credentials, **Create credentials > OAuth client ID**, type **Web application**.
 2. Add the redirect URI `<APP_URL>/api/auth/google/callback`, for example `http://localhost:3100/api/auth/google/callback` locally and `https://proof.yourdomain.com/api/auth/google/callback` on the VPS. Add the OAuth consent screen as **Internal** if the Google Workspace allows it.
 3. Put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env` and restart. The **Sign in with Google** button appears on `/login`.
-4. Anyone on `ALLOWED_EMAIL_DOMAIN` (default `reyaldesign.com`) or listed in `ALLOWED_EMAILS` can sign in, but they can use nothing until an admin gives them a role (see Team & access). `ADMIN_EMAIL` is the first admin. Its email and password login always works and always ends up an admin, so a bad role setup can never lock the team out.
+4. Anyone on `ALLOWED_EMAIL_DOMAIN` (default `reyaldesign.com`) or listed in `ALLOWED_EMAILS` can sign in, but they can use nothing until an admin gives them a role (see Team & access). `ADMIN_EMAIL` is the first admin. Its email and password login always works and always ends up an admin, so a bad role setup can never lock the team out. After 5 wrong passwords from one address (or 10 for one email) that form locks for 15 minutes, and each wrong try shows in Sign-in activity. Use a long random `ADMIN_PASSWORD`.
 
 ## Using it (designers)
 
@@ -71,6 +71,16 @@ Admin page at `/admin/team` (sidebar, under Admin, with a yellow badge for peopl
 - Access is checked on the server for every page, server action and API route, not just hidden in the sidebar. The check reads the database on each request. Tool names: `PROOFS`, `REQUESTS`, `AI_REVIEW`, `AI_CRITERIA`, `TEAM`.
 - First deploy: everyone is signed out once. `creyes@reyaldesign.com` and `ADMIN_EMAIL` are admins from the start, everyone else waits for approval.
 - Local testing: in development only, the shared `ADMIN_PASSWORD` signs in as any existing person, to try each role. This is removed from production builds.
+
+## ClickUp tasks
+
+A **Tasks** page (`/clickup`, sidebar item, tool `CLICKUP`) shows Reyal's ClickUp as a board, a list, a calendar and **My tasks**, and lets people change status, assignees, due date and priority, comment, attach files and create tasks. Changes are made in ClickUp itself.
+
+- **Each person connects their own ClickUp account** (one click, **Connect ClickUp**), so they only see what they can already see there. Tokens are stored encrypted with a key derived from `SESSION_SECRET` (changing it just means everyone connects again). **Disconnect ClickUp** is at the bottom of the lists panel.
+- **Setup (once):** in ClickUp, Settings, Apps, Create an App, redirect URL `https://client.reyaldesign.com/api/clickup/callback`. Put the client id and secret in the server `.env` as `CLICKUP_CLIENT_ID` and `CLICKUP_CLIENT_SECRET`, then `docker compose up -d --force-recreate`. Until both are set, the page shows a setup note.
+- **Who sees it:** Admins from the start. Switch it on for other roles in Team & access, Roles & permissions.
+- **Local testing:** `CLICKUP_DEV_TOKEN` (a personal token) skips the Connect step. It is ignored in production.
+- ClickUp allows about 100 requests a minute per person, so lists are kept for a few minutes and refreshed after any change made here. The workspace ids and folder names are in `src/lib/clickupView.ts`.
 
 ## The proof page
 

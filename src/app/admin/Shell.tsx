@@ -3,6 +3,7 @@ import './dashboard.css';
 import Script from 'next/script';
 import { homeFor, requireMe } from '@/lib/access';
 import { aiEnabled } from '@/lib/ai';
+import { overdueBadge } from '@/lib/clickupData';
 import { db } from '@/lib/db';
 import { logout } from './actions';
 import Sidebar from './Sidebar';
@@ -19,7 +20,7 @@ export default async function Shell({ children }: { children: React.ReactNode })
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Urbanist:wght@400;500;600;700;800&display=swap" />
-      <Sidebar name={me.name} email={me.email} open={open} pending={pending} tools={me.tools} home={homeFor(me.tools)} signOut={logout} ai={aiEnabled()} />
+      <Sidebar cuDue={me.tools.includes('CLICKUP') ? overdueBadge(me.id) : 0} name={me.name} email={me.email} open={open} pending={pending} tools={me.tools} home={homeFor(me.tools)} signOut={logout} ai={aiEnabled()} />
       <main className="main">{children}</main>
       <Script src="/spotlight.js" strategy="afterInteractive" />
     </div>

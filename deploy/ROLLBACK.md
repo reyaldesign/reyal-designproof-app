@@ -57,3 +57,6 @@ docker tag ghcr.io/reyaldesign/reyal-designproof-app:latest reyal-proof:pre-team
 To go back: `docker tag reyal-proof:pre-team-access ghcr.io/reyaldesign/reyal-designproof-app:latest`, then `docker compose up -d --force-recreate --no-build`. The migration only adds tables, so the old code runs on the new database. Everyone signs in once more, because sessions changed.
 
 If you are locked out after the update: the email and password login with `ADMIN_EMAIL` and `ADMIN_PASSWORD` always works and always makes that account an active admin, so you can fix roles from `/admin/team`.
+
+## ClickUp tasks rollback
+The tag `pre-clickup` is the code before it. Before deploying, tag the running image and keep a database copy (same as above, with `pre-clickup` in the names). The migrations only add a table and one role row, so the old code runs on the new database. To hide the tool without rolling back, switch ClickUp off for each role in Team & access. People's stored ClickUp tokens stay in the database until they disconnect.
