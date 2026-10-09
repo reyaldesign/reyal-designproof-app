@@ -16,7 +16,7 @@ export type AttentionItem = { proofId: string; title: string; client: string; ve
 type Sort = 'attention' | 'recent' | 'az';
 const SORTS: [Sort, string][] = [['attention', 'Needs attention'], ['recent', 'Recent'], ['az', 'A–Z']];
 
-export default function ClientGrid({ clients, attention, totalOpen, error }: { clients: ClientCard[]; attention: AttentionItem[]; totalOpen: number; error?: string }) {
+export default function ClientGrid({ clients, attention, totalOpen, error, aiTool = false }: { clients: ClientCard[]; attention: AttentionItem[]; totalOpen: number; error?: string; aiTool?: boolean }) {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<Sort>('attention');
   const [type, setType] = useState<string>('all');
@@ -42,6 +42,16 @@ export default function ClientGrid({ clients, attention, totalOpen, error }: { c
       </div>
 
       {error && <p className="mb-4 text-sm" style={{ color: 'var(--bad)' }}>{error}</p>}
+
+      {aiTool && (
+        <Link href="/aireviewer" className="tool-tile">
+          <span className="tool-ic" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.5l-1.9-5.7L4.5 11l5.6-1.9z" /><path d="M19 3.5v3M17.5 5h3" /></svg>
+          </span>
+          <span className="tool-text"><b>AI Reviewer</b><span>Check images against your checklist before they go to proofing</span></span>
+          <span className="tool-go">Open →</span>
+        </Link>
+      )}
 
       {attention.length > 0 && (
         <section className="wait" aria-label="Waiting on you">

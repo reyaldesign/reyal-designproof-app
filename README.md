@@ -46,6 +46,16 @@ The server pulls this repo from GitHub and builds the Docker image itself. It li
 
 **Optional push-to-deploy:** the Deploy workflow always builds and publishes the image to ghcr.io. It only deploys to the server if the repo variable `AUTO_DEPLOY` is `true` and the secrets `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` are set. Not needed for the flow above.
 
+## AI Reviewer
+
+A separate tool at `/aireviewer` (sidebar item, plus a tile on the dashboard) that checks images against a checklist with Claude before they go to proofing. It shares only the sign-in, the sidebar and the database file with the proofing app. It has its own tables (`Ai...`, no links to proofs or clients), its own client list, and its own image folder (`uploads/ai/`) that is only served to signed-in users.
+
+- **AI Review:** pick a client and image type to load their checklist, drop images or a whole folder, review the batch with live progress, and open any result for the score, a plain-language summary, a fix list, a per-criterion checklist and numbered markers where the AI thinks problems are (an estimate, not a measurement). Verdicts: Ready for proofing (80+), Needs revisions (50-79), Fails (under 50). Large photos are resized before sending, so they never hit Claude's size limit.
+- **History:** every review, grouped by day, filterable by result, client, image type and file name. Change a result by hand, or delete a review (its image goes too).
+- **Clients:** per-client checklists. Criteria for every image type sit on top, and each of the six default types (Reel/Animation, Flyer, Photo Resize, Carousel, Story/IG Cover, Profile Logo) adds its own. Rename, reorder and add types freely.
+
+**Switch and settings (in `.env`):** the whole tool is hidden (404, no sidebar item) unless `AI_REVIEWER_ENABLED="true"`. It needs `ANTHROPIC_API_KEY` from console.anthropic.com (billing on, and set a monthly spend limit there). Optional: `AI_REVIEWER_MODEL`, `AI_REVIEWER_EFFORT`, `AI_REVIEWER_MAX_TOKENS`, `AI_MAX_CONCURRENT`, and the two price variables used for the cost estimate. Each review is a paid call, so only signed-in team members can run one.
+
 ## The proof page
 
 A single-screen workspace. The header shows the title, type and a status track (Draft, Sent, Feedback received, Approved) that advances on its own, with one main button for the stage: **Send to client** while it is a draft or sent, **Upload vN** once feedback is in, none once approved. A bar under it has a tab per version, **+ New version**, and the share link with **Copy link**. Below, the page rail, the zoomable viewer and the comments panel (Open, Resolved, All). Each comment shows a zoomed crop of where the pin is, with **Reply** and **Resolve** inline. Settings (title, type, password, expiry, included revisions, status by hand) and **Delete proof** live in the **Settings** drawer. The client view is one click away with **Client view**.

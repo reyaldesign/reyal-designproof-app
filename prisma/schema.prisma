@@ -97,3 +97,61 @@ model Comment {
   parent       Comment?  @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
   replies      Comment[] @relation("Replies")
 }
+
+// ---------------------------------------------------------------------------
+// AI Reviewer. A separate tool: these tables have no relation to Client, Project or any proofing table.
+// ---------------------------------------------------------------------------
+model AiClient {
+  id         String       @id @default(cuid())
+  name       String
+  notes      String?
+  createdAt  DateTime     @default(now())
+  categories AiCategory[]
+  criteria   AiCriterion[]
+  reviews    AiReview[]
+}
+
+model AiCategory {
+  id        String        @id @default(cuid())
+  clientId  String
+  name      String
+  position  Int           @default(0)
+  client    AiClient      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  criteria  AiCriterion[]
+  reviews   AiReview[]
+}
+
+// A criterion with no category applies to every category of the client.
+model AiCriterion {
+  id         String      @id @default(cuid())
+  clientId   String
+  categoryId String?
+  text       String
+  position   Int         @default(0)
+  client     AiClient    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  category   AiCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}
+
+// Names are copied onto the review, so history stays readable if a client or category is later renamed or deleted.
+model AiReview {
+  id               String      @id @default(cuid())
+  clientId         String?
+  clientName       String?
+  categoryId       String?
+  categoryName     String?
+  originalFilename String
+  imageFile        String
+  score            Int
+  verdict          String // approved | needs_review | rejected
+  summary          String      @default("")
+  actionItems      String      @default("[]") // JSON array of strings
+  checks           String      @default("[]") // JSON array of { criterion, status, comment, location? }
+  criteriaSnapshot String      @default("[]") // JSON array of the criteria used
+  inputTokens      Int         @default(0)
+  outputTokens     Int         @default(0)
+  createdAt        DateTime    @default(now())
+  client           AiClient?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  category         AiCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
