@@ -3,7 +3,7 @@
   --ink: #f6f6f7; --ink-2: #c7c7cd; --muted: #8b8b95; --accent: #a20e26; --accent-hi: #c4132f; --yellow: #ffd308; --yellow-ink: #ffe36b; --blue: #6aa9ff; --green: #3ddc97;
   --display: Poppins, Urbanist, system-ui, sans-serif; --sans: Urbanist, system-ui, -apple-system, 'Segoe UI', sans-serif;
   height: 100dvh; display: grid; grid-template-rows: 64px minmax(0, 1fr); background: var(--bg); color: var(--ink); font: 500 14px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
-.review button { font: inherit; color: inherit; cursor: pointer; }
+:where(.review) button { font: inherit; color: inherit; cursor: pointer; } /* :where keeps this base rule weaker than the button classes, so .rv-light keeps its dark text */
 .review button:disabled { cursor: not-allowed; }
 .review ::placeholder { color: var(--muted); }
 
