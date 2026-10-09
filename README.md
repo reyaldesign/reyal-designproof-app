@@ -72,6 +72,16 @@ Admin page at `/admin/team` (sidebar, under Admin, with a yellow badge for peopl
 - First deploy: everyone is signed out once. `creyes@reyaldesign.com` and `ADMIN_EMAIL` are admins from the start, everyone else waits for approval.
 - Local testing: in development only, the shared `ADMIN_PASSWORD` signs in as any existing person, to try each role. This is removed from production builds.
 
+## ClickUp tasks
+
+A **Tasks** page (`/clickup`, sidebar item, tool `CLICKUP`) shows Reyal's ClickUp as a board, a list, a calendar and **My tasks**, and lets people change status, assignees, due date and priority, comment, attach files and create tasks. Changes are made in ClickUp itself.
+
+- **Each person connects their own ClickUp account** (one click, **Connect ClickUp**), so they only see what they can already see there. Tokens are stored encrypted with a key derived from `SESSION_SECRET` (changing it just means everyone connects again). **Disconnect ClickUp** is at the bottom of the lists panel.
+- **Setup (once):** in ClickUp, Settings, Apps, Create an App, redirect URL `https://client.reyaldesign.com/api/clickup/callback`. Put the client id and secret in the server `.env` as `CLICKUP_CLIENT_ID` and `CLICKUP_CLIENT_SECRET`, then `docker compose up -d --force-recreate`. Until both are set, the page shows a setup note.
+- **Who sees it:** Admins from the start. Switch it on for other roles in Team & access, Roles & permissions.
+- **Local testing:** `CLICKUP_DEV_TOKEN` (a personal token) skips the Connect step. It is ignored in production.
+- ClickUp allows about 100 requests a minute per person, so lists are kept for a few minutes and refreshed after any change made here. The workspace ids and folder names are in `src/lib/clickupView.ts`.
+
 ## The proof page
 
 A single-screen workspace. The header shows the title, type and a status track (Draft, Sent, Feedback received, Approved) that advances on its own, with one main button for the stage: **Send to client** while it is a draft or sent, **Upload vN** once feedback is in, none once approved. A bar under it has a tab per version, **+ New version**, and the share link with **Copy link**. Below, the page rail, the zoomable viewer and the comments panel (Open, Resolved, All). Each comment shows a zoomed crop of where the pin is, with **Reply** and **Resolve** inline. Settings (title, type, password, expiry, included revisions, status by hand) and **Delete proof** live in the **Settings** drawer. The client view is one click away with **Client view**.

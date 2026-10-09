@@ -4,6 +4,7 @@ export const TOOLS = [
   { key: 'REQUESTS', label: 'Requests', d: 'Inbox of open client comments', href: '/admin/requests' },
   { key: 'AI_REVIEW', label: 'AI Review', d: 'Grade images against client criteria', href: '/aireviewer' },
   { key: 'AI_CRITERIA', label: 'AI criteria', d: "Edit each client's review criteria", href: '/aireviewer/clients' },
+  { key: 'CLICKUP', label: 'ClickUp', d: 'See and update ClickUp tasks on a board', href: '/clickup' },
   { key: 'TEAM', label: 'Team & access', d: 'Manage roles and see sign-ins', href: '/admin/team' },
 ] as const;
 export type Tool = (typeof TOOLS)[number]['key'];
