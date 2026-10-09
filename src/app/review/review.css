@@ -188,7 +188,8 @@
   .rv-sheet-row b { font: 700 15px/1 var(--display); }
   .rv-sheet-row span { font-size: 13px; color: var(--muted); }
   .rv-sheet-row .rev { margin-left: auto; font-size: 12px; }
-  .rv-sheet .rv-list { overflow: visible; padding: 0; }
+  .rv-sheet { grid-auto-rows: max-content; } /* rows keep their full height; the sheet itself scrolls */
+  .rv-sheet .rv-list { overflow: visible; padding: 0; flex: none; min-height: auto; }
   .rv-sheet .rv-tabs { padding: 0; }
   .rv-sheet .rv-foot { padding: 0; border-top: 0; }
   .rv-sheet .rv-first { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px dashed rgba(255,211,8,.5); }
