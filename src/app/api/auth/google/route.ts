@@ -10,9 +10,11 @@ export async function GET(req: Request) {
     client_id: clientId(),
     redirect_uri: redirectUri(req),
     response_type: 'code',
-    scope: 'openid email',
+    scope: 'openid email profile',
     state,
     prompt: 'select_account',
   });
+  const domain = process.env.ALLOWED_EMAIL_DOMAIN ?? 'reyaldesign.com';
+  if (domain && !process.env.ALLOWED_EMAILS) q.set('hd', domain); // only a hint for the account picker; the server checks the email itself
   return Response.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${q}`, 303);
 }

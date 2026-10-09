@@ -13,7 +13,7 @@ const refresh = () => { revalidatePath('/aireviewer', 'layout'); };
 
 // ----- clients (the tool's own list, unrelated to Reyal Proof clients) -----
 export async function createAiClient(f: FormData) {
-  await requireAi();
+  await requireAi('AI_CRITERIA');
   const name = str(f, 'name');
   if (!name) return;
   const c = await db.aiClient.create({
@@ -24,7 +24,7 @@ export async function createAiClient(f: FormData) {
 }
 
 export async function updateAiClient(f: FormData) {
-  await requireAi();
+  await requireAi('AI_CRITERIA');
   const name = str(f, 'name');
   if (!name) return;
   await db.aiClient.update({ where: { id: str(f, 'id') }, data: { name, notes: str(f, 'notes') || null } });
@@ -32,7 +32,7 @@ export async function updateAiClient(f: FormData) {
 }
 
 export async function deleteAiClient(f: FormData) {
-  await requireAi();
+  await requireAi('AI_CRITERIA');
   // Past reviews are kept (they hold their own copy of the client name), so nothing in History disappears.
   const gone = await db.aiClient.delete({ where: { id: str(f, 'id') } });
   if (gone.logoFile) await removeAiImages([gone.logoFile]);
@@ -43,7 +43,7 @@ export async function deleteAiClient(f: FormData) {
 // ----- client icon: resized to a 256px square so it is small, sharp and consistent -----
 const ICON_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 export async function setAiClientLogo(f: FormData) {
-  await requireAi();
+  await requireAi('AI_CRITERIA');
   const file = f.get('logo');
   if (!(file instanceof File) || !file.size || !ICON_TYPES.includes(file.type) || file.size > 2 * 1024 * 1024) return;
   const id = str(f, 'id');
@@ -57,7 +57,7 @@ export async function setAiClientLogo(f: FormData) {
   refresh();
 }
 export async function removeAiClientLogo(f: FormData) {
-  await requireAi();
+  await requireAi('AI_CRITERIA');
   const client = await db.aiClient.findUnique({ where: { id: str(f, 'id') } });
   if (!client?.logoFile) return;
   await db.aiClient.update({ where: { id: client.id }, data: { logoFile: null } });
@@ -67,7 +67,7 @@ export async function removeAiClientLogo(f: FormData) {
 
 // ----- categories -----
 export async function addAiCategory(f: FormData) {
-  await requireAi();
+  await requireAi('AI_CRITERIA');
   const name = str(f, 'name');
   if (!name) return;
   const clientId = str(f, 'clientId');
@@ -76,21 +76,21 @@ export async function addAiCategory(f: FormData) {
   refresh();
 }
 export async function renameAiCategory(f: FormData) {
-  await requireAi();
+  await requireAi('AI_CRITERIA');
   const name = str(f, 'name');
   if (!name) return;
   await db.aiCategory.update({ where: { id: str(f, 'id') }, data: { name } });
   refresh();
 }
 export async function deleteAiCategory(f: FormData) {
-  await requireAi();
+  await requireAi('AI_CRITERIA');
   await db.aiCategory.delete({ where: { id: str(f, 'id') } });
   refresh();
 }
 
 // ----- criteria: categoryId empty means "checked in every category of this client" -----
 export async function addAiCriterion(f: FormData) {
-  await requireAi();
+  await requireAi('AI_CRITERIA');
   const text = str(f, 'text');
   if (!text) return;
   const clientId = str(f, 'clientId');
@@ -100,20 +100,20 @@ export async function addAiCriterion(f: FormData) {
   refresh();
 }
 export async function updateAiCriterion(f: FormData) {
-  await requireAi();
+  await requireAi('AI_CRITERIA');
   const text = str(f, 'text');
   if (!text) return;
   await db.aiCriterion.update({ where: { id: str(f, 'id') }, data: { text } });
   refresh();
 }
 export async function deleteAiCriterion(f: FormData) {
-  await requireAi();
+  await requireAi('AI_CRITERIA');
   await db.aiCriterion.delete({ where: { id: str(f, 'id') } });
   refresh();
 }
 /** Swaps a criterion with its neighbour in the same list (direction: up or down). */
 export async function moveAiCriterion(f: FormData) {
-  await requireAi();
+  await requireAi('AI_CRITERIA');
   const c = await db.aiCriterion.findUnique({ where: { id: str(f, 'id') } });
   if (!c) return;
   const list = await db.aiCriterion.findMany({ where: { clientId: c.clientId, categoryId: c.categoryId }, orderBy: [{ position: 'asc' }, { id: 'asc' }] });
@@ -128,13 +128,13 @@ export async function moveAiCriterion(f: FormData) {
 
 // ----- reviews -----
 export async function deleteAiReview(f: FormData) {
-  await requireAi();
+  await requireAi('AI_REVIEW');
   const r = await db.aiReview.delete({ where: { id: str(f, 'id') } });
   await removeAiImages([r.imageFile]);
   refresh();
 }
 export async function setAiVerdict(f: FormData) {
-  await requireAi();
+  await requireAi('AI_REVIEW');
   const verdict = str(f, 'verdict');
   if (!['approved', 'needs_review', 'rejected'].includes(verdict)) return;
   await db.aiReview.update({ where: { id: str(f, 'id') }, data: { verdict } });

@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import FilePicker from '@/components/FilePicker';
 import SubmitButton from '@/components/SubmitButton';
+import { requireTool } from '@/lib/access';
 import { clientActivity } from '@/lib/activity';
 import { db } from '@/lib/db';
 import { thumb, timeAgo } from '@/lib/format';
@@ -15,6 +16,7 @@ import ProofBoard, { type ProofCard } from './ProofBoard';
 export const dynamic = 'force-dynamic';
 
 export default async function ClientPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {
+  await requireTool('PROOFS');
   const { id } = await params;
   const { error } = await searchParams;
   const client = await db.client.findUnique({

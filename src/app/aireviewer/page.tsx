@@ -1,8 +1,9 @@
-import { aiKeyConfigured, aiModel } from '@/lib/ai';
+import { aiKeyConfigured, aiModel, requireAi } from '@/lib/ai';
 import { loadAiClients } from '@/lib/aiData';
 import ReviewApp from './ReviewApp';
 
 export default async function AiReviewPage() {
+  await requireAi('AI_REVIEW');
   const clients = await loadAiClients();
   return (
     <ReviewApp

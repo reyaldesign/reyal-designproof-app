@@ -4,7 +4,8 @@ import { randomBytes } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { requireAdmin } from '@/lib/auth';
+import { requireTool } from '@/lib/access';
+import { signOut } from '@/lib/access';
 import { db } from '@/lib/db';
 import { MAX_IMAGE_MB, MAX_PDF_MB, MAX_UPLOAD_MB } from '@/lib/limits';
 import { removeUploads, saveImages } from '@/lib/storage';
@@ -32,7 +33,7 @@ async function imageRows(f: FormData, start = 0): Promise<{ rows: { file: string
 }
 
 export async function createClient(f: FormData) {
-  await requireAdmin();
+  await requireTool('PROOFS');
   const name = str(f, 'name');
   if (!name) redirect('/admin?error=Enter a client name.');
   const c = await db.client.create({ data: { name, email: str(f, 'email') || null, notes: str(f, 'notes') || null } });
@@ -42,7 +43,7 @@ export async function createClient(f: FormData) {
 const revisions = (v: string) => Math.min(20, Math.max(0, Math.round(Number(v)) || 0));
 
 export async function updateClient(f: FormData) {
-  await requireAdmin();
+  await requireTool('PROOFS');
   const id = str(f, 'id');
   const name = str(f, 'name');
   if (!name) redirect(`/admin/clients/${id}?error=${encodeURIComponent('Enter a client name.')}`);
@@ -55,7 +56,7 @@ export async function updateClient(f: FormData) {
 }
 
 export async function deleteClient(f: FormData) {
-  await requireAdmin();
+  await requireTool('PROOFS');
   const id = str(f, 'id');
   const files = (await db.image.findMany({ where: { version: { project: { clientId: id } } }, select: { file: true } })).map((i) => i.file);
   await db.client.delete({ where: { id } });
@@ -64,7 +65,7 @@ export async function deleteClient(f: FormData) {
 }
 
 export async function createProject(f: FormData) {
-  await requireAdmin();
+  await requireTool('PROOFS');
   const clientId = str(f, 'clientId');
   const { rows: images, error } = await imageRows(f);
   const fail = (msg: string) => redirect(`/admin/clients/${clientId}?error=${encodeURIComponent(msg)}`);
@@ -86,7 +87,7 @@ export async function createProject(f: FormData) {
 }
 
 export async function updateProject(f: FormData) {
-  await requireAdmin();
+  await requireTool('PROOFS');
   const id = str(f, 'id');
   await db.project.update({
     where: { id },
@@ -104,7 +105,7 @@ export async function updateProject(f: FormData) {
 }
 
 export async function addVersion(f: FormData) {
-  await requireAdmin();
+  await requireTool('PROOFS');
   const projectId = str(f, 'projectId');
   const { rows: images, error } = await imageRows(f);
   if (error) redirect(`/admin/${projectId}?error=${encodeURIComponent(error)}`);
@@ -116,13 +117,13 @@ export async function addVersion(f: FormData) {
 }
 
 export async function setResolved(f: FormData) {
-  await requireAdmin();
+  await requireTool('PROOFS');
   const c = await db.comment.update({ where: { id: str(f, 'id') }, data: { resolved: str(f, 'resolved') === '1' }, include: { version: true } });
   revalidatePath(`/admin/${c.version.projectId}`);
 }
 
 export async function replyTo(f: FormData) {
-  await requireAdmin();
+  await requireTool('PROOFS');
   const parent = await db.comment.findUniqueOrThrow({ where: { id: str(f, 'id') }, include: { version: true } });
   const text = str(f, 'text').slice(0, 4000);
   if (!text) return;
@@ -134,7 +135,7 @@ export async function replyTo(f: FormData) {
 
 /** Marks the proof as sent after the designer copies the link or opens the email draft. Nothing is emailed from here. */
 export async function markSent(f: FormData) {
-  await requireAdmin();
+  await requireTool('PROOFS');
   const id = str(f, 'id');
   const p = await db.project.findUniqueOrThrow({ where: { id } });
   if (p.status === 'Draft') await db.project.update({ where: { id }, data: { status: 'Sent' } });
@@ -142,14 +143,14 @@ export async function markSent(f: FormData) {
 }
 
 export async function reopenApproval(f: FormData) {
-  await requireAdmin();
+  await requireTool('PROOFS');
   const id = str(f, 'id');
   await db.project.update({ where: { id }, data: { status: 'Sent', approvedAt: null, approvedBy: null, approvedVersion: null } });
   revalidatePath(`/admin/${id}`);
 }
 
 export async function deleteProject(f: FormData) {
-  await requireAdmin();
+  await requireTool('PROOFS');
   const id = str(f, 'id');
   const files = (await db.image.findMany({ where: { version: { projectId: id } }, select: { file: true } })).map((i) => i.file);
   const p = await db.project.delete({ where: { id } });
@@ -158,7 +159,6 @@ export async function deleteProject(f: FormData) {
 }
 
 export async function logout() {
-  (await cookies()).delete('rp_admin');
-  (await cookies()).delete('rp_user');
+  await signOut();
   redirect('/login');
 }

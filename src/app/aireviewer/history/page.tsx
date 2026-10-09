@@ -1,3 +1,4 @@
+import { requireAi } from '@/lib/ai';
 import { db } from '@/lib/db';
 import type { Check, Verdict } from '@/lib/ai';
 import HistoryList, { type HistoryRow } from './HistoryList';
@@ -7,6 +8,7 @@ function parse<T>(s: string, fallback: T): T {
 }
 
 export default async function HistoryPage() {
+  await requireAi('AI_REVIEW');
   const rows = await db.aiReview.findMany({ orderBy: { createdAt: 'desc' }, take: 500, include: { client: { select: { logoFile: true } } } });
   const data: HistoryRow[] = rows.map((r) => ({
     id: r.id, imageFile: r.imageFile, filename: r.originalFilename, score: r.score, verdict: r.verdict as Verdict, summary: r.summary,
