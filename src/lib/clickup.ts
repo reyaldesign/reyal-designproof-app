@@ -62,7 +62,11 @@ export async function cu<T>(userId: string, path: string, init: { method?: strin
     await db.clickupToken.delete({ where: { userId } }).catch(() => {});
     throw new ClickupError(401, 'Your ClickUp connection expired. Connect again.');
   }
-  if (r.status === 429) throw new ClickupError(429, 'ClickUp is limiting requests (100 a minute). Wait a minute and try again.');
+  if (r.status === 429) {
+    const reset = Number(r.headers.get('x-ratelimit-reset')); // epoch seconds
+    const wait = reset ? Math.min(60, Math.max(1, Math.ceil(reset - Date.now() / 1000))) : 60;
+    throw new ClickupError(429, `ClickUp is limiting requests (100 a minute). Try again in about ${wait} seconds.`);
+  }
   if (!r.ok) throw new ClickupError(r.status, `ClickUp refused that (${r.status}).`);
   return (await r.json()) as T;
 }

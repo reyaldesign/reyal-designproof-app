@@ -1,24 +1,32 @@
-import { cu, type CuField, type CuStatus, type CuTask, type CuUser } from './clickup';
+import { ClickupError, cu, type CuField, type CuStatus, type CuTask, type CuUser } from './clickup';
 import { SPACE_ID, TEAM_ID, isLate } from './clickupView';
 
 // ClickUp allows about 100 requests a minute per person, so slow-changing things are kept for a few minutes.
 // On globalThis so server actions and pages share one cache, however the server bundles them.
-const g = globalThis as unknown as { cuKept?: Map<string, { at: number; v: unknown }> };
+const g = globalThis as unknown as { cuKept?: Map<string, { at: number; v: unknown }>; cuFlights?: Map<string, Promise<unknown>> };
 const kept = g.cuKept ?? (g.cuKept = new Map());
+const flights = g.cuFlights ?? (g.cuFlights = new Map());
+/** Cached for ms. Two screens asking for the same thing at once share one ClickUp call. If ClickUp is limiting or down, the last good copy is shown instead of an error. */
 async function keep<T>(key: string, ms: number, fn: () => Promise<T>): Promise<T> {
   const hit = kept.get(key);
   if (hit && Date.now() - hit.at < ms) return hit.v as T;
-  const v = await fn();
-  kept.set(key, { at: Date.now(), v });
-  return v;
+  let run = flights.get(key) as Promise<T> | undefined;
+  if (!run) {
+    run = fn().then((v) => { kept.set(key, { at: Date.now(), v }); return v; }).finally(() => flights.delete(key));
+    flights.set(key, run);
+  }
+  try { return await run; } catch (e) {
+    if (hit && e instanceof ClickupError && (e.status === 429 || e.status >= 500)) return hit.v as T;
+    throw e;
+  }
 }
 
-/** After a change: the lists that show counts and "mine" are refetched on the next read, but the old value stays readable for the sidebar badge meanwhile. all=true (disconnect) drops everything for this person. */
+/** After a change: the task lists and "mine" are refetched on the next read (the panel's counts are left alone, they refresh on their own every few minutes). The old value stays readable for the sidebar badge meanwhile. all=true (disconnect) drops everything for this person. */
 export function forget(u: string, all = false) {
   for (const [k, e] of kept) {
     if (k.split(':')[1] !== u) continue;
     if (all) kept.delete(k);
-    else if (/^(mine|nav|tree|folder)/.test(k)) e.at = 0;
+    else if (/^(mine|lt|sp):/.test(k)) e.at = 0;
   }
 }
 
@@ -57,7 +65,7 @@ async function pages(u: string, path: string, cap: number) {
   return out.slice(0, cap);
 }
 
-export const listTasks = (u: string, listId: string) => pages(u, `/list/${encodeURIComponent(listId)}/task?subtasks=true&include_closed=true`, 500);
+export const listTasks = (u: string, listId: string) => keep(`lt:${u}:${listId}`, 30_000, () => pages(u, `/list/${encodeURIComponent(listId)}/task?subtasks=true&include_closed=true`, 500));
 
 /** Tasks across the Fulfillment space. */
 export function spaceTasks(u: string, o: { assignee?: number; closed?: boolean; from?: number; to?: number; cap?: number } = {}) {
@@ -66,7 +74,7 @@ export function spaceTasks(u: string, o: { assignee?: number; closed?: boolean; 
   if (o.assignee) q.append('assignees[]', String(o.assignee));
   if (o.from) q.set('due_date_gt', String(o.from));
   if (o.to) q.set('due_date_lt', String(o.to));
-  return pages(u, `/team/${TEAM_ID}/task?${q}`, o.cap ?? 500);
+  return keep(`sp:${u}:${q}:${o.cap ?? 500}`, 60_000, () => pages(u, `/team/${TEAM_ID}/task?${q}`, o.cap ?? 500));
 }
 
 /** Everything open that is assigned to this person, across every space and list. */
@@ -89,12 +97,12 @@ export type NavFolder = { id: string; name: string; lists: NavList[] };
 export type NavSpace = { id: string; name: string; isPrivate: boolean; loose: NavList[]; folders: NavFolder[] };
 export type Nav = { spaces: NavSpace[]; mine: number; mineLate: number; at: number };
 
-export const navData = (u: string) => keep(`nav:${u}`, 180_000, async (): Promise<Nav> => {
+export const navData = (u: string) => keep(`nav:${u}`, 600_000, async (): Promise<Nav> => {
   const spaces = await allSpaces(u);
   const [trees, mine, overdue] = await Promise.all([
     Promise.all(spaces.map((s) => spaceTree(u, s.id))),
     myOpenTasks(u),
-    pages(u, `/team/${TEAM_ID}/task?due_date_lt=${Date.now()}&include_closed=false&subtasks=true&order_by=due_date`, 500),
+    pages(u, `/team/${TEAM_ID}/task?due_date_lt=${Date.now()}&include_closed=false&subtasks=true&order_by=due_date`, 200),
   ]);
   const late = new Set(overdue.filter(isLate).map((t) => t.list.id));
   const row = (l: Named): NavList => ({ id: l.id, name: l.name, open: Number(l.task_count) || 0, late: late.has(l.id) });

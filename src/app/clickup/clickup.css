@@ -302,3 +302,5 @@
 .cu-disc { padding: 8px 12px 10px; border-top: 1px solid var(--line); }
 .cu-disc button { background: none; border: 0; padding: 4px 0; color: var(--muted); font: 600 12px/1 var(--sans); cursor: pointer; }
 .cu-disc button:hover { color: var(--ink); }
+
+.cu-stage > summary.on { background: #25252b; border-color: #45454e; color: #fff; }

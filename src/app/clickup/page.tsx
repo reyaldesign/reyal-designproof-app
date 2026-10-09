@@ -7,7 +7,7 @@ import NewTaskModal, { type ListCfg } from './NewTaskModal';
 import TaskPanel from './TaskPanel';
 import { Failed, TaskCard, TaskRow, gate, url } from './ui';
 
-type Q = { list?: string; view?: string; f?: string; q?: string; task?: string; new?: string; col?: string; due?: string; n?: string; error?: string };
+type Q = { s?: string; list?: string; view?: string; f?: string; q?: string; task?: string; new?: string; col?: string; due?: string; n?: string; error?: string };
 type Col = { key: string; value: string; name: string; color: string };
 
 export default async function Board({ searchParams }: { searchParams: Promise<Q> }) {
@@ -18,7 +18,7 @@ export default async function Board({ searchParams }: { searchParams: Promise<Q>
 
   const listId = q.list || BOARD_LIST_ID;
   const asList = q.view === 'list';
-  const base = { list: q.list, view: q.view, f: q.f, q: q.q };
+  const base = { list: q.list, view: q.view, f: q.f, q: q.q, s: q.s };
   const here = url('/clickup', { ...base, task: q.task });
   const close = url('/clickup', base);
 
@@ -45,10 +45,13 @@ export default async function Board({ searchParams }: { searchParams: Promise<Q>
     ];
     const active = FILTERS.find(([k]) => k === q.f) ?? FILTERS[0];
     const needle = (q.q ?? '').toLowerCase();
-    const shown = pool.filter((t) => active[2](t) && (!needle || `${t.name} ${noteOf(t)}`.toLowerCase().includes(needle)));
-    const filtered = active[0] !== 'all' || !!needle;
+    const matched = pool.filter((t) => active[2](t) && (!needle || `${t.name} ${noteOf(t)}`.toLowerCase().includes(needle)));
+    // The stage filter works on the progress dropdown where the list has one (WMT Task Progress), otherwise on ClickUp's own statuses.
+    const stage = columns.find((c) => (c.key || '_none') === q.s);
+    const shown = stage ? matched.filter((t) => keyOf(t) === stage.key) : matched;
+    const filtered = active[0] !== 'all' || !!needle || !!stage;
 
-    const groups = columns.map((c) => ({ c, items: shown.filter((t) => keyOf(t) === c.key) }));
+    const groups = (stage ? [stage] : columns).map((c) => ({ c, items: shown.filter((t) => keyOf(t) === c.key) }));
 
     // The popup lets you move the task to another list in the folder, so it needs each list's own statuses, fields and codes.
     let modal: React.ReactNode = null;
@@ -88,6 +91,13 @@ export default async function Board({ searchParams }: { searchParams: Promise<Q>
           </div>
         )}
         <div className="cu-toolbar">
+          <details className="cu-dd cu-stage">
+            <summary className={`cu-ghost ${stage ? 'on' : ''}`}>{pf ? PROGRESS_FIELD : 'Status'}: {stage ? stage.name : 'All'} ▾</summary>
+            <div className="cu-ddm cu-wide">
+              <Link className="cu-opt" href={url('/clickup', { ...base, s: undefined })}>All stages<small>{matched.length}</small>{!stage && <em>✓</em>}</Link>
+              {columns.map((c) => <Link key={c.key || '_none'} className="cu-opt" href={url('/clickup', { ...base, s: c.key || '_none' })}><i style={{ background: c.color }} />{c.name}<small>{matched.filter((t) => keyOf(t) === c.key).length}</small>{stage?.key === c.key && <em>✓</em>}</Link>)}
+            </div>
+          </details>
           <div className="cu-seg" role="group" aria-label="View">
             <Link href={url('/clickup', { ...base, view: undefined })} className={!asList ? 'on' : ''}>Board</Link>
             <Link href={url('/clickup', { ...base, view: 'list' })} className={asList ? 'on' : ''}>List</Link>
@@ -96,14 +106,14 @@ export default async function Board({ searchParams }: { searchParams: Promise<Q>
             {FILTERS.map(([k, label, fn]) => { const n = pool.filter(fn).length; return <Link key={k} href={url('/clickup', { ...base, f: k === 'all' ? undefined : k })} className={active[0] === k ? 'on' : ''}>{label}<span className={k === 'late' && n ? 'late' : ''}>{n}</span></Link>; })}
           </div>
           <form className="cu-search" action="/clickup">
-            {(['list', 'view', 'f'] as const).map((k) => q[k] && <input key={k} type="hidden" name={k} value={q[k]} />)}
+            {(['list', 'view', 'f', 's'] as const).map((k) => q[k] && <input key={k} type="hidden" name={k} value={q[k]} />)}
             <span aria-hidden="true" /><input name="q" defaultValue={q.q ?? ''} placeholder="Search this list" aria-label="Search this list" />
           </form>
         </div>
         {q.error && <div className="cu-error" role="alert">{q.error.slice(0, 200)}</div>}
 
         {!asList && (
-          <div className="cu-board" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(230px, 1fr))` }}>
+          <div className="cu-board" style={{ gridTemplateColumns: `repeat(${groups.length}, minmax(230px, 1fr))` }}>
             {groups.map(({ c, items }) => (
               <section key={c.key} className="cu-col">
                 <h3><span className="cu-pill" style={{ background: c.color }}>{c.name}</span><em>{items.length}</em><Link className="cu-plus" href={url('/clickup', { ...base, new: '1', col: c.value })} aria-label={`Add a task to ${c.name}`}>+</Link></h3>

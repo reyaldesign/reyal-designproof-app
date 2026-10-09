@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { cu, errorText, type CuComment, type CuField, type CuStatus, type CuTask, type CuUser } from '@/lib/clickup';
+import { listMembers, listMeta } from '@/lib/clickupData';
 import { SPACE_NAME, between, clientOf, dayKey, fmtDay, mondayOf, progressOf, readableList, shift, todayKey } from '@/lib/clickupView';
 import { addAttachment, addComment, assignee, setDue, setPriority, setProgress, setTitle } from './actions';
 import { AttachButton, AutoDate, AutoText } from './Auto';
@@ -22,8 +23,8 @@ async function load(u: string, id: string) {
   const kind = progressOf(t).kind;
   const [{ comments }, members, statuses] = await Promise.all([
     cu<{ comments: CuComment[] }>(u, `/task/${encodeURIComponent(id)}/comment`),
-    cu<{ members: CuUser[] }>(u, `/list/${t.list.id}/member`).then((r) => r.members).catch(() => [] as CuUser[]), // guests cannot list members
-    kind === 'status' ? cu<{ statuses: CuStatus[] }>(u, `/list/${t.list.id}`).then((r) => r.statuses) : Promise.resolve([] as CuStatus[]),
+    listMembers(u, t.list.id).catch(() => [] as CuUser[]), // kept for a few minutes; guests cannot list members
+    kind === 'status' ? listMeta(u, t.list.id).then((r) => r.statuses) : Promise.resolve([] as CuStatus[]),
   ]);
   return { t, comments, members, statuses };
 }
