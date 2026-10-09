@@ -88,4 +88,5 @@ export function noteOf(t: CuTask) {
   return '';
 }
 
-export const isDone = (t: CuTask) => t.status.type === 'closed' || !!t.date_closed;
+/** Finished: closed in ClickUp, or (where the task has WMT Task Progress) its stage is Done or Complete. */
+export const isDone = (t: CuTask) => t.status.type === 'closed' || !!t.date_closed || /^(done|complete|completed)$/i.test(progressOf(t).kind === 'field' ? progressOf(t).name : '');
