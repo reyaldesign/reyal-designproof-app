@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { isDevice, pathOf } from '@/lib/live';
+import { isDevice, pathOf, sameSite } from '@/lib/live';
 import { notify } from '@/lib/mail';
 import { loadProject } from '@/lib/review';
 import { revisionInfo } from '@/lib/revisions';
@@ -40,12 +40,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     if (live) {
       // A live website comment is located by its page and element, or by page pixels. A screenshot must be one this review page uploaded.
       const x = px(c.x), y = px(c.y);
-      const located = !!c.pageUrl && (!!c.selector || (x != null && y != null));
+      // The page must be on the proof's own site. Its address is opened later in the admin's frame, so nothing else is accepted.
+      const page = c.pageUrl && sameSite(c.pageUrl, version.liveUrl) ? c.pageUrl : null;
+      const located = !!page && (!!c.selector || (x != null && y != null));
       const vw = px(c.vw);
       return {
         versionId: version.id, imageId: null, author, text: c.text!.trim().slice(0, 4000),
         x: located ? x : null, y: located ? y : null, pin: located ? ++pin : null,
-        pageUrl: located ? c.pageUrl!.slice(0, 1000) : null,
+        pageUrl: located ? page!.slice(0, 1000) : null,
         selector: located && c.selector ? c.selector.slice(0, 500) : null,
         elementText: located && c.elementText ? c.elementText.slice(0, 300) : null,
         rx: located ? ratio(c.rx) : null, ry: located ? ratio(c.ry) : null,

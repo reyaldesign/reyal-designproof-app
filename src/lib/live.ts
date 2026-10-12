@@ -14,9 +14,19 @@ export function cleanLiveUrl(input: string): string | null {
   try {
     const u = new URL(/^https?:\/\//i.test(s) ? s : `https://${s}`);
     if (!/^https?:$/.test(u.protocol) || !u.hostname.includes('.') && u.hostname !== 'localhost') return null;
+    // The review page is https, and a browser will not show an http site inside it.
+    if (process.env.NODE_ENV === 'production' && u.protocol !== 'https:') return null;
     return u.toString();
   } catch { return null; }
 }
+
+/** Is this page on the same website as the proof's address? www and the bare name count as one site. Used to refuse a comment that claims to be on another page. */
+export function sameSite(page: string | null | undefined, site: string | null | undefined) {
+  const host = (u: string | null | undefined) => { try { const x = new URL(u ?? ''); return /^https?:$/.test(x.protocol) ? x.hostname.replace(/^www\./, '') : ''; } catch { return ''; } };
+  return !!host(page) && host(page) === host(site);
+}
+/** http or https only. Anything else (javascript:, data:) is never put in a link or a frame. */
+export const isWebUrl = (u: string) => /^https?:\/\//i.test(u);
 
 /** The part of a page address people recognise: /menu/ rather than the whole URL. */
 export function pathOf(url: string | null | undefined) {

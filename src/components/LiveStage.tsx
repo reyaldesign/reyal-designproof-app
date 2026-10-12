@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { DEVICES, pathOf, samePage, type Device } from '@/lib/live';
+import { DEVICES, isWebUrl, pathOf, samePage, type Device } from '@/lib/live';
 import './live.css';
 
 export type LivePin = { id: string; n: number | string; kind: 'open' | 'done' | 'draft' | 'new'; selector?: string | null; rx?: number | null; ry?: number | null; x?: number | null; y?: number | null; href: string; device?: string | null; sel?: boolean };
@@ -59,6 +59,7 @@ const LiveStage = forwardRef<LiveHandle, Props>(function LiveStage({ url, pins, 
     clear: () => send({ type: 'clear' }),
     // Show a comment: the same page just scrolls to its pin, another page is opened first.
     open: (href, id, dev) => {
+      if (!isWebUrl(href)) return;
       if (dev === 'desktop' || dev === 'tablet' || dev === 'mobile') setDevice(dev); // a comment is shown at the size it was made on
       if (samePage(page, href)) { if (id) setTimeout(() => send({ type: 'focus', id }), dev && dev !== device ? 500 : 0); return; }
       pending.current = id ?? null;
@@ -99,7 +100,7 @@ const LiveStage = forwardRef<LiveHandle, Props>(function LiveStage({ url, pins, 
       if (!m || m.rs !== 1 || e.source !== frame.current?.contentWindow) return;
       if (m.type === 'hello') {
         setBridge('ready');
-        setPage(String(m.href || url));
+        if (isWebUrl(String(m.href))) setPage(String(m.href));
         setSections(Array.isArray(m.sections) ? (m.sections as { i: number; name: string }[]) : []);
         if (pending.current) { const id = pending.current; pending.current = null; const o = (() => { try { return new URL(String(m.href)).origin; } catch { return '*'; } })(); setTimeout(() => frame.current?.contentWindow?.postMessage({ rs: 1, type: 'focus', id }, o), 700); }
       } else if (m.type === 'pick' && onPick && !readOnly) {
