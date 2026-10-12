@@ -83,7 +83,20 @@ A **Tasks** page (`/clickup`, sidebar item, tool `CLICKUP`) shows Reyal's ClickU
 - **Local testing:** `CLICKUP_DEV_TOKEN` (a personal token) skips the Connect step. It is ignored in production.
 - ClickUp allows about 100 requests a minute per person, so lists are kept for a few minutes and refreshed after any change made here. The workspace ids and folder names are in `src/lib/clickupView.ts`.
 
-## The proof page
+## Live website proofs (WordPress)
+
+A proof can be a **live website** instead of images: choose **Live website** in New proof (or New version) and enter the staging address. The client sees the real site in a **Desktop / Tablet / Phone** frame, picks any part of a page to pin a comment, and uses the same To send / Sent panel, Send revision (with the confirm pop-up) and Approve as every other proof. You see the same view with pins, a screenshot of each spot and the element that was commented on, and reply and resolve as usual.
+
+**Why a plugin:** a page on another address cannot be read from inside the review page, so picking an element, drawing pins and taking a screenshot need a small script running inside the site. The **Reyal Review Bridge** plugin (`wordpress/reyal-review-bridge/reyal-review-bridge.php`) does that. It also lets the review page show the site in a frame (many hosts and security plugins forbid it). It does nothing for normal visitors: the script loads only when the page is inside a frame, and it talks only to `https://client.reyaldesign.com`.
+
+**To use it on a site:** copy the folder `reyal-review-bridge` into `wp-content/plugins/` on the staging site and activate it. If the review address differs, add `define( 'REYAL_REVIEW_ORIGIN', 'https://your-review-address' );` to `wp-config.php`.
+
+- The staging site must be **https** and open without a login, a Cloudflare challenge or a "coming soon" page (an unguessable address is fine). Browsers block the cookies those need inside a frame.
+- Without the plugin the client can still look at the site in the three sizes and leave general comments. The page says so.
+- Each comment stores the page, the element (by its Elementor id when there is one), where inside it, the screen width and size (desktop, tablet, phone), and a screenshot. A pin is shown only at the size it was made on. Screenshots are kept with the proof and deleted with it.
+- A new version can point at a new address, so each round can be a fresh staging copy.
+- Editing in Elementor does not move old pins on the old version, which stays as it was reviewed.
+
 
 A single-screen workspace. The header shows the title, type and a status track (Draft, Sent, Feedback received, Approved) that advances on its own, with one main button for the stage: **Send to client** while it is a draft or sent, **Upload vN** once feedback is in, none once approved. A bar under it has a tab per version, **+ New version**, and the share link with **Copy link**. Below, the page rail, the zoomable viewer and the comments panel (Open, Resolved, All). Each comment shows a zoomed crop of where the pin is, with **Reply** and **Resolve** inline. Settings (title, type, password, expiry, included revisions, status by hand) and **Delete proof** live in the **Settings** drawer. The client view is one click away with **Client view**.
 

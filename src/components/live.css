@@ -1,0 +1,26 @@
+/* Live website stage. Used on the client review page and the admin proof page, so it only relies on variables both define. */
+.lv { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; position: relative; }
+.lv-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--line, #222227); background: var(--bg, #09090b); }
+.lv-sections { max-width: 180px; padding: 8px 12px; border-radius: 99px; border: 1px solid var(--line-2, #32323a); background: var(--surface, #141417); color: var(--ink-2, #c7c7cd); font: 600 13px/1 var(--sans, system-ui); }
+.lv-sections:disabled { opacity: .5; }
+.lv-seg { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--line, #222227); border-radius: 99px; background: var(--surface, #141417); }
+.lv-seg button { padding: 7px 14px; border: 0; border-radius: 99px; background: none; color: var(--muted, #8b8b95); font: 600 13px/1 var(--sans, system-ui); cursor: pointer; }
+.lv-seg button.on { background: var(--surface-3, #25252b); color: #fff; }
+.lv-seg button:disabled { opacity: .45; cursor: not-allowed; }
+.lv-open { margin-left: auto; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted, #8b8b95); font: 600 12px/1 var(--sans, system-ui); }
+.lv-open:hover { color: var(--ink, #f6f6f7); }
+.lv-view { position: relative; flex: 1 1 0; min-height: 0; display: flex; justify-content: center; padding: 14px 14px 0; background: var(--stage, #0f0f12); overflow: hidden; }
+.lv-frame { height: 100%; background: #fff; border-radius: 12px 12px 0 0; overflow: hidden; box-shadow: 0 18px 50px -12px rgba(0,0,0,.7); transition: width .25s ease; }
+.lv-frame iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+.lv-note { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); width: min(560px, calc(100% - 28px)); display: grid; gap: 4px; padding: 12px 16px; border-radius: 14px; border: 1px solid rgba(255,211,8,.4); background: rgba(20,20,23,.96); color: var(--ink-2, #c7c7cd); font-size: 13px; line-height: 1.45; z-index: 6; }
+.lv-note b { color: var(--yellow, #ffd308); }
+@media (max-width: 760px) {
+  /* a phone already shows the phone layout, so there is no size switch; one row of controls, scrolling sideways if it must */
+  .lv-bar { flex-wrap: nowrap; overflow-x: auto; padding: 8px 10px; gap: 8px; }
+  .lv-bar > * { flex: none; }
+  .lv-bar .lv-seg[aria-label="Screen size"] { display: none; }
+  .lv-sections { max-width: 140px; }
+  .lv-open { display: none; }
+  .lv-view { padding: 8px 0 0; }
+  .lv-frame { border-radius: 0; width: 100% !important; }
+}

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import FilePicker from '@/components/FilePicker';
+import SourcePicker from '@/components/SourcePicker';
 import SubmitButton from '@/components/SubmitButton';
 import { requireTool } from '@/lib/access';
 import { clientActivity } from '@/lib/activity';
@@ -101,9 +101,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
               <label className="muted">Expires (optional)
                 <input className="input" style={{ marginTop: 4 }} name="expires" type="date" />
               </label>
-              <label className="muted">Images or PDF. Proofs are previews, not final artwork: JPG, PNG, WebP or GIF up to 10 MB each, PDF up to 30 MB and 60 pages, 40 MB per upload
-                <FilePicker />
-              </label>
+              <SourcePicker />
               {error && <p style={{ color: 'var(--bad)' }}>{error}</p>}
               <SubmitButton className="btn btn-primary" pending="Uploading and creating…">Create proof</SubmitButton>
             </form>
