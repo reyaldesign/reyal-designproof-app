@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { requireTool } from '@/lib/access';
 import { signOut } from '@/lib/access';
 import { db } from '@/lib/db';
+import { cleanLiveUrl } from '@/lib/live';
 import { MAX_IMAGE_MB, MAX_PDF_MB, MAX_UPLOAD_MB } from '@/lib/limits';
 import { removeUploads, saveImages } from '@/lib/storage';
 import { isProofType } from '@/lib/types';
@@ -14,6 +15,9 @@ import { isProofType } from '@/lib/types';
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 const files = (f: FormData) => f.getAll('files').filter((x): x is File => x instanceof File && x.size > 0);
 const date = (s: string) => (s ? new Date(`${s}T23:59:59`) : null);
+const BAD_URL = 'Enter the address of the live site, for example https://staging.example.com';
+/** Screenshot files left on a live site proof's comments, so they are deleted with it. */
+const shotsOf = async (where: object) => (await db.comment.findMany({ where: { shot: { not: null }, ...where }, select: { shot: true } })).map((c) => c.shot!);
 
 /** Saves the uploaded files. Returns the rows, or an error message the page can show. */
 async function imageRows(f: FormData, start = 0): Promise<{ rows: { file: string; position: number }[]; error?: string }> {
@@ -58,7 +62,7 @@ export async function updateClient(f: FormData) {
 export async function deleteClient(f: FormData) {
   await requireTool('PROOFS');
   const id = str(f, 'id');
-  const files = (await db.image.findMany({ where: { version: { project: { clientId: id } } }, select: { file: true } })).map((i) => i.file);
+  const files = [...(await db.image.findMany({ where: { version: { project: { clientId: id } } }, select: { file: true } })).map((i) => i.file), ...(await shotsOf({ version: { project: { clientId: id } } }))];
   await db.client.delete({ where: { id } });
   await removeUploads(files);
   redirect('/admin');
@@ -67,10 +71,12 @@ export async function deleteClient(f: FormData) {
 export async function createProject(f: FormData) {
   await requireTool('PROOFS');
   const clientId = str(f, 'clientId');
-  const { rows: images, error } = await imageRows(f);
   const fail = (msg: string) => redirect(`/admin/clients/${clientId}?error=${encodeURIComponent(msg)}`);
+  const liveUrl = str(f, 'source') === 'live' ? cleanLiveUrl(str(f, 'liveUrl')) : null;
+  if (str(f, 'source') === 'live' && !liveUrl) fail(BAD_URL);
   if (!str(f, 'title')) fail('Enter a proof title.');
   if (!isProofType(str(f, 'type'))) fail('Choose what type of proof this is.');
+  const { rows: images, error } = liveUrl ? { rows: [], error: undefined } : await imageRows(f);
   if (error) fail(error);
   const p = await db.project.create({
     data: {
@@ -80,7 +86,7 @@ export async function createProject(f: FormData) {
       clientId,
       password: str(f, 'password') || null,
       expiresAt: date(str(f, 'expires')),
-      versions: { create: { number: 1, label: str(f, 'label') || 'Version 1', images: { create: images } } },
+      versions: { create: { number: 1, label: str(f, 'label') || 'Version 1', liveUrl, images: { create: images } } },
     },
   });
   redirect(`/admin/${p.id}`);
@@ -107,11 +113,13 @@ export async function updateProject(f: FormData) {
 export async function addVersion(f: FormData) {
   await requireTool('PROOFS');
   const projectId = str(f, 'projectId');
-  const { rows: images, error } = await imageRows(f);
+  const liveUrl = str(f, 'source') === 'live' ? cleanLiveUrl(str(f, 'liveUrl')) : null;
+  if (str(f, 'source') === 'live' && !liveUrl) redirect(`/admin/${projectId}?error=${encodeURIComponent(BAD_URL)}`);
+  const { rows: images, error } = liveUrl ? { rows: [], error: undefined } : await imageRows(f);
   if (error) redirect(`/admin/${projectId}?error=${encodeURIComponent(error)}`);
   const last = await db.version.findFirst({ where: { projectId }, orderBy: { number: 'desc' } });
   const number = (last?.number ?? 0) + 1;
-  await db.version.create({ data: { projectId, number, label: str(f, 'label') || `Version ${number}`, images: { create: images } } });
+  await db.version.create({ data: { projectId, number, label: str(f, 'label') || `Version ${number}`, liveUrl, images: { create: images } } });
   await db.project.update({ where: { id: projectId }, data: { status: 'Sent', approvedAt: null, approvedBy: null, approvedVersion: null } });
   revalidatePath(`/admin/${projectId}`);
 }
@@ -152,7 +160,7 @@ export async function reopenApproval(f: FormData) {
 export async function deleteProject(f: FormData) {
   await requireTool('PROOFS');
   const id = str(f, 'id');
-  const files = (await db.image.findMany({ where: { version: { projectId: id } }, select: { file: true } })).map((i) => i.file);
+  const files = [...(await db.image.findMany({ where: { version: { projectId: id } }, select: { file: true } })).map((i) => i.file), ...(await shotsOf({ version: { projectId: id } }))];
   const p = await db.project.delete({ where: { id } });
   await removeUploads(files);
   redirect(`/admin/clients/${p.clientId}`);

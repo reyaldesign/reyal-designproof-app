@@ -92,7 +92,9 @@ export default async function Review({
       comments={data.comments.map((c) => ({
         id: c.id, imageId: c.imageId, parentId: c.parentId, author: c.author, text: c.text, x: c.x, y: c.y,
         pin: c.pin, resolved: c.resolved, fromDesigner: c.fromDesigner, createdAt: c.createdAt.toISOString(),
+        pageUrl: c.pageUrl, selector: c.selector, elementText: c.elementText, rx: c.rx, ry: c.ry, vw: c.vw, device: c.device, shot: c.shot,
       }))}
+      live={data.liveUrl}
     />
   );
 }

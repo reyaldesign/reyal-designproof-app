@@ -203,3 +203,8 @@
 @media (prefers-reduced-motion: reduce) {
   .review *, .review *::before, .review *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* live website comments */
+.rv-where { display: block; font-size: 12px; color: var(--muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rv-shotthumb { width: 100%; max-height: 110px; object-fit: cover; object-position: top; border-radius: 10px; border: 1px solid var(--line-2); }
+.review .rv-canvas > .lv { position: absolute; inset: 0; }

@@ -192,3 +192,10 @@
   .pp-share { margin-left: 0; max-width: 100%; width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .pp *, .pp-drawer, .pp-modal, .pp-overlay { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* live website proofs */
+.studio .pp-canvas > .lv { position: absolute; inset: 0; }
+.studio .pp-work.live { grid-template-columns: minmax(0, 1fr) 380px; }
+@media (max-width: 1000px) { .studio .pp-work.live { grid-template-columns: minmax(0, 1fr); } }
+.studio .pp-shot { width: 100%; max-height: 150px; object-fit: cover; object-position: top; border-radius: 10px; border: 1px solid var(--line-2); }
+.studio .pp-where { display: block; font-size: 12px; color: var(--muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

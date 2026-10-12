@@ -38,11 +38,12 @@ export default async function ProofPage({ params, searchParams }: { params: Prom
       client={{ id: p.client.id, name: p.client.name, email: p.client.email, revisionsIncluded: p.client.revisionsIncluded }}
       revisions={{ used: rev.used, included: rev.included }}
       versions={p.versions.map((v) => ({
-        id: v.id, number: v.number, label: v.label, createdAt: v.createdAt.toISOString(),
+        id: v.id, number: v.number, label: v.label, createdAt: v.createdAt.toISOString(), liveUrl: v.liveUrl,
         images: v.images.map((i) => ({ id: i.id, file: i.file })),
         comments: v.comments.map((c) => ({
           id: c.id, imageId: c.imageId, parentId: c.parentId, author: c.author, text: c.text, x: c.x, y: c.y, pin: c.pin,
           resolved: c.resolved, fromDesigner: c.fromDesigner, createdAt: c.createdAt.toISOString(),
+          pageUrl: c.pageUrl, selector: c.selector, elementText: c.elementText, rx: c.rx, ry: c.ry, vw: c.vw, device: c.device, shot: c.shot,
         })),
       }))}
       link={`${base}/review/${p.slug}`}

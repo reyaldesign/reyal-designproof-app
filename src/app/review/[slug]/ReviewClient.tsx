@@ -3,12 +3,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TransformComponent, TransformWrapper, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
+import LiveStage, { type LiveHandle, type LivePick, type LivePin } from '@/components/LiveStage';
+import { pathOf, type Device } from '@/lib/live';
 
 type C = {
   id: string; imageId: string | null; parentId: string | null; author: string; text: string;
   x: number | null; y: number | null; pin: number | null; resolved: boolean; fromDesigner: boolean; createdAt: string;
+  // live website comments
+  pageUrl?: string | null; selector?: string | null; elementText?: string | null; rx?: number | null; ry?: number | null; vw?: number | null; device?: string | null; shot?: string | null;
 };
-type Draft = { tid: string; imageId: string | null; x: number | null; y: number | null; text: string };
+type LiveDraft = { pageUrl: string; selector: string; elementText: string; rx: number; ry: number; vw: number; device: Device; shot: string | null; rect: LivePick['rect'] };
+type Draft = { tid: string; imageId: string | null; x: number | null; y: number | null; text: string; live?: LiveDraft };
 type Props = {
   slug: string; title: string; client: string; status: string;
   approval: { by: string; at: string; version: number } | null; latest: number;
@@ -17,6 +22,7 @@ type Props = {
   current: { id: string; number: number; label: string };
   images: { id: string; file: string }[];
   comments: C[];
+  live: string | null; // the address of a live website being reviewed in place of images
 };
 
 const store = {
@@ -36,7 +42,7 @@ function Pin({ n, kind, x, y, scale, onClick }: { n: number | string; kind: 'ope
   );
 }
 
-export default function ReviewClient({ slug, title, client, status, approval, latest, revisions, versions, current, images, comments }: Props) {
+export default function ReviewClient({ slug, title, client, status, approval, latest, revisions, versions, current, images, comments, live }: Props) {
   const router = useRouter();
   const draftKey = `rp:draft:${current.id}`;
   const [tab, setTab] = useState<'send' | 'sent'>('send');
@@ -65,6 +71,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   const canvasRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const tw = useRef<ReactZoomPanPinchRef>(null);
+  const liveRef = useRef<LiveHandle>(null);
   const down = useRef({ x: 0, y: 0 });
 
   const img = images[idx];
@@ -101,12 +108,13 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   }, []);
 
   useEffect(() => {
-    setNat(null);
     setPop(null);
+    if (!img) return;
+    setNat(null);
     const i = new Image();
     i.onload = () => setNat({ w: i.naturalWidth, h: i.naturalHeight });
     i.src = `/files/${img.file}`;
-  }, [img.file]);
+  }, [img?.file]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -137,6 +145,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   }
   function closePop(save: boolean) {
     if (!pop) return;
+    liveRef.current?.clear();
     const text = popText.trim();
     setDrafts((d) => (save && text ? d.map((x) => (x.tid === pop.tid ? { ...x, text } : x)) : d.filter((x) => x.tid !== pop.tid)));
     setPop(null);
@@ -150,13 +159,36 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   }
   const goPage = (i: number) => { setIdx(i); setPop(null); };
 
+  // ----- live website: a pick inside the site starts a draft, and its screenshot is uploaded as soon as it arrives -----
+  const [focus, setFocus] = useState<string | null>(null);
+  const [bridge, setBridge] = useState<'waiting' | 'ready' | 'missing'>('waiting');
+  const [liveMode, setLiveMode] = useState<'comment' | 'browse'>('comment');
+  function livePick(p: LivePick) {
+    if (locked) return;
+    const tid = uid();
+    setDrafts((d) => [...d, { tid, imageId: null, x: p.x, y: p.y, text: '', live: { pageUrl: p.href, selector: p.selector, elementText: p.text, rx: p.rx, ry: p.ry, vw: p.vw, device: p.device, shot: null, rect: p.rect } }]);
+    setPopText('');
+    setLastSent(null);
+    setTab('send');
+    const right = p.at.left + p.at.width + 330 < stage.w;
+    setPop({ tid, left: right ? p.at.left + p.at.width - 8 : p.at.left + 8, top: p.at.top, flip: !right });
+    liveRef.current?.capture(tid, p.rect);
+  }
+  async function liveShot(tid: string, dataUrl: string | null) {
+    if (!dataUrl) return;
+    const r = await fetch(`/api/review/${slug}/shot`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) }).catch(() => null);
+    const name = r?.ok ? ((await r.json().catch(() => null)) as { name?: string } | null)?.name : null;
+    if (name) setDrafts((d) => d.map((x) => (x.tid === tid && x.live ? { ...x, live: { ...x.live, shot: name } } : x)));
+  }
+  const drop = (tid: string) => setDrafts((x) => x.filter((y) => y.tid !== tid));
+
   async function send() {
     setBusy(true); setErr('');
     store.set('rp:name', name);
     const ordered = [...pinned, ...drafts.filter((d) => d.x == null)].filter((d) => d.text);
     const r = await fetch(`/api/review/${slug}/send`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ versionId: current.id, name, comments: ordered, confirmed: true }),
+      body: JSON.stringify({ versionId: current.id, name, comments: ordered.map((d) => (d.live ? { text: d.text, x: d.x, y: d.y, ...d.live, rect: undefined } : d)), confirmed: true }),
     }).catch(() => null);
     setBusy(false);
     setConfirmSend(false);
@@ -192,10 +224,15 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   }
   const dismissGuide = (hide: boolean) => { setGuideHidden(hide); store.set('rp:guide', hide ? 'hidden' : 'shown'); };
 
-  const sentHere = roots.filter((c) => c.imageId === img.id && c.x != null);
-  const draftsHere = drafts.filter((d) => d.imageId === img.id && d.text);
+  const sentHere = roots.filter((c) => c.imageId === img?.id && c.x != null);
+  const draftsHere = drafts.filter((d) => d.imageId === img?.id && d.text);
   const newDraft = pop ? drafts.find((d) => d.tid === pop.tid) : undefined;
   const pageCount = (id: string) => roots.filter((c) => c.imageId === id && c.x != null).length + drafts.filter((d) => d.imageId === id && d.x != null && d.text).length;
+  const livePins: LivePin[] = !live ? [] : [
+    ...roots.filter((c) => c.pageUrl && c.pin != null).map((c): LivePin => ({ id: c.id, n: c.pin!, kind: c.resolved ? 'done' : 'open', selector: c.selector, rx: c.rx, ry: c.ry, x: c.x, y: c.y, href: c.pageUrl!, device: c.device, sel: c.id === focus })),
+    ...drafts.filter((d) => d.live && d.text && d.tid !== pop?.tid).map((d): LivePin => ({ id: d.tid, n: draftPin(d.tid), kind: 'draft', selector: d.live!.selector, rx: d.live!.rx, ry: d.live!.ry, x: d.x, y: d.y, href: d.live!.pageUrl, device: d.live!.device })),
+    ...(newDraft?.live ? [{ id: newDraft.tid, n: draftPin(newDraft.tid), kind: 'new' as const, selector: newDraft.live.selector, rx: newDraft.live.rx, ry: newDraft.live.ry, x: newDraft.x, y: newDraft.y, href: newDraft.live.pageUrl, device: newDraft.live.device }] : []),
+  ];
   const segs = Array.from({ length: Math.min(revisions.included, 12) }, (_, k) => (k < revisions.used ? (outOfRevisions ? 'full' : 'used') : ''));
   const revLabel = `${Math.min(revisions.used, revisions.included)} of ${revisions.included} revisions used`;
 
@@ -225,9 +262,10 @@ export default function ReviewClient({ slug, title, client, status, approval, la
         <div key={d.tid} className="rv-draft">
           <div className="meta">
             <span className="rv-num">{d.x == null ? 'G' : draftPin(d.tid)}</span>
-            <span>{d.x == null ? 'General · not sent' : `Page ${images.findIndex((m) => m.id === d.imageId) + 1} · not sent`}</span>
-            <button className="rm" onClick={() => setDrafts((x) => x.filter((y) => y.tid !== d.tid))} aria-label="Remove comment">Remove</button>
+            <span>{d.x == null ? 'General · not sent' : d.live ? `${pathOf(d.live.pageUrl)} · ${d.live.device} · not sent` : `Page ${images.findIndex((m) => m.id === d.imageId) + 1} · not sent`}</span>
+            <button className="rm" onClick={() => drop(d.tid)} aria-label="Remove comment">Remove</button>
           </div>
+          {d.live?.elementText && <span className="rv-where">On “{d.live.elementText.slice(0, 80)}”</span>}
           <span className="rv-text">{d.text}</span>
         </div>
       ))}
@@ -243,18 +281,19 @@ export default function ReviewClient({ slug, title, client, status, approval, la
       {!roots.length && <div className="rv-empty"><b>Nothing sent yet</b><span>Comments you send show up here, with replies from Reyal Design.</span></div>}
       {roots.map((c) => {
         const replies = comments.filter((r) => r.parentId === c.id);
-        const page = images.findIndex((m) => m.id === c.imageId);
+        const page = live ? (c.pageUrl ? 0 : -1) : images.findIndex((m) => m.id === c.imageId);
         const st = c.resolved ? { cls: 'done', label: 'Done' } : replies.length ? { cls: 'replied', label: 'Replied' } : { cls: 'with', label: 'With Reyal' };
         return (
           <div key={c.id} className={`rv-sent ${page >= 0 ? 'go' : ''}`} role={page >= 0 ? 'button' : undefined} tabIndex={page >= 0 ? 0 : undefined}
-            onClick={() => { if (page >= 0) goPage(page); }}
-            onKeyDown={(e) => { if (page >= 0 && e.key === 'Enter') goPage(page); }}>
+            onClick={() => { if (live && c.pageUrl) { setFocus(c.id); liveRef.current?.open(c.pageUrl, c.id, c.device); } else if (page >= 0) goPage(page); }}
+            onKeyDown={(e) => { if (e.key !== 'Enter') return; if (live && c.pageUrl) { setFocus(c.id); liveRef.current?.open(c.pageUrl, c.id, c.device); } else if (page >= 0) goPage(page); }}>
             <div className="meta">
               <span className={`rv-pinpill ${c.resolved ? 'done' : ''}`}>{c.pin ?? '•'}</span>
               <span className="who">{c.author}</span>
-              <span>{page >= 0 ? `Page ${page + 1}` : 'General'} · {when(c.createdAt)}</span>
+              <span>{live ? (c.pageUrl ? `${pathOf(c.pageUrl)}${c.device ? ` · ${c.device}` : ''}` : 'General') : page >= 0 ? `Page ${page + 1}` : 'General'} · {when(c.createdAt)}</span>
               <span className={`rv-chip ${st.cls}`}>{st.label}</span>
             </div>
+            {c.elementText && <span className="rv-where">On “{c.elementText.slice(0, 80)}”</span>}
             <span className="rv-text">{c.text}</span>
             {replies.map((r) => (
               <div key={r.id} className="rv-reply">
@@ -320,7 +359,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
         <span className="rv-mark">R</span>
         <div className="rv-titles">
           <span className="rv-title">{title}</span>
-          <span className="rv-sub"><span className="desk">{client} · shared by Reyal Design</span><span className="mob">v{current.number}{isLatest ? ' · Latest' : ''} · Page {idx + 1} of {images.length}</span></span>
+          <span className="rv-sub"><span className="desk">{client} · shared by Reyal Design</span><span className="mob">v{current.number}{isLatest ? ' · Latest' : ''}{live ? ' · Live site' : ` · Page ${idx + 1} of ${images.length}`}</span></span>
         </div>
         <div className="rv-head-right">
           <span className={`rv-status ${pill.cls}`}><span className="long">{pill.long}</span><span className="short">{pill.short}</span></span>
@@ -350,7 +389,26 @@ export default function ReviewClient({ slug, title, client, status, approval, la
             </div>
           )}
           <div ref={canvasRef} className="rv-canvas">
-            {size && (
+            {live && (
+              <LiveStage ref={liveRef} url={live} pins={livePins} readOnly={locked} focusId={focus} onPick={livePick} onShot={liveShot} onBridge={setBridge} onMode={setLiveMode} onPinClick={(id) => { setTab('sent'); setFocus(id); }}>
+                {pop && newDraft && (
+                  <div className="rv-pop" style={{ left: Math.min(Math.max(pop.flip ? pop.left - 300 - 22 : pop.left + 22, 8), Math.max(8, stage.w - 308)), top: Math.min(Math.max(pop.top - 24, 8), Math.max(8, stage.h - 260)) }}>
+                    <div className="hd"><span className="rv-num">{draftPin(pop.tid)}</span>New comment</div>
+                    {newDraft.live?.elementText && <span className="rv-where">On “{newDraft.live.elementText.slice(0, 80)}”</span>}
+                    <textarea
+                      autoFocus rows={3} value={popText} onChange={(e) => setPopText(e.target.value)} placeholder="What should change here?"
+                      onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) closePop(true); if (e.key === 'Escape') closePop(false); }}
+                    />
+                    {newDraft.live?.shot && <img className="rv-shotthumb" src={`/files/${newDraft.live.shot}?w=320`} alt="Screenshot of this spot" />}
+                    <div className="rv-actions">
+                      <button className="rv-ghost" onClick={() => closePop(false)}>Cancel</button>
+                      <button className="rv-light" onClick={() => closePop(true)}>Add comment</button>
+                    </div>
+                  </div>
+                )}
+              </LiveStage>
+            )}
+            {!live && size && (
               <TransformWrapper
                 key={img.id} ref={tw} minScale={0.5} maxScale={8} centerOnInit doubleClick={{ disabled: true }}
                 onTransform={(_ref, s) => setScale(s.scale)}
@@ -373,17 +431,17 @@ export default function ReviewClient({ slug, title, client, status, approval, la
                 </TransformComponent>
               </TransformWrapper>
             )}
-            {!size && <div className="rv-loading">Loading design…</div>}
-            <div className="rv-mobhint">{locked ? 'Approved · view only' : 'Tap the design to comment'}</div>
+            {!live && !size && <div className="rv-loading">Loading design…</div>}
+            {!live && <div className="rv-mobhint">{locked ? 'Approved · view only' : 'Tap the design to comment'}</div>}
 
-            <div className="rv-controls">
+            {!live && <div className="rv-controls">
               <button className="rv-ctl" aria-label="Zoom in" onClick={() => tw.current?.zoomIn()}>+</button>
               <button className="rv-ctl" aria-label="Zoom out" onClick={() => tw.current?.zoomOut()}>−</button>
               <button className="rv-ctl txt" onClick={() => tw.current?.resetTransform()}>Fit</button>
-            </div>
-            <div className="rv-hint">{locked ? 'Approved · view only' : `Page ${idx + 1} of ${images.length} · click to comment`}</div>
+            </div>}
+            <div className="rv-hint">{locked ? 'Approved · view only' : live ? (bridge === 'missing' ? 'Pinned comments are off for this site · use the general comment box' : liveMode === 'browse' ? 'Browse mode: use the links on the site, switch to Comment to leave notes' : 'Comment mode: click any part of the page') : `Page ${idx + 1} of ${images.length} · click to comment`}</div>
 
-            {pop && newDraft && (
+            {!live && pop && newDraft && (
               <div
                 className="rv-pop"
                 style={{

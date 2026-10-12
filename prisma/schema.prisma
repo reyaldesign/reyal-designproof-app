@@ -45,6 +45,7 @@ model Version {
   number    Int
   label     String
   createdAt DateTime  @default(now())
+  liveUrl   String? // a live website reviewed in its place (WordPress staging). Empty for image and PDF proofs.
   project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   images    Image[]
   comments  Comment[]
@@ -89,6 +90,15 @@ model Comment {
   x            Float?
   y            Float?
   pin          Int?
+  // Live website comments: which page, which element, where inside it, and at what screen width. x and y are page pixels there.
+  pageUrl      String?
+  selector     String?
+  elementText  String?
+  rx           Float?
+  ry           Float?
+  vw           Int?
+  device       String? // desktop | tablet | mobile
+  shot         String? // screenshot file name under uploads
   resolved     Boolean   @default(false)
   fromDesigner Boolean   @default(false)
   createdAt    DateTime  @default(now())

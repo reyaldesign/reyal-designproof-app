@@ -64,3 +64,17 @@ export async function removeUploads(names: string[]) {
       .map((rel) => unlink(path.join(uploadDir(), rel)).catch(() => {})),
   );
 }
+
+/** Saves a review screenshot sent as a data URL. Shrunk to 900px wide JPEG, so a page full of comments stays light. Returns the file name, or null if it is not a usable image. */
+export async function saveShot(dataUrl: string) {
+  const m = /^data:image\/(?:jpeg|png);base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
+  if (!m || m[1].length > 3_000_000) return null;
+  try {
+    const sharp = (await import('sharp')).default;
+    const buf = await sharp(Buffer.from(m[1], 'base64'), { limitInputPixels: 40_000_000 }).resize({ width: 900, withoutEnlargement: true }).flatten({ background: '#ffffff' }).jpeg({ quality: 72 }).toBuffer();
+    await mkdir(uploadDir(), { recursive: true });
+    const name = `shot-${newName('jpg')}`;
+    await writeFile(path.join(uploadDir(), name), buf);
+    return name;
+  } catch { return null; }
+}
