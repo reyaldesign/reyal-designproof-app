@@ -25,6 +25,7 @@
   }
 
   // ---------- styles ----------
+  var COOKIE_SEL = '.cky-consent-container,.cky-overlay,.cky-modal,#cookie-law-info-bar,.cli-bar-container,.cli-modal-backdrop,#cookiebot,#CybotCookiebotDialog,.cmplz-cookiebanner,#onetrust-banner-sdk,.cc-window,#cookie-notice';
   var css = document.createElement('style');
   css.id = 'rs-style';
   css.textContent =
@@ -39,7 +40,9 @@
     '.rs-pin.new{background:#ffd308;color:#111}' +
     '.rs-pin.sel{outline:3px solid rgba(255,211,8,.9);outline-offset:2px}' +
     '@keyframes rs-pop{from{transform:scale(.5);opacity:0}to{transform:none;opacity:1}}' +
-    'html.rs-commenting,html.rs-commenting *{cursor:crosshair !important}';
+    'html.rs-commenting,html.rs-commenting *{cursor:crosshair !important}' +
+    // Cookie consent banners cover the page and would swallow comment clicks, so they are hidden inside the review only.
+    COOKIE_SEL + '{display:none !important}';
   (document.head || document.documentElement).appendChild(css);
 
   function ui() {
@@ -184,15 +187,16 @@
   // ---------- sections ----------
   function sectionName(el, i) {
     if ((el.tagName === 'HEADER' || el.tagName === 'FOOTER') && !el.getAttribute('aria-label')) return el.tagName === 'HEADER' ? 'Header' : 'Footer';
-    var h = el.querySelector(':scope > h1, :scope > h2, :scope > h3');
-    var name = el.getAttribute('data-section-title') || el.getAttribute('aria-label') || (h && h.textContent) ||
-      Array.prototype.filter.call(el.classList, function (c) { return !/^(section|container|wrapper|row|elementor|e-con|e-parent|e-flex|e-con-full|elementor-section|elementor-top-section|elementor-element)/.test(c) && !/\d{3,}/.test(c); })[0] ||
-      el.id || (el.querySelector('h1, h2, h3') || {}).textContent || 'Section ' + (i + 1);
+    // A heading says it best. Builder class names (elementor-..., e-con ..., hashes) are not worth showing.
+    var h = el.querySelector('h1, h2, h3, h4');
+    var cls = Array.prototype.filter.call(el.classList, function (c) { return !/^(section|container|wrapper|row|elementor|e-|wp-|et_|fl-|vc_|wpb_)/.test(c) && !/\d{3,}/.test(c); })[0];
+    var name = el.getAttribute('data-section-title') || el.getAttribute('aria-label') || (h && h.textContent) || cls || el.id || 'Section ' + (i + 1);
     name = String(name).replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 50);
     return name.charAt(0).toUpperCase() + name.slice(1);
   }
+  var SECTION_SEL = 'section, header, footer, [role="region"], [data-section], main > [id], .e-con.e-parent, [data-elementor-type="wp-page"] > .elementor-element, [data-elementor-type="wp-page"] > .elementor > .elementor-element';
   function findSections() {
-    sections = Array.prototype.slice.call(document.querySelectorAll('section, header, footer, [role="region"], [data-section], main > [id], .e-con.e-parent'))
+    sections = Array.prototype.slice.call(document.querySelectorAll(SECTION_SEL))
       .filter(function (el) { return !/^rs-/.test(el.id || '') && !el.closest('#rs-pins') && el.getBoundingClientRect().height > 0 && !el.parentElement.closest('section, .e-con.e-parent'); });
     if (!sections.length) sections = Array.prototype.slice.call(document.querySelectorAll('h1, h2'));
     return sections.map(function (el, i) { return { i: i, name: sectionName(el, i) }; });
@@ -216,6 +220,7 @@
         x: window.scrollX, y: window.scrollY, width: window.innerWidth, height: window.innerHeight,
         windowWidth: document.documentElement.clientWidth, windowHeight: window.innerHeight,
         scale: scale, useCORS: true, logging: false, backgroundColor: '#ffffff',
+        onclone: function (d) { Array.prototype.forEach.call(d.querySelectorAll(COOKIE_SEL), function (n) { n.remove(); }); },
         ignoreElements: function (el) { return /^rs-/.test(el.id || '') || (el.classList && el.classList.contains('rs-pin')); },
       }).then(function (c) {
         if (rect) {

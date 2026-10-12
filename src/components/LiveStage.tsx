@@ -102,7 +102,7 @@ const LiveStage = forwardRef<LiveHandle, Props>(function LiveStage({ url, pins, 
           at: { left: f.left - b.left + r.l, top: f.top - b.top + r.t, width: r.w, height: r.h },
         });
       } else if (m.type === 'pinclick') onPinClick?.(String(m.id));
-      else if (m.type === 'shot') onShot?.(String(m.id), typeof m.dataUrl === 'string' ? m.dataUrl : null);
+      else if (m.type === 'shot') { onShot?.(String(m.id), typeof m.dataUrl === 'string' ? m.dataUrl : null); }
     };
     window.addEventListener('message', on);
     return () => window.removeEventListener('message', on);
