@@ -50,7 +50,8 @@ const LiveStage = forwardRef<LiveHandle, Props>(function LiveStage({ url, pins, 
   const send = useCallback((m: Record<string, unknown>) => {
     let origin = '*';
     try { origin = new URL(page).origin; } catch { /* keep any */ }
-    frame.current?.contentWindow?.postMessage({ rs: 1, ...m }, origin); // only the site that was opened gets the pins and commands
+    // Pins and commands go only to the site that was opened. A ping carries nothing and has to work through a redirect (www or not), so it goes to any address.
+    frame.current?.contentWindow?.postMessage({ rs: 1, ...m }, m.type === 'ping' ? '*' : origin);
   }, [page]);
 
   useImperativeHandle(ref, () => ({
@@ -75,13 +76,21 @@ const LiveStage = forwardRef<LiveHandle, Props>(function LiveStage({ url, pins, 
   useEffect(() => { onBridge?.(bridge); }, [bridge, onBridge]);
   useEffect(() => { onMode?.(readOnly ? 'browse' : mode); }, [mode, readOnly, onMode]);
 
-  // no hello soon after the page loads means the site has no bridge (or refuses to be shown)
+  // The page can finish loading before this component is ready (after a refresh), and then its first hello is missed. Asking again every second until it answers covers that.
   useEffect(() => {
-    setBridge('waiting');
+    if (bridge !== 'waiting') return;
+    let n = 0;
+    const t = setInterval(() => { if (++n > 20) clearInterval(t); else send({ type: 'ping' }); }, 1000);
+    return () => clearInterval(t);
+  }, [bridge, send]);
+
+  // no hello soon after the page loads means the site has no bridge (or refuses to be shown)
+  useEffect(() => { setBridge('waiting'); setLoaded(false); }, [url]);
+  useEffect(() => {
     if (!loaded) return;
     const t = setTimeout(() => setBridge((b) => (b === 'waiting' ? 'missing' : b)), 6000);
     return () => clearTimeout(t);
-  }, [loaded, url]);
+  }, [loaded]);
   useEffect(() => { const t = setTimeout(() => setBridge((b) => (b === 'waiting' ? 'missing' : b)), 15000); return () => clearTimeout(t); }, [url]);
 
   useEffect(() => {
