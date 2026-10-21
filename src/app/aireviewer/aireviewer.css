@@ -187,3 +187,9 @@
 .ai-statusrow.down b { color: var(--fails); } .ai-statusrow.down .ai-dot { background: var(--fails); }
 .ai-statusrow p { font-size: 12px; line-height: 1.4; color: var(--ink-2); margin: 0; }
 .ai-statusrow .ai-link { justify-self: start; }
+
+/* EN | ES switch in the page header */
+.ai-lang { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--line-2); border-radius: 99px; background: var(--surface); }
+.ai-lang button { padding: 6px 11px; border: 0; border-radius: 99px; background: none; color: var(--muted); font: 700 12px/1 var(--sans); letter-spacing: .04em; cursor: pointer; }
+.ai-lang button:hover { color: var(--ink); }
+.ai-lang button.on { background: var(--surface-3); color: #fff; }

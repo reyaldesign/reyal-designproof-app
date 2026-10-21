@@ -5,6 +5,7 @@ import { AI_IMAGE_TYPES, AI_MAX_IMAGE_MB, VERDICT_LABEL, type Verdict } from '@/
 import AiNav from './AiNav';
 import AiStatus from './AiStatus';
 import ClientIcon from './ClientIcon';
+import { useLang } from './Lang';
 import ReviewDetail from './ReviewDetail';
 import type { AiClientLite, ReviewView } from './types';
 
@@ -37,6 +38,7 @@ async function filesFromDrop(dt: DataTransfer): Promise<File[]> {
 }
 
 export default function ReviewApp({ clients, keyConfigured, model, price }: { clients: AiClientLite[]; keyConfigured: boolean; model: string; price: { in: number; out: number } }) {
+  const { t, msg, verdict } = useLang();
   const [clientId, setClientId] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [criteria, setCriteria] = useState<string[]>([]);
@@ -69,7 +71,7 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
       const big = f.size > AI_MAX_IMAGE_MB * 1024 * 1024;
       ok.push({ id: uid(), file: f, url: URL.createObjectURL(f), status: big ? 'error' : 'pending', error: big ? `Over ${AI_MAX_IMAGE_MB} MB. Export a smaller copy.` : undefined });
     }
-    if (skipped) ok.push({ id: uid(), file: new File([], `${skipped} file${skipped === 1 ? '' : 's'} skipped`), url: '', status: 'error', error: 'Only JPG, PNG, WebP and GIF images are reviewed.' });
+    if (skipped) ok.push({ id: uid(), file: new File([], String(skipped)), url: '', status: 'error', error: 'Only JPG, PNG, WebP and GIF images are reviewed.' });
     setItems((cur) => [...cur, ...ok]);
   }
 
@@ -126,61 +128,61 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
     <div className="page ai-page">
       <div className="page-head">
         <div>
-          <h1 className="h1">AI Reviewer</h1>
-          <p className="muted" style={{ marginTop: 8 }}>Check images against a checklist before they go to proofing.</p>
+          <h1 className="h1">{t('AI Reviewer')}</h1>
+          <p className="muted" style={{ marginTop: 8 }}>{t('Check images against a checklist before they go to proofing.')}</p>
         </div>
         <AiNav />
       </div>
 
       {!keyConfigured && (
-        <div className="ai-alert">The Anthropic API key is not set on this server, so reviews will fail. Add <code>ANTHROPIC_API_KEY</code> to <code>.env</code> and restart.</div>
+        <div className="ai-alert">{t('The Anthropic API key is not set on this server, so reviews will fail. Add')} <code>ANTHROPIC_API_KEY</code> {t('to')} <code>.env</code> {t('and restart.')}</div>
       )}
 
       <div className="ai-grid">
         <aside className="ai-setup">
           <div className="ai-card">
-            <label className="ai-label">Client
+            <label className="ai-label">{t('Client')}
               <span className="ai-pick">
               {client && <ClientIcon name={client.name} logo={client.logo} size={36} />}
               <select className="input" value={clientId} onChange={(e) => { setClientId(e.target.value); setCategoryId(''); }}>
-                <option value="">No client (ad hoc checklist)</option>
+                <option value="">{t('No client (ad hoc checklist)')}</option>
                 {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               </span>
             </label>
             {client && (
-              <label className="ai-label">Image type
+              <label className="ai-label">{t('Image type')}
                 <select className="input" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                  <option value="">Choose a type…</option>
+                  <option value="">{t('Choose a type…')}</option>
                   {client.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </label>
             )}
-            {!clients.length && <p className="muted" style={{ fontSize: 12 }}>No clients yet. Add one under Clients to save a checklist per client.</p>}
+            {!clients.length && <p className="muted" style={{ fontSize: 12 }}>{t('No clients yet. Add one under Clients to save a checklist per client.')}</p>}
           </div>
 
           <div className="ai-card">
-            <div className="ai-h"><span>Checklist</span><span className="ai-count">{criteria.length}</span></div>
+            <div className="ai-h"><span>{t('Checklist')}</span><span className="ai-count">{criteria.length}</span></div>
             <ul className="ai-crit">
               {criteria.map((c, i) => (
-                <li key={i}><span>{c}</span><button aria-label={`Remove ${c}`} onClick={() => setCriteria((cur) => cur.filter((_, j) => j !== i))}>×</button></li>
+                <li key={i}><span>{c}</span><button aria-label={t('Remove {c}', { c })} onClick={() => setCriteria((cur) => cur.filter((_, j) => j !== i))}>×</button></li>
               ))}
-              {!criteria.length && <li className="empty">No criteria. The AI will judge general image quality.</li>}
+              {!criteria.length && <li className="empty">{t('No criteria. The AI will judge general image quality.')}</li>}
             </ul>
             <form className="ai-addrow" onSubmit={(e) => { e.preventDefault(); const t = newCrit.trim(); if (t) { setCriteria((cur) => [...cur, t]); setNewCrit(''); } }}>
-              <input className="input" value={newCrit} onChange={(e) => setNewCrit(e.target.value)} placeholder="Add a criterion" aria-label="Add a criterion" />
-              <button className="btn">Add</button>
+              <input className="input" value={newCrit} onChange={(e) => setNewCrit(e.target.value)} placeholder={t('Add a criterion')} aria-label={t('Add a criterion')} />
+              <button className="btn">{t('Add')}</button>
             </form>
-            <p className="muted" style={{ fontSize: 12 }}>Changes here apply to this batch only. Save them for good under Clients.</p>
+            <p className="muted" style={{ fontSize: 12 }}>{t('Changes here apply to this batch only. Save them for good under Clients.')}</p>
           </div>
 
           <div className="ai-card ai-usage">
-            <div className="ai-h"><span>This session</span></div>
+            <div className="ai-h"><span>{t('This session')}</span></div>
             <AiStatus variant="row" />
-            <div><span>Reviews</span><b>{done.length}</b></div>
-            <div><span>Tokens in / out</span><b>{inTok.toLocaleString()} / {outTok.toLocaleString()}</b></div>
-            <div><span>Estimated cost</span><b>${cost.toFixed(3)}</b></div>
-            <div><span>Model</span><b>{model}</b></div>
+            <div><span>{t('Reviews')}</span><b>{done.length}</b></div>
+            <div><span>{t('Tokens in / out')}</span><b>{inTok.toLocaleString()} / {outTok.toLocaleString()}</b></div>
+            <div><span>{t('Estimated cost')}</span><b>${cost.toFixed(3)}</b></div>
+            <div><span>{t('Model')}</span><b>{model}</b></div>
           </div>
         </aside>
 
@@ -191,11 +193,11 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
             onDragLeave={() => setOver(false)}
             onDrop={async (e) => { e.preventDefault(); setOver(false); addFiles(await filesFromDrop(e.dataTransfer)); }}
           >
-            <b>Drop images or a whole folder here</b>
-            <small>JPG, PNG, WebP or GIF, up to {AI_MAX_IMAGE_MB} MB each</small>
+            <b>{t('Drop images or a whole folder here')}</b>
+            <small>{t('JPG, PNG, WebP or GIF, up to {n} MB each', { n: AI_MAX_IMAGE_MB })}</small>
             <div className="ai-droprow">
-              <button className="btn" onClick={() => fileInput.current?.click()}>Choose images</button>
-              <button className="btn" onClick={() => folderInput.current?.click()}>Choose a folder</button>
+              <button className="btn" onClick={() => fileInput.current?.click()}>{t('Choose images')}</button>
+              <button className="btn" onClick={() => folderInput.current?.click()}>{t('Choose a folder')}</button>
             </div>
             <input ref={fileInput} type="file" accept={AI_IMAGE_TYPES.join(',')} multiple hidden onChange={(e) => { addFiles([...(e.target.files ?? [])]); e.target.value = ''; }} />
             <input ref={folderInput} type="file" hidden {...({ webkitdirectory: '', directory: '' } as object)} onChange={(e) => { addFiles([...(e.target.files ?? [])]); e.target.value = ''; }} />
@@ -203,51 +205,51 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
 
           {total > 0 && (
             <div className="ai-bar">
-              <button className="btn btn-primary" disabled={running || pending === 0} onClick={reviewAll}>{running ? 'Reviewing…' : pending ? `Review ${pending} image${pending === 1 ? '' : 's'}` : 'All reviewed'}</button>
+              <button className="btn btn-primary" disabled={running || pending === 0} onClick={reviewAll}>{running ? t('Reviewing…') : pending ? t(pending === 1 ? 'Review {n} image' : 'Review {n} images', { n: pending }) : t('All reviewed')}</button>
               <div className="ai-progress" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={finished}><i style={{ width: `${(finished / total) * 100}%` }} /></div>
-              <span className="muted">{finished} of {total}</span>
-              <button className="btn-ghost" onClick={() => { items.forEach((i) => URL.revokeObjectURL(i.url)); setItems([]); setSelected(null); }} disabled={running}>Clear</button>
+              <span className="muted">{t('{a} of {b}', { a: finished, b: total })}</span>
+              <button className="btn-ghost" onClick={() => { items.forEach((i) => URL.revokeObjectURL(i.url)); setItems([]); setSelected(null); }} disabled={running}>{t('Clear')}</button>
             </div>
           )}
 
           {done.length > 0 && (
             <div className="ai-filters">
               {([['all', 'All', done.length], ['approved', 'Ready', counts.approved], ['needs_review', 'Needs revisions', counts.needs_review], ['rejected', 'Fails', counts.rejected]] as [Filter, string, number][]).map(([k, label, n]) => (
-                <button key={k} className={filter === k ? 'on' : ''} onClick={() => setFilter(k)}>{label}<span>{n}</span></button>
+                <button key={k} className={filter === k ? 'on' : ''} onClick={() => setFilter(k)}>{t(label)}<span>{n}</span></button>
               ))}
             </div>
           )}
 
           <div className="ai-cards">
             {shown.map((i) => {
-              const v = i.review && VERDICT_LABEL[i.review.verdict];
+              const v = i.review && { ...VERDICT_LABEL[i.review.verdict], ...verdict(i.review.verdict) };
               return (
                 <button key={i.id} className={`ai-tile ${selected === i.id ? 'sel' : ''}`} onClick={() => setSelected(i.id)}>
-                  <span className="ai-tthumb"><img src={i.url} alt="" />{i.status === 'reviewing' && <span className="ai-spin" aria-label="Reviewing" />}</span>
+                  <span className="ai-tthumb"><img src={i.url} alt="" />{i.status === 'reviewing' && <span className="ai-spin" aria-label={t('Reviewing…')} />}</span>
                   <span className="ai-tbody">
                     <b title={i.file.name}>{i.file.name}</b>
-                    {i.status === 'pending' && <span className="muted">Waiting</span>}
-                    {i.status === 'reviewing' && <span className="muted">Reviewing…</span>}
-                    {i.status === 'error' && <span className="ai-err">{i.error}</span>}
+                    {i.status === 'pending' && <span className="muted">{t('Waiting')}</span>}
+                    {i.status === 'reviewing' && <span className="muted">{t('Reviewing…')}</span>}
+                    {i.status === 'error' && <span className="ai-err">{msg(i.error ?? '')}</span>}
                     {i.review && v && <span className={`ai-verdict ${v.cls}`}>{i.review.score} · {v.short}</span>}
                   </span>
                   {i.status === 'error' && i.error && !i.error.startsWith('Over') && !i.error.startsWith('Only') && (
-                    <span className="ai-retry" role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); reviewOne(i.id); }}>Retry</span>
+                    <span className="ai-retry" role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); reviewOne(i.id); }}>{t('Retry')}</span>
                   )}
                 </button>
               );
             })}
-            {items.filter((i) => !i.url).map((i) => <div key={i.id} className="ai-note-row">{i.file.name}. {i.error}</div>)}
+            {items.filter((i) => !i.url).map((i) => <div key={i.id} className="ai-note-row">{t(Number(i.file.name) === 1 ? '{n} file skipped' : '{n} files skipped', { n: i.file.name })}. {msg(i.error ?? '')}</div>)}
           </div>
-          {!items.length && <p className="ai-hint">Nothing here yet. Pick a client and image type to load their checklist, then drop the images to review.</p>}
+          {!items.length && <p className="ai-hint">{t('Nothing here yet. Pick a client and image type to load their checklist, then drop the images to review.')}</p>}
         </section>
       </div>
 
       {sel?.review && (
         <>
           <div className="ai-scrim" onClick={() => setSelected(null)} />
-          <aside className="ai-panel" role="dialog" aria-label="Review detail">
-            <div className="ai-panel-top"><span>Review</span><button onClick={() => setSelected(null)}>Close</button></div>
+          <aside className="ai-panel" role="dialog" aria-label={t('Review detail')}>
+            <div className="ai-panel-top"><span>{t('Review')}</span><button onClick={() => setSelected(null)}>{t('Close')}</button></div>
             <ReviewDetail r={sel.review} imageUrl={sel.url} />
           </aside>
         </>
