@@ -161,6 +161,7 @@ model AiReview {
   inputTokens      Int         @default(0)
   outputTokens     Int         @default(0)
   createdAt        DateTime    @default(now())
+  translations     String      @default("{}") // JSON: { es: { summary, actionItems, checks: [{ criterion, comment }] } }, made on first view in Spanish
   client           AiClient?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   category         AiCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 

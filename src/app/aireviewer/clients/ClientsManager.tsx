@@ -5,6 +5,7 @@ import { useRef } from 'react';
 import SubmitButton from '@/components/SubmitButton';
 import AiNav from '../AiNav';
 import ClientIcon from '../ClientIcon';
+import { useLang } from '../Lang';
 import {
   addAiCategory, addAiCriterion, createAiClient, deleteAiCategory, deleteAiClient, deleteAiCriterion,
   moveAiCriterion, removeAiClientLogo, renameAiCategory, setAiClientLogo, updateAiClient, updateAiCriterion,
@@ -13,24 +14,25 @@ import type { AiClientLite, Crit } from '../types';
 
 /** One editable list of criteria. Each row saves when you leave the field; arrows reorder. */
 function CriteriaList({ clientId, categoryId, items, placeholder }: { clientId: string; categoryId: string | null; items: Crit[]; placeholder: string }) {
+  const { t } = useLang();
   return (
     <div className="ai-clist">
       {items.map((c, i) => (
         <div key={c.id} className="ai-crow">
           <form action={updateAiCriterion}>
             <input type="hidden" name="id" value={c.id} />
-            <input className="input" name="text" defaultValue={c.text} aria-label="Criterion" onBlur={(e) => { if (e.currentTarget.value.trim() !== c.text) e.currentTarget.form?.requestSubmit(); }} />
+            <input className="input" name="text" defaultValue={c.text} aria-label={t('Criterion')} onBlur={(e) => { if (e.currentTarget.value.trim() !== c.text) e.currentTarget.form?.requestSubmit(); }} />
           </form>
-          <form action={moveAiCriterion}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="dir" value="up" /><button className="ai-ibtn" disabled={i === 0} aria-label="Move up">↑</button></form>
-          <form action={moveAiCriterion}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="dir" value="down" /><button className="ai-ibtn" disabled={i === items.length - 1} aria-label="Move down">↓</button></form>
-          <form action={deleteAiCriterion}><input type="hidden" name="id" value={c.id} /><button className="ai-ibtn del" aria-label="Delete criterion">×</button></form>
+          <form action={moveAiCriterion}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="dir" value="up" /><button className="ai-ibtn" disabled={i === 0} aria-label={t('Move up')}>↑</button></form>
+          <form action={moveAiCriterion}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="dir" value="down" /><button className="ai-ibtn" disabled={i === items.length - 1} aria-label={t('Move down')}>↓</button></form>
+          <form action={deleteAiCriterion}><input type="hidden" name="id" value={c.id} /><button className="ai-ibtn del" aria-label={t('Delete criterion')}>×</button></form>
         </div>
       ))}
       <form action={addAiCriterion} className="ai-addrow" key={items.length}>
         <input type="hidden" name="clientId" value={clientId} />
         <input type="hidden" name="categoryId" value={categoryId ?? ''} />
         <input className="input" name="text" placeholder={placeholder} aria-label={placeholder} />
-        <button className="btn">Add</button>
+        <button className="btn">{t('Add')}</button>
       </form>
     </div>
   );
@@ -38,51 +40,52 @@ function CriteriaList({ clientId, categoryId, items, placeholder }: { clientId: 
 
 export default function ClientsManager({ clients, selectedId }: { clients: AiClientLite[]; selectedId?: string }) {
   const dlg = useRef<HTMLDialogElement>(null);
+  const { t } = useLang();
   const client = clients.find((c) => c.id === selectedId) ?? clients[0];
 
   return (
     <div className="page ai-page">
       <div className="page-head">
         <div>
-          <h1 className="h1">Clients <span className="count">{clients.length}</span></h1>
-          <p className="muted" style={{ marginTop: 8 }}>Save a checklist per client and image type. These clients are separate from your proofing clients.</p>
+          <h1 className="h1">{t('Clients')} <span className="count">{clients.length}</span></h1>
+          <p className="muted" style={{ marginTop: 8 }}>{t('Save a checklist per client and image type. These clients are separate from your proofing clients.')}</p>
         </div>
         <AiNav />
       </div>
 
       <div className="ai-clients">
         <aside className="ai-clist-side">
-          <button className="btn btn-primary" onClick={() => dlg.current?.showModal()}>+ Add client</button>
+          <button className="btn btn-primary" onClick={() => dlg.current?.showModal()}>{t('+ Add client')}</button>
           {clients.map((c) => (
             <Link key={c.id} href={`/aireviewer/clients?c=${c.id}`} className={`ai-cside ${client?.id === c.id ? 'on' : ''}`}>
               <ClientIcon name={c.name} logo={c.logo} size={36} />
               <span className="ai-cside-t">
                 <b>{c.name}</b>
-                <span className="muted">{c.categories.length} types · {c.base.length + c.categories.reduce((n, x) => n + x.criteria.length, 0)} criteria</span>
+                <span className="muted">{t('{n} types · {m} criteria', { n: c.categories.length, m: c.base.length + c.categories.reduce((n, x) => n + x.criteria.length, 0) })}</span>
               </span>
             </Link>
           ))}
-          {!clients.length && <p className="muted">No clients yet.</p>}
+          {!clients.length && <p className="muted">{t('No clients yet.')}</p>}
         </aside>
 
         <section className="ai-cdetail">
-          {!client && <div className="empty-state"><h2>Add your first client</h2><p>Each client gets six image types to start (Reel, Flyer, Photo Resize, Carousel, Story, Profile Logo). Add checklists to each.</p></div>}
+          {!client && <div className="empty-state"><h2>{t('Add your first client')}</h2><p>{t('Each client gets six image types to start (Reel, Flyer, Photo Resize, Carousel, Story, Profile Logo). Add checklists to each.')}</p></div>}
           {client && (
             <>
               <div className="ai-card ai-iconcard">
                 <ClientIcon name={client.name} logo={client.logo} size={72} />
                 <div className="ai-iconctl">
-                  <b>Client icon</b>
-                  <span className="muted">PNG, JPG, WebP or GIF, up to 2 MB. It is cropped to a square.</span>
+                  <b>{t('Client icon')}</b>
+                  <span className="muted">{t('PNG, JPG, WebP or GIF, up to 2 MB. It is cropped to a square.')}</span>
                   <div className="head-actions">
                     <form action={setAiClientLogo}>
                       <input type="hidden" name="id" value={client.id} />
-                      <label className="btn">{client.logo ? 'Replace icon' : 'Upload icon'}
+                      <label className="btn">{client.logo ? t('Replace icon') : t('Upload icon')}
                         <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif" hidden
-                          onChange={(e) => { const f = e.currentTarget.files?.[0]; if (f && f.size > 2 * 1024 * 1024) { alert('That image is over 2 MB. Please choose a smaller one.'); e.currentTarget.value = ''; return; } e.currentTarget.form?.requestSubmit(); }} />
+                          onChange={(e) => { const f = e.currentTarget.files?.[0]; if (f && f.size > 2 * 1024 * 1024) { alert(t('That image is over 2 MB. Please choose a smaller one.')); e.currentTarget.value = ''; return; } e.currentTarget.form?.requestSubmit(); }} />
                       </label>
                     </form>
-                    {client.logo && <form action={removeAiClientLogo}><input type="hidden" name="id" value={client.id} /><button className="btn-ghost">Remove</button></form>}
+                    {client.logo && <form action={removeAiClientLogo}><input type="hidden" name="id" value={client.id} /><button className="btn-ghost">{t('Remove')}</button></form>}
                   </div>
                 </div>
               </div>
@@ -90,15 +93,15 @@ export default function ClientsManager({ clients, selectedId }: { clients: AiCli
               <div className="ai-card">
                 <form action={updateAiClient} className="ai-editrow">
                   <input type="hidden" name="id" value={client.id} />
-                  <input className="input" name="name" defaultValue={client.name} aria-label="Client name" required />
-                  <input className="input" name="notes" defaultValue={client.notes ?? ''} placeholder="Notes (optional)" aria-label="Notes" />
-                  <SubmitButton className="btn" pending="Saving…">Save</SubmitButton>
+                  <input className="input" name="name" defaultValue={client.name} aria-label={t('Client name')} required />
+                  <input className="input" name="notes" defaultValue={client.notes ?? ''} placeholder={t('Notes (optional)')} aria-label={t('Notes (optional)')} />
+                  <SubmitButton className="btn" pending={t('Saving…')}>{t('Save')}</SubmitButton>
                 </form>
               </div>
 
               <div className="ai-card">
-                <div className="ai-h"><span>Checked in every image type</span><span className="ai-count">{client.base.length}</span></div>
-                <CriteriaList clientId={client.id} categoryId={null} items={client.base} placeholder="Add a criterion for all types" />
+                <div className="ai-h"><span>{t('Checked in every image type')}</span><span className="ai-count">{client.base.length}</span></div>
+                <CriteriaList clientId={client.id} categoryId={null} items={client.base} placeholder={t('Add a criterion for all types')} />
               </div>
 
               {client.categories.map((cat) => (
@@ -106,26 +109,26 @@ export default function ClientsManager({ clients, selectedId }: { clients: AiCli
                   <div className="ai-h">
                     <form action={renameAiCategory} className="ai-catname">
                       <input type="hidden" name="id" value={cat.id} />
-                      <input className="input" name="name" defaultValue={cat.name} aria-label="Image type name" onBlur={(e) => { if (e.currentTarget.value.trim() && e.currentTarget.value.trim() !== cat.name) e.currentTarget.form?.requestSubmit(); }} />
+                      <input className="input" name="name" defaultValue={cat.name} aria-label={t('Image type name')} onBlur={(e) => { if (e.currentTarget.value.trim() && e.currentTarget.value.trim() !== cat.name) e.currentTarget.form?.requestSubmit(); }} />
                     </form>
                     <span className="ai-count">{cat.criteria.length}</span>
-                    <form action={deleteAiCategory}><input type="hidden" name="id" value={cat.id} /><button className="ai-link danger" onClick={(e) => { if (!confirm(`Delete the "${cat.name}" type and its criteria?`)) e.preventDefault(); }}>Delete type</button></form>
+                    <form action={deleteAiCategory}><input type="hidden" name="id" value={cat.id} /><button className="ai-link danger" onClick={(e) => { if (!confirm(t('Delete the "{name}" type and its criteria?', { name: cat.name }))) e.preventDefault(); }}>{t('Delete type')}</button></form>
                   </div>
-                  <CriteriaList clientId={client.id} categoryId={cat.id} items={cat.criteria} placeholder={`Add a criterion for ${cat.name}`} />
+                  <CriteriaList clientId={client.id} categoryId={cat.id} items={cat.criteria} placeholder={t('Add a criterion for {name}', { name: cat.name })} />
                 </div>
               ))}
 
               <form action={addAiCategory} className="ai-addrow ai-newcat" key={client.categories.length}>
                 <input type="hidden" name="clientId" value={client.id} />
-                <input className="input" name="name" placeholder="+ Add an image type (for example Menu or Banner)" aria-label="New image type" />
-                <button className="btn">Add type</button>
+                <input className="input" name="name" placeholder={t('+ Add an image type (for example Menu or Banner)')} aria-label={t('New image type')} />
+                <button className="btn">{t('Add type')}</button>
               </form>
 
               <div className="danger-zone">
-                <span className="muted">Danger zone</span>
-                <form action={deleteAiClient} onSubmit={(e) => { if (!confirm(`Delete "${client.name}" and all their saved checklists? Past reviews stay in History.`)) e.preventDefault(); }}>
+                <span className="muted">{t('Danger zone')}</span>
+                <form action={deleteAiClient} onSubmit={(e) => { if (!confirm(t('Delete "{name}" and all their saved checklists? Past reviews stay in History.', { name: client.name }))) e.preventDefault(); }}>
                   <input type="hidden" name="id" value={client.id} />
-                  <button className="btn-ghost" style={{ color: 'var(--bad)' }}>Delete client…</button>
+                  <button className="btn-ghost" style={{ color: 'var(--bad)' }}>{t('Delete client…')}</button>
                 </form>
               </div>
             </>
@@ -134,13 +137,13 @@ export default function ClientsManager({ clients, selectedId }: { clients: AiCli
       </div>
 
       <dialog ref={dlg} className="dlg" onClick={(e) => { if (e.target === dlg.current) dlg.current?.close(); }}>
-        <h2>Add client</h2>
+        <h2>{t('Add client')}</h2>
         <form action={createAiClient}>
-          <input className="input" name="name" placeholder="Client name" required autoFocus />
-          <input className="input" name="notes" placeholder="Notes (optional)" />
+          <input className="input" name="name" placeholder={t('Client name')} required autoFocus />
+          <input className="input" name="notes" placeholder={t('Notes (optional)')} />
           <div className="head-actions" style={{ justifyContent: 'flex-end' }}>
-            <button type="button" className="btn-ghost" onClick={() => dlg.current?.close()}>Cancel</button>
-            <SubmitButton className="btn btn-primary" pending="Adding…">Add client</SubmitButton>
+            <button type="button" className="btn-ghost" onClick={() => dlg.current?.close()}>{t('Cancel')}</button>
+            <SubmitButton className="btn btn-primary" pending={t('Adding…')}>{t('Add client')}</SubmitButton>
           </div>
         </form>
       </dialog>

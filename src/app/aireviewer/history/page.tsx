@@ -13,6 +13,7 @@ export default async function HistoryPage() {
   const data: HistoryRow[] = rows.map((r) => ({
     id: r.id, imageFile: r.imageFile, filename: r.originalFilename, score: r.score, verdict: r.verdict as Verdict, summary: r.summary,
     actionItems: parse<string[]>(r.actionItems, []), checks: parse<Check[]>(r.checks, []),
+    es: parse<{ es?: HistoryRow['es'] }>(r.translations, {}).es ?? null,
     clientName: r.clientName, clientLogo: r.client?.logoFile ?? null, categoryName: r.categoryName, createdAt: r.createdAt.toISOString(),
   }));
   return <HistoryList rows={data} />;

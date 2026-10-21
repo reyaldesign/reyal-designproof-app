@@ -1,4 +1,5 @@
 import type { Check, Verdict } from '@/lib/aiShared';
+import type { ReviewText } from '@/lib/aiTranslate';
 
 export type Crit = { id: string; text: string };
 export type AiClientLite = { id: string; name: string; notes: string | null; logo: string | null; base: Crit[]; categories: { id: string; name: string; criteria: Crit[] }[] };
@@ -17,4 +18,5 @@ export type ReviewView = {
   clientLogo?: string | null;
   categoryName?: string | null;
   createdAt?: string;
+  es?: ReviewText | null; // the Spanish version, when it has already been made
 };
