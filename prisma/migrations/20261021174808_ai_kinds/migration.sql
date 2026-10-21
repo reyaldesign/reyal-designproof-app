@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "AiCategory" ADD COLUMN "kind" TEXT NOT NULL DEFAULT 'social';
+ALTER TABLE "AiCriterion" ADD COLUMN "kind" TEXT NOT NULL DEFAULT 'social';
+ALTER TABLE "AiReview" ADD COLUMN "kind" TEXT NOT NULL DEFAULT 'social';
+ALTER TABLE "AiReview" ADD COLUMN "pages" TEXT NOT NULL DEFAULT '[]';

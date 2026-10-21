@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import SubmitButton from '@/components/SubmitButton';
+import { AI_KINDS, type Kind } from '@/lib/aiShared';
 import AiNav from '../AiNav';
 import ClientIcon from '../ClientIcon';
 import { useLang } from '../Lang';
@@ -13,7 +14,7 @@ import {
 import type { AiClientLite, Crit } from '../types';
 
 /** One editable list of criteria. Each row saves when you leave the field; arrows reorder. */
-function CriteriaList({ clientId, categoryId, items, placeholder }: { clientId: string; categoryId: string | null; items: Crit[]; placeholder: string }) {
+function CriteriaList({ clientId, categoryId, items, placeholder, kind }: { clientId: string; categoryId: string | null; items: Crit[]; placeholder: string; kind: Kind }) {
   const { t } = useLang();
   return (
     <div className="ai-clist">
@@ -31,6 +32,7 @@ function CriteriaList({ clientId, categoryId, items, placeholder }: { clientId: 
       <form action={addAiCriterion} className="ai-addrow" key={items.length}>
         <input type="hidden" name="clientId" value={clientId} />
         <input type="hidden" name="categoryId" value={categoryId ?? ''} />
+        <input type="hidden" name="kind" value={kind} />
         <input className="input" name="text" placeholder={placeholder} aria-label={placeholder} />
         <button className="btn">{t('Add')}</button>
       </form>
@@ -41,6 +43,7 @@ function CriteriaList({ clientId, categoryId, items, placeholder }: { clientId: 
 export default function ClientsManager({ clients, selectedId }: { clients: AiClientLite[]; selectedId?: string }) {
   const dlg = useRef<HTMLDialogElement>(null);
   const { t } = useLang();
+  const [kind, setKind] = useState<Kind>('social');
   const client = clients.find((c) => c.id === selectedId) ?? clients[0];
 
   return (
@@ -99,12 +102,17 @@ export default function ClientsManager({ clients, selectedId }: { clients: AiCli
                 </form>
               </div>
 
-              <div className="ai-card">
-                <div className="ai-h"><span>{t('Checked in every image type')}</span><span className="ai-count">{client.base.length}</span></div>
-                <CriteriaList clientId={client.id} categoryId={null} items={client.base} placeholder={t('Add a criterion for all types')} />
+              <div className="ai-kinds ai-kindtabs" role="group" aria-label={t('Review type')}>
+                {AI_KINDS.map((k) => <button key={k.key} className={kind === k.key ? 'on' : ''} aria-pressed={kind === k.key} onClick={() => setKind(k.key)}>{t(k.label)}</button>)}
               </div>
 
-              {client.categories.map((cat) => (
+              <div className="ai-card">
+                <div className="ai-h"><span>{t('Checked in every image type')}</span><span className="ai-count">{client.base.filter((c) => c.kind === kind).length}</span></div>
+                <CriteriaList clientId={client.id} categoryId={null} items={client.base.filter((c) => c.kind === kind)} placeholder={t('Add a criterion for all types')} kind={kind} />
+              </div>
+
+              {!client.categories.some((c) => c.kind === kind) && <p className="muted">{t('No image types for {kind} yet. Add the first one below.', { kind: t(AI_KINDS.find((k) => k.key === kind)!.label) })}</p>}
+              {client.categories.filter((c) => c.kind === kind).map((cat) => (
                 <div key={cat.id} className="ai-card">
                   <div className="ai-h">
                     <form action={renameAiCategory} className="ai-catname">
@@ -114,12 +122,13 @@ export default function ClientsManager({ clients, selectedId }: { clients: AiCli
                     <span className="ai-count">{cat.criteria.length}</span>
                     <form action={deleteAiCategory}><input type="hidden" name="id" value={cat.id} /><button className="ai-link danger" onClick={(e) => { if (!confirm(t('Delete the "{name}" type and its criteria?', { name: cat.name }))) e.preventDefault(); }}>{t('Delete type')}</button></form>
                   </div>
-                  <CriteriaList clientId={client.id} categoryId={cat.id} items={cat.criteria} placeholder={t('Add a criterion for {name}', { name: cat.name })} />
+                  <CriteriaList clientId={client.id} categoryId={cat.id} items={cat.criteria} placeholder={t('Add a criterion for {name}', { name: cat.name })} kind={kind} />
                 </div>
               ))}
 
               <form action={addAiCategory} className="ai-addrow ai-newcat" key={client.categories.length}>
                 <input type="hidden" name="clientId" value={client.id} />
+                <input type="hidden" name="kind" value={kind} />
                 <input className="input" name="name" placeholder={t('+ Add an image type (for example Menu or Banner)')} aria-label={t('New image type')} />
                 <button className="btn">{t('Add type')}</button>
               </form>

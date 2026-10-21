@@ -1,8 +1,8 @@
-import type { Check, Verdict } from '@/lib/aiShared';
+import type { Check, Kind, PageRef, Verdict } from '@/lib/aiShared';
 import type { ReviewText } from '@/lib/aiTranslate';
 
 export type Crit = { id: string; text: string };
-export type AiClientLite = { id: string; name: string; notes: string | null; logo: string | null; base: Crit[]; categories: { id: string; name: string; criteria: Crit[] }[] };
+export type AiClientLite = { id: string; name: string; notes: string | null; logo: string | null; base: (Crit & { kind: Kind })[]; categories: { id: string; name: string; kind: Kind; criteria: Crit[] }[] };
 
 /** What the detail panel needs to show one review, whether it just ran or comes from history. */
 export type ReviewView = {
@@ -19,4 +19,6 @@ export type ReviewView = {
   categoryName?: string | null;
   createdAt?: string;
   es?: ReviewText | null; // the Spanish version, when it has already been made
+  kind?: Kind;
+  pages?: PageRef[]; // every page image of a multi-page review, in order. Empty for a single image.
 };

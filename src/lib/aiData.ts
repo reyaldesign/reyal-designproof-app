@@ -1,5 +1,8 @@
 import { db } from './db';
 import type { AiClientLite } from '@/app/aireviewer/types';
+import { isKind, type Kind } from './aiShared';
+
+const asKind = (v: string): Kind => (isKind(v) ? v : 'social');
 
 /** The tool's clients with their categories and criteria, in display order. */
 export async function loadAiClients(): Promise<AiClientLite[]> {
@@ -15,7 +18,7 @@ export async function loadAiClients(): Promise<AiClientLite[]> {
     name: c.name,
     notes: c.notes,
     logo: c.logoFile,
-    base: c.criteria.filter((x) => x.categoryId === null).map((x) => ({ id: x.id, text: x.text })),
-    categories: c.categories.map((cat) => ({ id: cat.id, name: cat.name, criteria: cat.criteria.map((x) => ({ id: x.id, text: x.text })) })),
+    base: c.criteria.filter((x) => x.categoryId === null).map((x) => ({ id: x.id, text: x.text, kind: asKind(x.kind) })),
+    categories: c.categories.map((cat) => ({ id: cat.id, name: cat.name, kind: asKind(cat.kind), criteria: cat.criteria.map((x) => ({ id: x.id, text: x.text })) })),
   }));
 }

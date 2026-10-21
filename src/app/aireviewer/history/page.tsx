@@ -1,6 +1,7 @@
 import { requireAi } from '@/lib/ai';
 import { db } from '@/lib/db';
 import type { Check, Verdict } from '@/lib/ai';
+import { isKind, type PageRef } from '@/lib/aiShared';
 import HistoryList, { type HistoryRow } from './HistoryList';
 
 function parse<T>(s: string, fallback: T): T {
@@ -14,6 +15,7 @@ export default async function HistoryPage() {
     id: r.id, imageFile: r.imageFile, filename: r.originalFilename, score: r.score, verdict: r.verdict as Verdict, summary: r.summary,
     actionItems: parse<string[]>(r.actionItems, []), checks: parse<Check[]>(r.checks, []),
     es: parse<{ es?: HistoryRow['es'] }>(r.translations, {}).es ?? null,
+    kind: isKind(r.kind) ? r.kind : 'social', pages: parse<PageRef[]>(r.pages, []),
     clientName: r.clientName, clientLogo: r.client?.logoFile ?? null, categoryName: r.categoryName, createdAt: r.createdAt.toISOString(),
   }));
   return <HistoryList rows={data} />;

@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { requireAi } from '@/lib/ai';
 import sharp from 'sharp';
 import { removeAiImages, saveAiImage } from '@/lib/aiStorage';
+import { isKind } from '@/lib/aiShared';
 import { db } from '@/lib/db';
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
@@ -71,8 +72,9 @@ export async function addAiCategory(f: FormData) {
   const name = str(f, 'name');
   if (!name) return;
   const clientId = str(f, 'clientId');
-  const last = await db.aiCategory.aggregate({ where: { clientId }, _max: { position: true } });
-  await db.aiCategory.create({ data: { clientId, name, position: (last._max.position ?? -1) + 1 } });
+  const kind = isKind(str(f, 'kind')) ? str(f, 'kind') : 'social';
+  const last = await db.aiCategory.aggregate({ where: { clientId, kind }, _max: { position: true } });
+  await db.aiCategory.create({ data: { clientId, name, kind, position: (last._max.position ?? -1) + 1 } });
   refresh();
 }
 export async function renameAiCategory(f: FormData) {
@@ -95,8 +97,10 @@ export async function addAiCriterion(f: FormData) {
   if (!text) return;
   const clientId = str(f, 'clientId');
   const categoryId = str(f, 'categoryId') || null;
-  const last = await db.aiCriterion.aggregate({ where: { clientId, categoryId }, _max: { position: true } });
-  await db.aiCriterion.create({ data: { clientId, categoryId, text, position: (last._max.position ?? -1) + 1 } });
+  // A criterion in an image type belongs to that type's review type. A shared one takes the type of the tab it was added on.
+  const kind = categoryId ? (await db.aiCategory.findUnique({ where: { id: categoryId } }))?.kind ?? 'social' : isKind(str(f, 'kind')) ? str(f, 'kind') : 'social';
+  const last = await db.aiCriterion.aggregate({ where: { clientId, categoryId, kind }, _max: { position: true } });
+  await db.aiCriterion.create({ data: { clientId, categoryId, kind, text, position: (last._max.position ?? -1) + 1 } });
   refresh();
 }
 export async function updateAiCriterion(f: FormData) {
@@ -116,7 +120,7 @@ export async function moveAiCriterion(f: FormData) {
   await requireAi('AI_CRITERIA');
   const c = await db.aiCriterion.findUnique({ where: { id: str(f, 'id') } });
   if (!c) return;
-  const list = await db.aiCriterion.findMany({ where: { clientId: c.clientId, categoryId: c.categoryId }, orderBy: [{ position: 'asc' }, { id: 'asc' }] });
+  const list = await db.aiCriterion.findMany({ where: { clientId: c.clientId, categoryId: c.categoryId, kind: c.kind }, orderBy: [{ position: 'asc' }, { id: 'asc' }] });
   const i = list.findIndex((x) => x.id === c.id);
   const j = str(f, 'dir') === 'up' ? i - 1 : i + 1;
   if (j < 0 || j >= list.length) return;
@@ -130,7 +134,9 @@ export async function moveAiCriterion(f: FormData) {
 export async function deleteAiReview(f: FormData) {
   await requireAi('AI_REVIEW');
   const r = await db.aiReview.delete({ where: { id: str(f, 'id') } });
-  await removeAiImages([r.imageFile]);
+  let pages: { file: string }[] = [];
+  try { pages = JSON.parse(r.pages) as { file: string }[]; } catch { /* a single-image review */ }
+  await removeAiImages([r.imageFile, ...pages.map((p) => p.file)]);
   refresh();
 }
 export async function setAiVerdict(f: FormData) {

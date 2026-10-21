@@ -127,6 +127,7 @@ model AiCategory {
   clientId  String
   name      String
   position  Int           @default(0)
+  kind      String        @default("social") // social | website | menu
   client    AiClient      @relation(fields: [clientId], references: [id], onDelete: Cascade)
   criteria  AiCriterion[]
   reviews   AiReview[]
@@ -139,6 +140,7 @@ model AiCriterion {
   categoryId String?
   text       String
   position   Int         @default(0)
+  kind       String      @default("social") // social | website | menu
   client     AiClient    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   category   AiCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 }
@@ -162,6 +164,8 @@ model AiReview {
   outputTokens     Int         @default(0)
   createdAt        DateTime    @default(now())
   translations     String      @default("{}") // JSON: { es: { summary, actionItems, checks: [{ criterion, comment }] } }, made on first view in Spanish
+  kind             String      @default("social") // social | website | menu
+  pages            String      @default("[]") // JSON array of { file, w, h }: every page image of a multi-page review, in order
   client           AiClient?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   category         AiCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
