@@ -9,13 +9,19 @@ export const VERDICT_LABEL: Record<Verdict, { label: string; short: string; cls:
   rejected: { label: 'Fails', short: 'Fails', cls: 'fails' },
 };
 
-// What is being reviewed. Each type has its own image types and checklists per client.
+// What is being reviewed. Social media has its own media types and checklists per client. Website and Food Menu have one shared list each.
 export type Kind = 'social' | 'website' | 'menu';
 export const AI_KINDS: { key: Kind; label: string }[] = [
   { key: 'social', label: 'Social media' },
   { key: 'website', label: 'Website' },
   { key: 'menu', label: 'Food Menu' },
 ];
+/** Website and Food Menu are not tied to a client. Each has one shared list, kept on a fixed record. */
+export const GENERAL: Partial<Record<Kind, { id: string; name: string }>> = {
+  website: { id: 'general-website', name: 'General Website Review' },
+  menu: { id: 'general-menu', name: 'General Food Menu' },
+};
+export const generalKind = (id: string): Kind | null => (Object.keys(GENERAL) as Kind[]).find((k) => GENERAL[k]!.id === id) ?? null;
 export const isKind = (v: unknown): v is Kind => v === 'social' || v === 'website' || v === 'menu';
 /** Social media is one small image per review. Website and Food Menu take images and PDFs, a few pages at a time. */
 export const KIND_RULES: Record<Kind, { pdf: boolean; maxFileMb: number; maxPages: number }> = {

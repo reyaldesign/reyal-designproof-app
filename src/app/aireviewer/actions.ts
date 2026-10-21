@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { requireAi } from '@/lib/ai';
 import sharp from 'sharp';
 import { removeAiImages, saveAiImage } from '@/lib/aiStorage';
-import { isKind } from '@/lib/aiShared';
+import { generalKind, isKind } from '@/lib/aiShared';
 import { db } from '@/lib/db';
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
@@ -27,13 +27,14 @@ export async function createAiClient(f: FormData) {
 export async function updateAiClient(f: FormData) {
   await requireAi('AI_CRITERIA');
   const name = str(f, 'name');
-  if (!name) return;
+  if (!name || generalKind(str(f, 'id'))) return;
   await db.aiClient.update({ where: { id: str(f, 'id') }, data: { name, notes: str(f, 'notes') || null } });
   refresh();
 }
 
 export async function deleteAiClient(f: FormData) {
   await requireAi('AI_CRITERIA');
+  if (generalKind(str(f, 'id'))) return; // the shared Website and Food Menu lists stay
   // Past reviews are kept (they hold their own copy of the client name), so nothing in History disappears.
   const gone = await db.aiClient.delete({ where: { id: str(f, 'id') } });
   if (gone.logoFile) await removeAiImages([gone.logoFile]);
@@ -97,7 +98,7 @@ export async function addAiCriterion(f: FormData) {
   if (!text) return;
   const clientId = str(f, 'clientId');
   const categoryId = str(f, 'categoryId') || null;
-  // A criterion in an image type belongs to that type's review type. A shared one takes the type of the tab it was added on.
+  // A criterion in a media type belongs to that type's review type. A shared one takes the type of the tab it was added on.
   const kind = categoryId ? (await db.aiCategory.findUnique({ where: { id: categoryId } }))?.kind ?? 'social' : isKind(str(f, 'kind')) ? str(f, 'kind') : 'social';
   const last = await db.aiCriterion.aggregate({ where: { clientId, categoryId, kind }, _max: { position: true } });
   await db.aiCriterion.create({ data: { clientId, categoryId, kind, text, position: (last._max.position ?? -1) + 1 } });
