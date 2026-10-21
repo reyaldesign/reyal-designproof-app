@@ -17,7 +17,7 @@ export default function AiNav() {
   const { review, criteria } = useContext(Tools);
   const tabs = [
     ...(review ? [['/aireviewer', 'AI Review'], ['/aireviewer/history', 'History']] : []),
-    ...(criteria ? [['/aireviewer/clients', 'Clients']] : []),
+    ...(criteria ? [['/aireviewer/clients', 'Review Criteria']] : []),
   ];
   return (
     <div className="ai-headright">

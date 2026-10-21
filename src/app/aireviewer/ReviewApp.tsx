@@ -259,8 +259,8 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
                 </select>
               </label>
             )}
-            {client && !cats.length && <p className="muted" style={{ fontSize: 12 }}>{t('No media types for this review type yet. Add them under Clients.')}</p>}
-            {!shared && !ownClients.length && <p className="muted" style={{ fontSize: 12 }}>{t('No clients yet. Add one under Clients to save a checklist per client.')}</p>}
+            {client && !cats.length && <p className="muted" style={{ fontSize: 12 }}>{t('No media types for this review type yet. Add them under Review Criteria.')}</p>}
+            {!shared && !ownClients.length && <p className="muted" style={{ fontSize: 12 }}>{t('No clients yet. Add one under Review Criteria to save a checklist per client.')}</p>}
           </div>
 
           <div className="ai-card">
@@ -275,7 +275,7 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
               <input className="input" value={newCrit} onChange={(e) => setNewCrit(e.target.value)} placeholder={t('Add a criterion')} aria-label={t('Add a criterion')} />
               <button className="btn">{t('Add')}</button>
             </form>
-            <p className="muted" style={{ fontSize: 12 }}>{t('Changes here apply to this batch only. Save them for good under Clients.')}</p>
+            <p className="muted" style={{ fontSize: 12 }}>{t('Changes here apply to this batch only. Save them for good under Review Criteria.')}</p>
           </div>
 
           <div className="ai-card ai-usage">

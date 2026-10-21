@@ -52,7 +52,7 @@ export default function ClientsManager({ clients, selectedId }: { clients: AiCli
     <div className="page ai-page">
       <div className="page-head">
         <div>
-          <h1 className="h1">{t('Clients')} <span className="count">{own.length}</span></h1>
+          <h1 className="h1">{t('Review Criteria')} <span className="count">{own.length}</span></h1>
           <p className="muted" style={{ marginTop: 8 }}>{t('Save a checklist per client and media type. These clients are separate from your proofing clients.')}</p>
         </div>
         <AiNav />
