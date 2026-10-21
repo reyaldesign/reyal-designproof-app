@@ -69,18 +69,22 @@ export function extractJson(raw: string): unknown {
 }
 
 /** Validates the model's checks so bad data (wrong types, out-of-range locations) never reaches the screen. */
-export function sanitizeChecks(checks: unknown): Check[] {
+export function sanitizeChecks(checks: unknown): (Check & { image?: number })[] {
   if (!Array.isArray(checks)) return [];
-  const out: Check[] = [];
+  const out: (Check & { image?: number })[] = [];
   for (const c of checks) {
     if (!c || typeof c !== 'object') continue;
     const o = c as Record<string, unknown>;
     const status = o.status === 'pass' || o.status === 'warn' || o.status === 'fail' ? o.status : o.pass ? 'pass' : 'fail';
-    const entry: Check = { criterion: String(o.criterion ?? ''), status, comment: String(o.comment ?? '') };
+    const entry: Check & { image?: number } = { criterion: String(o.criterion ?? ''), status, comment: String(o.comment ?? '') };
     const loc = o.location as Record<string, unknown> | undefined;
     if (loc && typeof loc === 'object') {
       const x = Number(loc.x), y = Number(loc.y);
-      if (Number.isFinite(x) && Number.isFinite(y) && x >= 0 && x <= 1 && y >= 0 && y <= 1) entry.location = { x, y };
+      if (Number.isFinite(x) && Number.isFinite(y) && x >= 0 && x <= 1 && y >= 0 && y <= 1) {
+        entry.location = { x, y };
+        const img = Math.round(Number(loc.image));
+        if (Number.isFinite(img) && img >= 1 && img <= 200) entry.image = img; // which image of a multi-page review the position is in
+      }
     }
     out.push(entry);
   }
@@ -99,8 +103,22 @@ export async function prepareForClaude(buf: Buffer) {
 
 export class AiFailure extends Error {}
 
-/** One review. Throws AiFailure with a plain-language message when nothing could be judged (so nothing is saved or billed twice). */
-export async function reviewWithClaude(image: Buffer, criteria: string[]): Promise<{ result: ReviewResult; inputTokens: number; outputTokens: number }> {
+/** One image, as the Social media reviewer has always done it. */
+export async function reviewWithClaude(image: Buffer, criteria: string[]) {
+  return reviewImages([{ buf: image }], criteria);
+}
+
+/** Said to the AI only when a review has more than one image (pages, or slices of a tall page). One image is reviewed exactly as before. */
+export const MULTI_NOTE =
+  '\n\nThis review covers several images that belong together, given in order, each introduced by a label such as "Image 2: page 1, part 2 of 3". ' +
+  'Parts of one tall page overlap a little at their edges, so treat them as one continuous page and do not report the same issue twice. ' +
+  'Judge all of it as one piece of work with one score. In every comment, say which page the issue is on. ' +
+  'In every "location", also add an integer "image" field (1-based) naming the image that position refers to, with x and y measured inside that image, ' +
+  'for example {"x": 0.4, "y": 0.2, "image": 3}.';
+
+/** One review of one or more images. Throws AiFailure with a plain-language message when nothing could be judged (so nothing is saved or billed twice). */
+export async function reviewImages(parts: { buf: Buffer; label?: string }[], criteria: string[]): Promise<{ result: Omit<ReviewResult, 'checks'> & { checks: (Check & { image?: number })[] }; inputTokens: number; outputTokens: number }> {
+  const multi = parts.length > 1;
   const key = process.env.ANTHROPIC_API_KEY?.trim();
   if (!key) throw new AiFailure('ANTHROPIC_API_KEY is not set on the server. Add it to .env and restart.');
   const anthropic = new Anthropic({ apiKey: key });
@@ -111,14 +129,17 @@ export async function reviewWithClaude(image: Buffer, criteria: string[]): Promi
     message = await anthropic.messages.create({
       model: MODEL(),
       max_tokens: MAX_TOKENS(),
-      system: SYSTEM_PROMPT,
+      system: multi ? SYSTEM_PROMPT + MULTI_NOTE : SYSTEM_PROMPT,
       // `temperature` is intentionally omitted: current models reject it. `effort` is the consistency lever.
       output_config: { effort: EFFORT() },
       messages: [{
         role: 'user',
         content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image.toString('base64') } },
-          { type: 'text', text: `Review criteria:\n${list}` },
+          ...parts.flatMap((p): Anthropic.ContentBlockParam[] => [
+            ...(p.label ? [{ type: 'text' as const, text: p.label }] : []),
+            { type: 'image' as const, source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: p.buf.toString('base64') } },
+          ]),
+          { type: 'text' as const, text: `Review criteria:\n${list}` },
         ],
       }],
     });
