@@ -9,7 +9,7 @@ import ClientIcon from '../ClientIcon';
 import { useLang } from '../Lang';
 import {
   addAiCategory, addAiCriterion, createAiClient, deleteAiCategory, deleteAiClient, deleteAiCriterion,
-  moveAiCriterion, removeAiClientLogo, renameAiCategory, setAiClientLogo, updateAiClient, updateAiCriterion,
+  loadStarterCriteria, moveAiCriterion, removeAiClientLogo, saveAiReference, renameAiCategory, setAiClientLogo, updateAiClient, updateAiCriterion,
 } from '../actions';
 import type { AiClientLite, Crit } from '../types';
 
@@ -88,6 +88,15 @@ export default function ClientsManager({ clients, selectedId }: { clients: AiCli
           {!client && <div className="empty-state"><h2>{t('Add your first client')}</h2><p>{t('Each client gets six media types to start (Reel, Flyer, Photo Resize, Carousel, Story, Profile Logo). Add checklists to each.')}</p></div>}
           {client && (
             <>
+              {client.general && !client.base.length && !client.categories.length && (
+                <div className="ai-card">
+                  <form action={loadStarterCriteria} className="ai-editrow">
+                    <input type="hidden" name="id" value={client.id} />
+                    <span className="muted">{t('Start from the Reyal criteria for this list: the shared criteria, the media types, and reference notes for the AI.')}</span>
+                    <SubmitButton className="btn btn-primary" pending={t('Loading…')}>{t('Load starter criteria')}</SubmitButton>
+                  </form>
+                </div>
+              )}
               {client.general && <p className="muted">{t('One list for every {kind} review, not tied to a client. Its media types and criteria load on the Review page.', { kind: t(AI_KINDS.find((k) => k.key === kind)!.label) })}</p>}
               {!client.general && <>
               <div className="ai-card ai-iconcard">
@@ -118,6 +127,18 @@ export default function ClientsManager({ clients, selectedId }: { clients: AiCli
               </div>
 
               </>}
+
+              {client.general && (
+                <div className="ai-card">
+                  <div className="ai-h"><span>{t('Reference for the AI')}</span></div>
+                  <p className="muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>{t('Guidance the AI reads with every review of this list: rules, legal notes, and checks that cannot be a pass or fail line. It is not graded.')}</p>
+                  <form action={saveAiReference} key={client.notes ?? ''}>
+                    <input type="hidden" name="id" value={client.id} />
+                    <textarea className="input" name="reference" rows={10} defaultValue={client.notes ?? ''} aria-label={t('Reference for the AI')} style={{ width: '100%', fontFamily: 'inherit' }} />
+                    <div className="head-actions" style={{ justifyContent: 'flex-end', marginTop: 8 }}><SubmitButton className="btn" pending={t('Saving…')}>{t('Save reference')}</SubmitButton></div>
+                  </form>
+                </div>
+              )}
 
               <div className="ai-card">
                 <div className="ai-h"><span>{t('Checked in every media type')}</span><span className="ai-count">{client.base.filter((c) => c.kind === kind).length}</span></div>

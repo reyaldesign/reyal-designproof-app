@@ -1,4 +1,4 @@
-import { AiFailure, refuseAi, reviewImages, withSlot } from '@/lib/ai';
+import { AiFailure, GENERAL, refuseAi, reviewImages, withSlot } from '@/lib/ai';
 import { TOKEN_RE, UploadError, readMeta, renderPages, sliceCount, sliceTall, type Rendered } from '@/lib/aiPdf';
 import { AI_MAX_SLICES, KIND_RULES, isKind, type Check, type PageRef } from '@/lib/aiShared';
 import { recordReviewOutcome } from '@/lib/aiStatus';
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
         meta.push({ page: pi, top: s.top, bottom: s.bottom, pageH: pageImgs[pi].h });
       });
     }
-    const { result, inputTokens, outputTokens } = await withSlot(() => reviewImages(parts, criteria));
+    const { result, inputTokens, outputTokens } = await withSlot(() => reviewImages(parts, criteria, client?.id === GENERAL[kind]?.id ? client?.notes : null)); // a shared list's reference guidance goes with every review of it
 
     // Put each marker on the page the AI meant, as a fraction of that page's full height.
     const checks: Check[] = result.checks.map(({ image, location, ...c }) => {

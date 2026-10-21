@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation';
 import { requireAi } from '@/lib/ai';
 import sharp from 'sharp';
 import { removeAiImages, saveAiImage } from '@/lib/aiStorage';
+import { MAX_REFERENCE } from '@/lib/ai';
+import { STARTER } from '@/lib/aiStarter';
 import { generalKind, isKind } from '@/lib/aiShared';
 import { db } from '@/lib/db';
 
@@ -64,6 +66,31 @@ export async function removeAiClientLogo(f: FormData) {
   if (!client?.logoFile) return;
   await db.aiClient.update({ where: { id: client.id }, data: { logoFile: null } });
   await removeAiImages([client.logoFile]);
+  refresh();
+}
+
+// ----- the shared Website and Food Menu lists: reference guidance for the AI, and a one-time starter set -----
+export async function saveAiReference(f: FormData) {
+  await requireAi('AI_CRITERIA');
+  const id = str(f, 'id');
+  if (!generalKind(id)) return;
+  await db.aiClient.update({ where: { id }, data: { notes: String(f.get('reference') ?? '').trim().slice(0, MAX_REFERENCE) || null } });
+  refresh();
+}
+/** Fills an empty shared list with the starter criteria and reference. A list that already has anything in it is left alone. */
+export async function loadStarterCriteria(f: FormData) {
+  await requireAi('AI_CRITERIA');
+  const id = str(f, 'id');
+  const kind = generalKind(id);
+  const starter = kind && STARTER[kind];
+  if (!kind || !starter) return;
+  const client = await db.aiClient.findUnique({ where: { id }, include: { _count: { select: { criteria: true, categories: true } } } });
+  if (!client || client._count.criteria || client._count.categories) return;
+  await db.$transaction([
+    db.aiClient.update({ where: { id }, data: { notes: client.notes || starter.reference } }),
+    ...starter.base.map((text, position) => db.aiCriterion.create({ data: { clientId: id, kind, text, position } })),
+    ...starter.types.map((t, position) => db.aiCategory.create({ data: { clientId: id, kind, name: t.name, position, criteria: { create: t.criteria.map((text, p) => ({ clientId: id, kind, text, position: p })) } } })),
+  ]);
   refresh();
 }
 
