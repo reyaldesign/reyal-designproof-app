@@ -59,8 +59,8 @@ export default function HistoryList({ rows }: { rows: HistoryRow[] }) {
           <option value="">{t('All clients')}</option>
           {clients.map((c) => <option key={c}>{c}</option>)}
         </select>
-        <select className="input ai-sel" value={category} onChange={(e) => setCategory(e.target.value)} aria-label={t('Image type')}>
-          <option value="">{t('All image types')}</option>
+        <select className="input ai-sel" value={category} onChange={(e) => setCategory(e.target.value)} aria-label={t('Media Type')}>
+          <option value="">{t('All media types')}</option>
           {categories.map((c) => <option key={c}>{c}</option>)}
         </select>
         <label className="search"><input type="search" placeholder={t('Search file names')} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t('Search file names')} /></label>

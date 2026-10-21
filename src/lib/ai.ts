@@ -28,6 +28,7 @@ const MAX_TOKENS = () => Number(process.env.AI_REVIEWER_MAX_TOKENS || 8192);
 const PRICE_IN = () => Number(process.env.PRICE_PER_MTOK_INPUT || 2.0);
 const PRICE_OUT = () => Number(process.env.PRICE_PER_MTOK_OUTPUT || 10.0);
 export const estimateCostUsd = (inTok: number, outTok: number) => (inTok / 1e6) * PRICE_IN() + (outTok / 1e6) * PRICE_OUT();
+export const MAX_REFERENCE = 12000; // characters of reference guidance sent with a review
 export const aiKeyConfigured = () => !!process.env.ANTHROPIC_API_KEY?.trim();
 export const aiModel = MODEL;
 
@@ -117,7 +118,7 @@ export const MULTI_NOTE =
   'for example {"x": 0.4, "y": 0.2, "image": 3}.';
 
 /** One review of one or more images. Throws AiFailure with a plain-language message when nothing could be judged (so nothing is saved or billed twice). */
-export async function reviewImages(parts: { buf: Buffer; label?: string }[], criteria: string[]): Promise<{ result: Omit<ReviewResult, 'checks'> & { checks: (Check & { image?: number })[] }; inputTokens: number; outputTokens: number }> {
+export async function reviewImages(parts: { buf: Buffer; label?: string }[], criteria: string[], reference?: string | null): Promise<{ result: Omit<ReviewResult, 'checks'> & { checks: (Check & { image?: number })[] }; inputTokens: number; outputTokens: number }> {
   const multi = parts.length > 1;
   const key = process.env.ANTHROPIC_API_KEY?.trim();
   if (!key) throw new AiFailure('ANTHROPIC_API_KEY is not set on the server. Add it to .env and restart.');
@@ -140,6 +141,7 @@ export async function reviewImages(parts: { buf: Buffer; label?: string }[], cri
             { type: 'image' as const, source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: p.buf.toString('base64') } },
           ]),
           { type: 'text' as const, text: `Review criteria:\n${list}` },
+          ...(reference?.trim() ? [{ type: 'text' as const, text: `Reference guidance for this review. Read it and follow it, but do not grade it as a checklist item:\n${reference.trim().slice(0, MAX_REFERENCE)}` }] : []),
         ],
       }],
     });

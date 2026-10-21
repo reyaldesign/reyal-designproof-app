@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AI_IMAGE_TYPES, AI_KINDS, AI_MAX_IMAGE_MB, KIND_RULES, VERDICT_LABEL, isKind, type Kind, type Verdict } from '@/lib/aiShared';
+import { AI_IMAGE_TYPES, AI_KINDS, GENERAL, AI_MAX_IMAGE_MB, KIND_RULES, VERDICT_LABEL, isKind, type Kind, type Verdict } from '@/lib/aiShared';
 import AiNav from './AiNav';
 import AiStatus from './AiStatus';
 import ClientIcon from './ClientIcon';
@@ -49,7 +49,7 @@ async function filesFromDrop(dt: DataTransfer): Promise<File[]> {
 export default function ReviewApp({ clients, keyConfigured, model, price }: { clients: AiClientLite[]; keyConfigured: boolean; model: string; price: { in: number; out: number } }) {
   const { t, msg, verdict } = useLang();
   const [kind, setKind] = useState<Kind>('social');
-  const [clientId, setClientId] = useState('');
+  const [pickedId, setClientId] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [criteria, setCriteria] = useState<string[]>([]);
   const [newCrit, setNewCrit] = useState('');
@@ -66,6 +66,9 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
 
   const rules = KIND_RULES[kind];
   const isSet = rules.pdf; // Website and Food Menu
+  const shared = GENERAL[kind]?.id; // Website and Food Menu use one shared list, no client
+  const clientId = shared ?? pickedId;
+  const ownClients = clients.filter((c) => !c.general);
   const client = clients.find((c) => c.id === clientId);
   const cats = client?.categories.filter((c) => c.kind === kind) ?? [];
   const category = cats.find((c) => c.id === categoryId);
@@ -239,29 +242,29 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
                 {AI_KINDS.map((k) => <button key={k.key} className={kind === k.key ? 'on' : ''} aria-pressed={kind === k.key} onClick={() => chooseKind(k.key)}>{t(k.label)}</button>)}
               </div>
             </div>
-            <label className="ai-label">{t('Client')}
+            {!shared && <label className="ai-label">{t('Client')}
               <span className="ai-pick">
               {client && <ClientIcon name={client.name} logo={client.logo} size={36} />}
               <select className="input" value={clientId} onChange={(e) => { setClientId(e.target.value); setCategoryId(''); }}>
                 <option value="">{t('No client (ad hoc checklist)')}</option>
-                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {ownClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               </span>
-            </label>
+            </label>}
             {client && (
-              <label className="ai-label">{t('Image type')}
+              <label className="ai-label">{t('Media Type')}
                 <select className="input" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                  <option value="">{t('Choose a type…')}</option>
+                  <option value="">{t('Choose a media type…')}</option>
                   {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </label>
             )}
-            {client && !cats.length && <p className="muted" style={{ fontSize: 12 }}>{t('No image types for this review type yet. Add them under Clients.')}</p>}
-            {!clients.length && <p className="muted" style={{ fontSize: 12 }}>{t('No clients yet. Add one under Clients to save a checklist per client.')}</p>}
+            {client && !cats.length && <p className="muted" style={{ fontSize: 12 }}>{t('No media types for this review type yet. Add them under Review Criteria.')}</p>}
+            {!shared && !ownClients.length && <p className="muted" style={{ fontSize: 12 }}>{t('No clients yet. Add one under Review Criteria to save a checklist per client.')}</p>}
           </div>
 
           <div className="ai-card">
-            <div className="ai-h"><span>{t('Checklist')}</span><span className="ai-count">{criteria.length}</span></div>
+            <div className="ai-h"><span>{shared ? t('{kind} criteria', { kind: t(AI_KINDS.find((k) => k.key === kind)!.label) }) : t('Checklist')}</span><span className="ai-count">{criteria.length}</span></div>
             <ul className="ai-crit">
               {criteria.map((c, i) => (
                 <li key={i}><span>{c}</span><button aria-label={t('Remove {c}', { c })} onClick={() => setCriteria((cur) => cur.filter((_, j) => j !== i))}>×</button></li>
@@ -272,7 +275,7 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
               <input className="input" value={newCrit} onChange={(e) => setNewCrit(e.target.value)} placeholder={t('Add a criterion')} aria-label={t('Add a criterion')} />
               <button className="btn">{t('Add')}</button>
             </form>
-            <p className="muted" style={{ fontSize: 12 }}>{t('Changes here apply to this batch only. Save them for good under Clients.')}</p>
+            <p className="muted" style={{ fontSize: 12 }}>{t('Changes here apply to this batch only. Save them for good under Review Criteria.')}</p>
           </div>
 
           <div className="ai-card ai-usage">
@@ -352,7 +355,7 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
             })}
             {items.filter((i) => !i.url).map((i) => <div key={i.id} className="ai-note-row">{t(Number(i.file.name) === 1 ? '{n} file skipped' : '{n} files skipped', { n: i.file.name })}. {msg(i.error ?? '')}</div>)}
           </div>
-          {!items.length && <p className="ai-hint">{t('Nothing here yet. Pick a client and image type to load their checklist, then drop the images to review.')}</p>}
+          {!items.length && <p className="ai-hint">{t('Nothing here yet. Pick a client and media type to load their checklist, then drop the images to review.')}</p>}
         </section>
       </div>
 

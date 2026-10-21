@@ -5,7 +5,9 @@ import { redirect } from 'next/navigation';
 import { requireAi } from '@/lib/ai';
 import sharp from 'sharp';
 import { removeAiImages, saveAiImage } from '@/lib/aiStorage';
-import { isKind } from '@/lib/aiShared';
+import { MAX_REFERENCE } from '@/lib/ai';
+import { STARTER } from '@/lib/aiStarter';
+import { generalKind, isKind } from '@/lib/aiShared';
 import { db } from '@/lib/db';
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
@@ -27,13 +29,14 @@ export async function createAiClient(f: FormData) {
 export async function updateAiClient(f: FormData) {
   await requireAi('AI_CRITERIA');
   const name = str(f, 'name');
-  if (!name) return;
+  if (!name || generalKind(str(f, 'id'))) return;
   await db.aiClient.update({ where: { id: str(f, 'id') }, data: { name, notes: str(f, 'notes') || null } });
   refresh();
 }
 
 export async function deleteAiClient(f: FormData) {
   await requireAi('AI_CRITERIA');
+  if (generalKind(str(f, 'id'))) return; // the shared Website and Food Menu lists stay
   // Past reviews are kept (they hold their own copy of the client name), so nothing in History disappears.
   const gone = await db.aiClient.delete({ where: { id: str(f, 'id') } });
   if (gone.logoFile) await removeAiImages([gone.logoFile]);
@@ -63,6 +66,31 @@ export async function removeAiClientLogo(f: FormData) {
   if (!client?.logoFile) return;
   await db.aiClient.update({ where: { id: client.id }, data: { logoFile: null } });
   await removeAiImages([client.logoFile]);
+  refresh();
+}
+
+// ----- the shared Website and Food Menu lists: reference guidance for the AI, and a one-time starter set -----
+export async function saveAiReference(f: FormData) {
+  await requireAi('AI_CRITERIA');
+  const id = str(f, 'id');
+  if (!generalKind(id)) return;
+  await db.aiClient.update({ where: { id }, data: { notes: String(f.get('reference') ?? '').trim().slice(0, MAX_REFERENCE) || null } });
+  refresh();
+}
+/** Fills an empty shared list with the starter criteria and reference. A list that already has anything in it is left alone. */
+export async function loadStarterCriteria(f: FormData) {
+  await requireAi('AI_CRITERIA');
+  const id = str(f, 'id');
+  const kind = generalKind(id);
+  const starter = kind && STARTER[kind];
+  if (!kind || !starter) return;
+  const client = await db.aiClient.findUnique({ where: { id }, include: { _count: { select: { criteria: true, categories: true } } } });
+  if (!client || client._count.criteria || client._count.categories) return;
+  await db.$transaction([
+    db.aiClient.update({ where: { id }, data: { notes: client.notes || starter.reference } }),
+    ...starter.base.map((text, position) => db.aiCriterion.create({ data: { clientId: id, kind, text, position } })),
+    ...starter.types.map((t, position) => db.aiCategory.create({ data: { clientId: id, kind, name: t.name, position, criteria: { create: t.criteria.map((text, p) => ({ clientId: id, kind, text, position: p })) } } })),
+  ]);
   refresh();
 }
 
@@ -97,7 +125,7 @@ export async function addAiCriterion(f: FormData) {
   if (!text) return;
   const clientId = str(f, 'clientId');
   const categoryId = str(f, 'categoryId') || null;
-  // A criterion in an image type belongs to that type's review type. A shared one takes the type of the tab it was added on.
+  // A criterion in a media type belongs to that type's review type. A shared one takes the type of the tab it was added on.
   const kind = categoryId ? (await db.aiCategory.findUnique({ where: { id: categoryId } }))?.kind ?? 'social' : isKind(str(f, 'kind')) ? str(f, 'kind') : 'social';
   const last = await db.aiCriterion.aggregate({ where: { clientId, categoryId, kind }, _max: { position: true } });
   await db.aiCriterion.create({ data: { clientId, categoryId, kind, text, position: (last._max.position ?? -1) + 1 } });

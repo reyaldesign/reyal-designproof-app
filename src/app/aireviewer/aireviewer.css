@@ -227,3 +227,4 @@
 .ai-shot.tall .ai-shot-in img { max-width: 100%; max-height: none; width: 100%; height: auto; }
 .ai-kindtabs { max-width: 420px; }
 .ai-rclient .ai-kindbadge { margin-left: 8px; }
+.ai-sidelabel{font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin:10px 4px 0}
