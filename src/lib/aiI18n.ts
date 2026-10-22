@@ -85,7 +85,7 @@ const ES: Record<string, string> = {
   'All review types': 'Todos los tipos de revisión',
   'Switching the review type clears the current batch. Continue?': 'Cambiar el tipo de revisión borra el lote actual. ¿Continuar?',
   'Drop images or PDFs here': 'Suelta imágenes o PDF aquí',
-  'Images and PDFs, up to {n} MB each. A review holds up to {p} pages.': 'Imágenes y PDF, hasta {n} MB cada uno. Una revisión admite hasta {p} páginas.',
+  'Images and PDFs, up to {n} MB each. Maximum {p} pages per review.': 'Imágenes y PDF, hasta {n} MB cada uno. Máximo {p} páginas por revisión.',
   'Choose files': 'Elegir archivos',
   'Review {n} file': 'Revisar {n} archivo',
   'Review {n} files': 'Revisar {n} archivos',

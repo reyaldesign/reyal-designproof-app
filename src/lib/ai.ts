@@ -24,7 +24,7 @@ import type { Check, ReviewResult } from './aiShared';
 // ----- limits -----
 const MODEL = () => process.env.AI_REVIEWER_MODEL || 'claude-sonnet-5';
 const EFFORT = () => (process.env.AI_REVIEWER_EFFORT || 'high') as 'low' | 'medium' | 'high' | 'xhigh' | 'max';
-const MAX_TOKENS = () => Number(process.env.AI_REVIEWER_MAX_TOKENS || 8192);
+const MAX_TOKENS = () => Number(process.env.AI_REVIEWER_MAX_TOKENS || 16384);
 const PRICE_IN = () => Number(process.env.PRICE_PER_MTOK_INPUT || 2.0);
 const PRICE_OUT = () => Number(process.env.PRICE_PER_MTOK_OUTPUT || 10.0);
 export const estimateCostUsd = (inTok: number, outTok: number) => (inTok / 1e6) * PRICE_IN() + (outTok / 1e6) * PRICE_OUT();
