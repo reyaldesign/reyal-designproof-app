@@ -24,7 +24,7 @@ import type { Check, ReviewResult } from './aiShared';
 // ----- limits -----
 const MODEL = () => process.env.AI_REVIEWER_MODEL || 'claude-sonnet-5';
 const EFFORT = () => (process.env.AI_REVIEWER_EFFORT || 'high') as 'low' | 'medium' | 'high' | 'xhigh' | 'max';
-const MAX_TOKENS = () => Number(process.env.AI_REVIEWER_MAX_TOKENS || 16384);
+const MAX_TOKENS = () => Number(process.env.AI_REVIEWER_MAX_TOKENS || 32000);
 const PRICE_IN = () => Number(process.env.PRICE_PER_MTOK_INPUT || 2.0);
 const PRICE_OUT = () => Number(process.env.PRICE_PER_MTOK_OUTPUT || 10.0);
 export const estimateCostUsd = (inTok: number, outTok: number) => (inTok / 1e6) * PRICE_IN() + (outTok / 1e6) * PRICE_OUT();
@@ -127,7 +127,8 @@ export async function reviewImages(parts: { buf: Buffer; label?: string }[], cri
 
   let message: Anthropic.Message;
   try {
-    message = await anthropic.messages.create({
+    // Streamed: a review of many pages can write a long answer, and the SDK only allows a long non-streamed call up to about 21,000 tokens.
+    message = await anthropic.messages.stream({
       model: MODEL(),
       max_tokens: MAX_TOKENS(),
       system: multi ? SYSTEM_PROMPT + MULTI_NOTE : SYSTEM_PROMPT,
@@ -144,7 +145,7 @@ export async function reviewImages(parts: { buf: Buffer; label?: string }[], cri
           ...(reference?.trim() ? [{ type: 'text' as const, text: `Reference guidance for this review. Read it and follow it, but do not grade it as a checklist item:\n${reference.trim().slice(0, MAX_REFERENCE)}` }] : []),
         ],
       }],
-    });
+    }).finalMessage();
   } catch (e) {
     if (e instanceof Anthropic.APIError) throw new AiFailure(`Claude API error (${e.status ?? 'network'}): ${e.message}`);
     throw new AiFailure(`Unexpected error calling Claude: ${e instanceof Error ? e.message : String(e)}`);
