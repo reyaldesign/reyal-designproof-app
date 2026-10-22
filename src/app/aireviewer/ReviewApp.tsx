@@ -296,7 +296,7 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
             onDrop={async (e) => { e.preventDefault(); setOver(false); addFiles(await filesFromDrop(e.dataTransfer)); }}
           >
             <b>{isSet ? t('Drop images or PDFs here') : t('Drop images or a whole folder here')}</b>
-            <small>{isSet ? t('Images and PDFs, up to {n} MB each. A review holds up to {p} pages.', { n: rules.maxFileMb, p: rules.maxPages }) : t('JPG, PNG, WebP or GIF, up to {n} MB each', { n: AI_MAX_IMAGE_MB })}</small>
+            <small>{isSet ? t('Images and PDFs, up to {n} MB each. Maximum {p} pages per review.', { n: rules.maxFileMb, p: rules.maxPages }) : t('JPG, PNG, WebP or GIF, up to {n} MB each', { n: AI_MAX_IMAGE_MB })}</small>
             <div className="ai-droprow">
               <button className="btn" onClick={() => fileInput.current?.click()}>{isSet ? t('Choose files') : t('Choose images')}</button>
               <button className="btn" onClick={() => folderInput.current?.click()}>{t('Choose a folder')}</button>
