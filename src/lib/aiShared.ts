@@ -27,7 +27,7 @@ export const isKind = (v: unknown): v is Kind => v === 'social' || v === 'websit
 export const KIND_RULES: Record<Kind, { pdf: boolean; maxFileMb: number; maxPages: number }> = {
   social: { pdf: false, maxFileMb: 10, maxPages: 1 },
   website: { pdf: true, maxFileMb: 250, maxPages: 10 },
-  menu: { pdf: true, maxFileMb: 250, maxPages: 10 },
+  menu: { pdf: true, maxFileMb: 250, maxPages: 20 },
 };
 /** A very tall page is cut into overlapping slices for the AI. This caps all the slices of one review. */
 export const AI_MAX_SLICES = 30;
