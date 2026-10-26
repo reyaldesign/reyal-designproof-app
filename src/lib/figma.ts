@@ -1,7 +1,7 @@
 // Figma prototype proofs: the pasted links, the embed address, and the three Figma API calls this app makes
 // (read a frame's size, export it as an image, post a comment on it). The token is the Reyal account's, from FIGMA_TOKEN.
 import sharp from 'sharp';
-import { NODE_RE, type FigmaLink } from './figmaShared';
+import { NODE_RE, type FigmaLink, type FigmaPage } from './figmaShared';
 
 export * from './figmaShared';
 
@@ -72,4 +72,27 @@ export async function postFigmaComment(file: string, node: string, at: { x: numb
     body: JSON.stringify({ message: message.slice(0, 7000), client_meta: { node_id: node, node_offset: { x: Math.round(at.x), y: Math.round(at.y) } } }),
   });
   return String(j.id ?? '');
+}
+
+/** Names that are notes for the team, not screens of the design. */
+const NOT_A_SCREEN = /^\[(handoff|note|notes|spec|annotation)/i;
+/**
+ * The screens of one size's prototype: every frame on the same Figma page that is as wide as the start screen
+ * (overlays and notices are narrower), in the order they sit in the file, minus team notes. Falls back to the start screen alone.
+ */
+export async function discoverPages(link: FigmaLink): Promise<FigmaPage[]> {
+  if (!link.start) return [];
+  const start = await frameInfo(link.file, link.start);
+  const first: FigmaPage = { id: link.start, name: start.name, w: start.w, h: start.h };
+  if (!link.page) return [first];
+  const j = await call(`/v1/files/${link.file}/nodes?ids=${encodeURIComponent(link.page)}&depth=1`);
+  const doc = (j.nodes as Record<string, { document?: { children?: { id: string; name: string; type: string; absoluteBoundingBox?: { width: number; height: number } }[] } } | null> | undefined)?.[link.page]?.document;
+  const pages: FigmaPage[] = [];
+  for (const c of doc?.children ?? []) {
+    const b = c.absoluteBoundingBox;
+    if (c.type !== 'FRAME' || !b || !NODE_RE.test(c.id) || NOT_A_SCREEN.test(c.name) || Math.abs(Math.round(b.width) - start.w) > 1) continue;
+    pages.push({ id: c.id, name: String(c.name).slice(0, 120), w: Math.round(b.width), h: Math.round(b.height) });
+  }
+  if (!pages.some((p) => p.id === first.id)) pages.unshift(first);
+  return pages.slice(0, 40);
 }

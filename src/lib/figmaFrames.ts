@@ -30,15 +30,19 @@ export async function ensureFrame(versionId: string, device: string, node: strin
   return job;
 }
 
-/** Exports each size's starting screen in the background, right after a Figma proof is made, so the first comment does not wait on Figma. */
+/** Exports every screen of every size in the background, right after a Figma proof is made, starting with each size's first screen, so comments do not wait on Figma. */
 export function prefetchStartFrames(versionId: string, figmaJson: string | null) {
   const proof = parseFigma(figmaJson);
   if (!proof) return;
-  void (async () => {
-    for (const d of ['desktop', 'tablet', 'mobile'] as const) {
-      const l = proof[d];
-      if (!l?.start) continue;
-      try { await ensureFrame(versionId, d, l.start); } catch (e) { console.error('figma prefetch failed', d, e instanceof Error ? e.message : e); }
-    }
-  })();
+  for (const d of ['desktop', 'tablet', 'mobile'] as const) {
+    const l = proof[d];
+    if (!l?.start) continue;
+    const nodes = [l.start, ...(l.pages ?? []).map((p) => p.id).filter((id) => id !== l.start)];
+    // One size at a time per Figma file keeps it gentle; the three sizes run side by side.
+    void (async () => {
+      for (const n of nodes) {
+        try { await ensureFrame(versionId, d, n); } catch (e) { console.error('figma prefetch failed', d, n, e instanceof Error ? e.message : e); }
+      }
+    })();
+  }
 }

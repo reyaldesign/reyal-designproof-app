@@ -24,10 +24,10 @@ type Props = {
   images: Img[];
   comments: C[];
   live: string | null; // the address of a live website being reviewed in place of images
-  figma: { links: Record<string, { embed: string; start: string | null; name: string }> } | null; // a Figma prototype, one link per screen size
+  figma: { links: Record<string, { embed: string; start: string | null; name: string; pages: { id: string; name: string; w: number; h: number }[] }> } | null; // a Figma prototype, one link per screen size
   figmaMissing: boolean; // the proof has Figma links but this server is not set up for them
 };
-type Img = { id: string; file: string; frameId?: string | null; frameName?: string | null; device?: string | null };
+type Img = { id: string; file: string; frameId?: string | null; frameName?: string | null; device?: string | null; fw?: number | null; fh?: number | null };
 
 const store = {
   get: (k: string) => { try { return localStorage.getItem(k) ?? ''; } catch { return ''; } },
@@ -132,7 +132,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
 
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement).tagName) || confirmSend || terms) return;
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement).tagName) || confirmSend || terms || figma) return;
       if (e.key === 'ArrowLeft') setIdx((i) => Math.max(0, i - 1));
       if (e.key === 'ArrowRight') setIdx((i) => Math.min(images.length - 1, i + 1));
     };
@@ -194,13 +194,13 @@ export default function ReviewClient({ slug, title, client, status, approval, la
     const m = images[i];
     if (figma && m?.device && figma.links[m.device]) { setFigDevice(m.device as Device); setFigMode('comment'); }
   };
-  // Figma proofs name a screen by its size (Desktop, Tablet, Phone), with a number only when a size has more than one screen.
+  // Figma proofs name a screen by its size and its own name: "Phone · Choose location".
+  const shortName = (n: string | null | undefined) => (n ?? '').replace(/^\[[^\]]*\]\s*/, '').replace(/\s*\/\s*(Desktop|Tablet|Mobile|Phone)\b.*$/i, '').trim();
   const viewLabel = (i: number) => {
     const m = images[i];
     const dev = DEVICES.find((d) => d.key === m?.device)?.label;
-    if (!dev) return `Screen ${i + 1}`;
-    const same = images.filter((x) => x.device === m.device);
-    return same.length > 1 ? `${dev} ${same.indexOf(m) + 1}` : dev;
+    const name = shortName(m?.frameName);
+    return dev ? (name ? `${dev} · ${name}` : dev) : `Screen ${i + 1}`;
   };
   const pageLabel = (imageId: string | null) => {
     const i = images.findIndex((m) => m.id === imageId);
@@ -429,15 +429,33 @@ export default function ReviewClient({ slug, title, client, status, approval, la
     </div>
   );
 
+  // On a Figma proof the list on the left holds the screens of the size being reviewed. One not yet fetched from Figma shows as a tile with its name.
+  const figPages = figma ? figma.links[figDevice]?.pages ?? [] : [];
+  const railCount = figma ? figPages.length : images.length;
+  const figRail = figPages.map((p) => {
+    const k = images.findIndex((m) => m.frameId === p.id);
+    const m = k >= 0 ? images[k] : null;
+    const count = m ? pageCount(m.id) : 0;
+    const name = shortName(p.name) || DEVICES.find((d) => d.key === figDevice)?.label || 'Screen';
+    return (
+      <button key={p.id} className={`rv-page ${m && k === idx ? 'on' : ''}`} onClick={() => void showFrame(p.id, figDevice)} aria-label={`Go to ${name}`} title={name}>
+        <span className={`rv-thumb ${m ? '' : 'fg-wait'}`}>
+          {m ? <img src={`/files/${m.file}?w=320`} alt="" loading="lazy" /> : <span className="fg-spin" aria-hidden />}
+          {count > 0 && <span className="rv-pins">{count}</span>}
+        </span>
+        <span className="n">{name}</span>
+      </button>
+    );
+  });
   const pageThumb = (m: { id: string; file: string }, n: number) => {
     const count = pageCount(m.id);
     return (
-      <button key={m.id} className={`rv-page ${n === idx ? 'on' : ''}`} onClick={() => goPage(n)} aria-label={figma ? `Go to ${viewLabel(n)}` : `Go to page ${n + 1}`}>
+      <button key={m.id} className={`rv-page ${n === idx ? 'on' : ''}`} onClick={() => goPage(n)} aria-label={`Go to page ${n + 1}`}>
         <span className="rv-thumb">
           <img src={`/files/${m.file}?w=320`} alt="" loading="lazy" />
           {count > 0 && <span className="rv-pins">{count}</span>}
         </span>
-        <span className="n">{figma ? viewLabel(n) : `Page ${n + 1}`}</span>
+        <span className="n">{`Page ${n + 1}`}</span>
       </button>
     );
   };
@@ -468,8 +486,8 @@ export default function ReviewClient({ slug, title, client, status, approval, la
         </div>
       </header>
 
-      <div className={`rv-body ${images.length > 1 ? '' : 'single'}`}>
-        {images.length > 1 && <nav className="rv-rail" aria-label="Pages">{images.map(pageThumb)}</nav>}
+      <div className={`rv-body ${railCount > 1 ? '' : 'single'}`}>
+        {railCount > 1 && <nav className="rv-rail" aria-label={figma ? 'Screens' : 'Pages'}>{figma ? figRail : images.map(pageThumb)}</nav>}
 
         <section className="rv-stage">
           {guideHidden === false && (
@@ -492,7 +510,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
           <div ref={canvasRef} className="rv-canvas">
             {figma && figma.links[figDevice] && (
               figMode === 'comment'
-                ? <button className="fg-float" onClick={() => { setFigNode(null); setFigMode('browse'); setPop(null); }} aria-label={`Preview the ${DEVICES.find((d) => d.key === figDevice)?.label} prototype`}><span aria-hidden>▶</span> Preview</button>
+                ? <button className="fg-float" onClick={() => { setFigNode(img?.device === figDevice ? img.frameId ?? null : null); setFigMode('browse'); setPop(null); }} aria-label={`Preview the ${DEVICES.find((d) => d.key === figDevice)?.label} prototype`}><span aria-hidden>▶</span> Preview</button>
                 : !locked && <button className="fg-float" disabled={figBusy} onClick={() => void figComment()}><span aria-hidden>✎</span> {figBusy ? 'Loading…' : 'Back to comments'}</button>
             )}
             {live && (
@@ -514,7 +532,17 @@ export default function ReviewClient({ slug, title, client, status, approval, la
                 )}
               </LiveStage>
             )}
-            {showImg && size && (
+            {showImg && figma && img && nat && (
+              <div className="fg-scroll" onPointerDown={(e) => (down.current = { x: e.clientX, y: e.clientY })} onPointerUp={place}>
+                <div className="fg-sheet" style={{ width: Math.max(160, Math.min(img.fw || nat.w / 2, stage.w - 48)), cursor: locked ? 'default' : 'crosshair' }}>
+                  <img ref={imgRef} className="rv-img" src={`/files/${img.file}`} alt={`${title}, ${viewLabel(idx)}`} draggable={false} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                  {sentHere.map((c) => <Pin key={c.id} n={c.pin!} kind={c.resolved ? 'done' : 'open'} x={c.x!} y={c.y!} scale={1} onClick={() => setTab('sent')} />)}
+                  {draftsHere.map((d) => <Pin key={d.tid} n={draftPin(d.tid)} kind="draft" x={d.x!} y={d.y!} scale={1} onClick={() => setTab('send')} />)}
+                  {newDraft && <Pin key={`new-${newDraft.tid}`} n={draftPin(newDraft.tid)} kind="new" x={newDraft.x!} y={newDraft.y!} scale={1} />}
+                </div>
+              </div>
+            )}
+            {showImg && !figma && size && (
               <TransformWrapper
                 key={img.id} ref={tw} minScale={0.5} maxScale={8} centerOnInit={!tall} wheel={{ disabled: tall }} doubleClick={{ disabled: true }}
                 onTransform={(_ref, s) => setScale(s.scale)}
@@ -537,7 +565,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
                 </TransformComponent>
               </TransformWrapper>
             )}
-            {showImg && !size && <div className="rv-loading">{figBusy ? 'Loading this screen from Figma. A long page can take up to a minute…' : figma && !img ? 'Switch to Comment to pin a note on a screen.' : 'Loading design…'}</div>}
+            {showImg && (figma ? !(img && nat) : !size) && <div className="rv-loading">{figBusy ? 'Loading this screen from Figma. A long page can take up to a minute…' : figma && !img ? 'Switch to Comment to pin a note on a screen.' : 'Loading design…'}</div>}
             {figma && figMode === 'browse' && (
               figma.links[figDevice]
                 ? <FigmaStage src={previewSrc} width={DEVICES.find((d) => d.key === figDevice)?.width ?? null} onNode={setFigNode} />
@@ -546,7 +574,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
             {figmaMissing && <div className="rv-loading">This Figma proof is not ready yet. Please ask Reyal Design to check it.</div>}
             {showImg && <div className="rv-mobhint">{locked ? 'Approved · view only' : 'Tap the design to comment'}</div>}
 
-            {showImg && <div className="rv-controls">
+            {showImg && !figma && <div className="rv-controls">
               <button className="rv-ctl" aria-label="Zoom in" onClick={() => tw.current?.zoomIn()}>+</button>
               <button className="rv-ctl" aria-label="Zoom out" onClick={() => tw.current?.zoomOut()}>−</button>
               <button className="rv-ctl txt" onClick={() => tw.current?.resetTransform()}>Fit</button>
@@ -591,7 +619,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
           </div>
           {sheet ? (
             <>
-              {images.length > 1 && <div className="rv-strip">{images.map(pageThumb)}</div>}
+              {railCount > 1 && <div className="rv-strip">{figma ? figRail : images.map(pageThumb)}</div>}
               {tabs}
               {list}
               {foot}

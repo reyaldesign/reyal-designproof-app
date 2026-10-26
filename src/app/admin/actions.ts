@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation';
 import { requireTool } from '@/lib/access';
 import { signOut } from '@/lib/access';
 import { db } from '@/lib/db';
-import { figmaConfigured, parseFigmaUrl } from '@/lib/figma';
+import { discoverPages, figmaConfigured, parseFigmaUrl } from '@/lib/figma';
 import { prefetchStartFrames } from '@/lib/figmaFrames';
 import { cleanLiveUrl } from '@/lib/live';
 import { MAX_IMAGE_MB, MAX_PDF_MB, MAX_UPLOAD_MB } from '@/lib/limits';
@@ -20,7 +20,7 @@ const date = (s: string) => (s ? new Date(`${s}T23:59:59`) : null);
 const BAD_URL = 'Enter the address of the live site, for example https://staging.example.com';
 const BAD_FIGMA = 'Paste a Figma prototype link (it starts with figma.com/proto) for at least one screen size.';
 /** The Figma prototype links from the form: one per screen size, any of them may be empty. Returns the JSON to store, or an error. */
-function figmaFrom(f: FormData): { json: string } | { error: string } {
+async function figmaFrom(f: FormData): Promise<{ json: string } | { error: string }> {
   if (!figmaConfigured()) return { error: 'Figma is not set up on this server yet (FIGMA_TOKEN and FIGMA_CLIENT_ID).' };
   const out: Record<string, unknown> = {};
   for (const [key, field] of [['desktop', 'figmaDesktop'], ['tablet', 'figmaTablet'], ['mobile', 'figmaMobile']] as const) {
@@ -28,7 +28,8 @@ function figmaFrom(f: FormData): { json: string } | { error: string } {
     if (!v) continue;
     const link = parseFigmaUrl(v);
     if (!link) return { error: `The ${key} link is not a Figma prototype link. ${BAD_FIGMA}` };
-    out[key] = link;
+    // Each size's screens are found now, so the review page can list them. If Figma cannot be reached, the start screen alone is used.
+    out[key] = { ...link, pages: await discoverPages(link).catch(() => []) };
   }
   return Object.keys(out).length ? { json: JSON.stringify(out) } : { error: BAD_FIGMA };
 }
@@ -90,7 +91,7 @@ export async function createProject(f: FormData) {
   const fail = (msg: string) => redirect(`/admin/clients/${clientId}?error=${encodeURIComponent(msg)}`);
   const liveUrl = str(f, 'source') === 'live' ? cleanLiveUrl(str(f, 'liveUrl')) : null;
   if (str(f, 'source') === 'live' && !liveUrl) fail(BAD_URL);
-  const fig = str(f, 'source') === 'figma' ? figmaFrom(f) : null;
+  const fig = str(f, 'source') === 'figma' ? await figmaFrom(f) : null;
   if (fig && 'error' in fig) fail(fig.error);
   const figma = fig && 'json' in fig ? fig.json : null;
   if (!str(f, 'title')) fail('Enter a proof title.');
@@ -136,7 +137,7 @@ export async function addVersion(f: FormData) {
   const projectId = str(f, 'projectId');
   const liveUrl = str(f, 'source') === 'live' ? cleanLiveUrl(str(f, 'liveUrl')) : null;
   if (str(f, 'source') === 'live' && !liveUrl) redirect(`/admin/${projectId}?error=${encodeURIComponent(BAD_URL)}`);
-  const fig = str(f, 'source') === 'figma' ? figmaFrom(f) : null;
+  const fig = str(f, 'source') === 'figma' ? await figmaFrom(f) : null;
   if (fig && 'error' in fig) redirect(`/admin/${projectId}?error=${encodeURIComponent(fig.error)}`);
   const figma = fig && 'json' in fig ? fig.json : null;
   const { rows: images, error } = liveUrl || figma ? { rows: [], error: undefined } : await imageRows(f);

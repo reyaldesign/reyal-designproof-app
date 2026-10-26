@@ -214,3 +214,11 @@
 .fg-float:hover { background: var(--surface-3); }
 .fg-float:disabled { opacity: .6; cursor: progress; }
 @media (max-width: 760px) { .fg-float { top: 10px; right: 10px; padding: 9px 14px; } }
+
+/* Figma proofs: the screen scrolls like any page (no drag-and-zoom viewer, so nothing wobbles) */
+.fg-scroll { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; touch-action: pan-y; padding: 24px 24px 80px; display: flex; justify-content: center; align-items: flex-start; -webkit-overflow-scrolling: touch; }
+.fg-sheet { position: relative; flex: none; background: #fff; border-radius: 4px; box-shadow: 0 18px 50px -12px rgba(0,0,0,.7); user-select: none; -webkit-user-select: none; }
+.fg-wait { display: grid; place-items: center; background: var(--surface-2); }
+.fg-spin { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--line-2); border-top-color: var(--ink-2); animation: fg-turn .9s linear infinite; }
+@keyframes fg-turn { to { transform: rotate(360deg); } }
+@media (max-width: 760px) { .fg-scroll { padding: 12px 8px 80px; } }
