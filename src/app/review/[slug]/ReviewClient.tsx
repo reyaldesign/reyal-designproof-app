@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TransformComponent, TransformWrapper, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
+import FigmaStage from '@/components/FigmaStage';
 import LiveStage, { type LiveHandle, type LivePick, type LivePin } from '@/components/LiveStage';
-import { pathOf, type Device } from '@/lib/live';
+import { DEVICES, pathOf, type Device } from '@/lib/live';
 
 type C = {
   id: string; imageId: string | null; parentId: string | null; author: string; text: string;
@@ -20,10 +21,13 @@ type Props = {
   revisions: { used: number; included: number };
   versions: { number: number; label: string }[];
   current: { id: string; number: number; label: string };
-  images: { id: string; file: string }[];
+  images: Img[];
   comments: C[];
   live: string | null; // the address of a live website being reviewed in place of images
+  figma: { links: Record<string, { embed: string; start: string | null; name: string }> } | null; // a Figma prototype, one link per screen size
+  figmaMissing: boolean; // the proof has Figma links but this server is not set up for them
 };
+type Img = { id: string; file: string; frameId?: string | null; frameName?: string | null; device?: string | null };
 
 const store = {
   get: (k: string) => { try { return localStorage.getItem(k) ?? ''; } catch { return ''; } },
@@ -42,7 +46,7 @@ function Pin({ n, kind, x, y, scale, onClick }: { n: number | string; kind: 'ope
   );
 }
 
-export default function ReviewClient({ slug, title, client, status, approval, latest, revisions, versions, current, images, comments, live }: Props) {
+export default function ReviewClient({ slug, title, client, status, approval, latest, revisions, versions, current, images: savedImages, comments, live, figma, figmaMissing }: Props) {
   const router = useRouter();
   const draftKey = `rp:draft:${current.id}`;
   const [tab, setTab] = useState<'send' | 'sent'>('send');
@@ -67,6 +71,15 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   const [err, setErr] = useState('');
   const [stage, setStage] = useState({ w: 0, h: 0 });
   const [nat, setNat] = useState<{ w: number; h: number } | null>(null);
+  // Figma prototype: the size shown, Browse (click through the prototype) or Comment (pin a note on the screen as an image), and the screen on show.
+  const [extra, setExtra] = useState<Img[]>([]); // screens exported from Figma since the page loaded
+  const images: Img[] = [...savedImages, ...extra.filter((e) => !savedImages.some((i) => i.id === e.id))];
+  const figDevices = figma ? DEVICES.filter((d) => figma.links[d.key]) : [];
+  const [figDevice, setFigDevice] = useState<Device>((figDevices[0]?.key ?? 'desktop') as Device);
+  const [figMode, setFigMode] = useState<'browse' | 'comment'>('browse');
+  const [figNode, setFigNode] = useState<string | null>(null);
+  const [figBusy, setFigBusy] = useState(false);
+  const [figErr, setFigErr] = useState('');
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -75,6 +88,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   const down = useRef({ x: 0, y: 0 });
 
   const img = images[idx];
+  const showImg = !live && (!figma || figMode === 'comment'); // the image stage with pins
   const locked = approval?.version === current.number; // approved versions take no more comments
   const canApprove = !approval && current.number === latest;
   const nextRev = revisions.used + 1; // the revision this Send revision would use
@@ -126,8 +140,26 @@ export default function ReviewClient({ slug, title, client, status, approval, la
     return () => window.removeEventListener('keydown', key);
   }, [images.length, confirmSend, terms]);
 
-  const fit = nat && stage.w ? Math.min((stage.w - 48) / nat.w, (stage.h - 48) / nat.h, 1) : 0;
+  const tall = !!nat && nat.h / nat.w > 2.2; // a long web page: fit the width and scroll down it, not shrink it to fit the height
+  const fit = nat && stage.w ? (tall ? Math.min((stage.w - 48) / nat.w, 1) : Math.min((stage.w - 48) / nat.w, (stage.h - 48) / nat.h, 1)) : 0;
   const size = nat && fit ? { width: Math.round(nat.w * fit), height: Math.round(nat.h * fit) } : null;
+
+  // On a long page the wheel scrolls down it (zoom stays on the + and - buttons).
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el || !tall || !size) return;
+    const on = (e: WheelEvent) => {
+      const t = tw.current;
+      if (!t) return;
+      e.preventDefault();
+      const st = t.state;
+      if (!st) return;
+      const minY = Math.min(0, stage.h - (size.height + 48) * st.scale);
+      t.setTransform(st.positionX, Math.max(minY, Math.min(0, st.positionY - e.deltaY)), st.scale, 0);
+    };
+    el.addEventListener('wheel', on, { passive: false });
+    return () => el.removeEventListener('wheel', on);
+  }, [tall, size?.height, stage.h, showImg]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function place(e: React.PointerEvent) {
     if (locked || !imgRef.current || !canvasRef.current) return;
@@ -157,7 +189,44 @@ export default function ReviewClient({ slug, title, client, status, approval, la
     setGeneral('');
     setLastSent(null);
   }
-  const goPage = (i: number) => { setIdx(i); setPop(null); };
+  const goPage = (i: number) => {
+    setIdx(i); setPop(null);
+    const m = images[i];
+    if (figma && m?.device && figma.links[m.device]) { setFigDevice(m.device as Device); setFigMode('comment'); }
+  };
+  const pageLabel = (imageId: string | null) => {
+    const i = images.findIndex((m) => m.id === imageId);
+    if (figma) return i >= 0 ? `${images[i].frameName || `Screen ${i + 1}`}${images[i].device ? ` · ${images[i].device}` : ''}` : 'General';
+    return `Page ${i + 1}`;
+  };
+  // Switch to Comment on the screen the prototype is showing. A screen is exported from Figma the first time it is needed.
+  async function figComment() {
+    const n = figNode ?? figma?.links[figDevice]?.start ?? null;
+    if (!figma || !n) return;
+    setFigErr('');
+    const have = images.findIndex((m) => m.frameId === n);
+    if (have >= 0) { setIdx(have); setPop(null); setFigMode('comment'); return; }
+    setFigBusy(true);
+    const r = await fetch(`/api/review/${slug}/figma-frame`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ versionId: current.id, node: n, device: figDevice }) }).catch(() => null);
+    const j = r ? ((await r.json().catch(() => null)) as { image?: Img; error?: string } | null) : null;
+    setFigBusy(false);
+    if (!r?.ok || !j?.image) return setFigErr(j?.error || 'Could not load this screen from Figma. Check your connection and try again.');
+    const image = j.image;
+    setExtra((x) => [...x, image]);
+    setIdx(images.length);
+    setPop(null);
+    setFigMode('comment');
+  }
+  // As the client clicks through the prototype, each screen is fetched from Figma in the background, so Comment is usually ready at once.
+  useEffect(() => {
+    if (!figma || !figNode || figMode !== 'browse' || images.some((m) => m.frameId === figNode)) return;
+    let on = true;
+    fetch(`/api/review/${slug}/figma-frame`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ versionId: current.id, node: figNode, device: figDevice }) })
+      .then((r) => r.json()).then((j: { image?: Img }) => { const image = j.image; if (on && image) setExtra((x) => (x.some((e) => e.id === image.id) ? x : [...x, image])); })
+      .catch(() => {});
+    return () => { on = false; };
+  }, [figNode, figDevice, figMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  function figSize(d: Device) { setFigDevice(d); setFigNode(null); setFigMode('browse'); setFigErr(''); setPop(null); }
 
   // ----- live website: a pick inside the site starts a draft, and its screenshot is uploaded as soon as it arrives -----
   const [focus, setFocus] = useState<string | null>(null);
@@ -262,7 +331,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
         <div key={d.tid} className="rv-draft">
           <div className="meta">
             <span className="rv-num">{d.x == null ? 'G' : draftPin(d.tid)}</span>
-            <span>{d.x == null ? 'General · not sent' : d.live ? `${pathOf(d.live.pageUrl)} · ${d.live.device} · not sent` : `Page ${images.findIndex((m) => m.id === d.imageId) + 1} · not sent`}</span>
+            <span>{d.x == null ? 'General · not sent' : d.live ? `${pathOf(d.live.pageUrl)} · ${d.live.device} · not sent` : `${pageLabel(d.imageId)} · not sent`}</span>
             <button className="rm" onClick={() => drop(d.tid)} aria-label="Remove comment">Remove</button>
           </div>
           {d.live?.elementText && <span className="rv-where">On “{d.live.elementText.slice(0, 80)}”</span>}
@@ -290,7 +359,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
             <div className="meta">
               <span className={`rv-pinpill ${c.resolved ? 'done' : ''}`}>{c.pin ?? '•'}</span>
               <span className="who">{c.author}</span>
-              <span>{live ? (c.pageUrl ? `${pathOf(c.pageUrl)}${c.device ? ` · ${c.device}` : ''}` : 'General') : page >= 0 ? `Page ${page + 1}` : 'General'} · {when(c.createdAt)}</span>
+              <span>{live ? (c.pageUrl ? `${pathOf(c.pageUrl)}${c.device ? ` · ${c.device}` : ''}` : 'General') : page >= 0 ? pageLabel(c.imageId) : 'General'} · {when(c.createdAt)}</span>
               <span className={`rv-chip ${st.cls}`}>{st.label}</span>
             </div>
             {c.elementText && <span className="rv-where">On “{c.elementText.slice(0, 80)}”</span>}
@@ -359,7 +428,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
         <span className="rv-mark">R</span>
         <div className="rv-titles">
           <span className="rv-title">{title}</span>
-          <span className="rv-sub"><span className="desk">{client} · shared by Reyal Design</span><span className="mob">v{current.number}{isLatest ? ' · Latest' : ''}{live ? ' · Live site' : ` · Page ${idx + 1} of ${images.length}`}</span></span>
+          <span className="rv-sub"><span className="desk">{client} · shared by Reyal Design</span><span className="mob">v{current.number}{isLatest ? ' · Latest' : ''}{live ? ' · Live site' : figma ? ' · Figma prototype' : ` · Page ${idx + 1} of ${images.length}`}</span></span>
         </div>
         <div className="rv-head-right">
           <span className={`rv-status ${pill.cls}`}><span className="long">{pill.long}</span><span className="short">{pill.short}</span></span>
@@ -388,6 +457,20 @@ export default function ReviewClient({ slug, title, client, status, approval, la
               <button className="gotit" onClick={() => dismissGuide(true)}>Got it</button>
             </div>
           )}
+          {figma && (
+            <div className="lv-bar" role="toolbar" aria-label="Figma prototype">
+              <div className="lv-seg" role="group" aria-label="Screen size">
+                {figDevices.map((d) => <button key={d.key} className={figDevice === d.key ? 'on' : ''} onClick={() => figSize(d.key)}>{d.label}</button>)}
+              </div>
+              {!locked && (
+                <div className="lv-seg" role="group" aria-label="Mode">
+                  <button className={figMode === 'browse' ? 'on' : ''} onClick={() => { setFigMode('browse'); setPop(null); }}>Browse</button>
+                  <button className={figMode === 'comment' ? 'on' : ''} disabled={figBusy || !(figNode ?? figma.links[figDevice]?.start)} onClick={() => void figComment()}>{figBusy ? 'Loading…' : 'Comment'}</button>
+                </div>
+              )}
+              {figErr && <span className="rv-err" role="alert" style={{ margin: 0 }}>{figErr}</span>}
+            </div>
+          )}
           <div ref={canvasRef} className="rv-canvas">
             {live && (
               <LiveStage ref={liveRef} url={live} pins={livePins} readOnly={locked} focusId={focus} onPick={livePick} onShot={liveShot} onBridge={setBridge} onMode={setLiveMode} onPinClick={(id) => { setTab('sent'); setFocus(id); }}>
@@ -408,12 +491,12 @@ export default function ReviewClient({ slug, title, client, status, approval, la
                 )}
               </LiveStage>
             )}
-            {!live && size && (
+            {showImg && size && (
               <TransformWrapper
-                key={img.id} ref={tw} minScale={0.5} maxScale={8} centerOnInit doubleClick={{ disabled: true }}
+                key={img.id} ref={tw} minScale={0.5} maxScale={8} centerOnInit={!tall} wheel={{ disabled: tall }} doubleClick={{ disabled: true }}
                 onTransform={(_ref, s) => setScale(s.scale)}
               >
-                <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: stage.w, height: stage.h, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: stage.w, height: tall ? Math.max(stage.h, size.height + 48) : stage.h, display: 'flex', alignItems: tall ? 'flex-start' : 'center', justifyContent: 'center', paddingTop: tall ? 24 : 0, boxSizing: 'border-box' }}>
                   <div
                     style={{ position: 'relative', ...size, cursor: locked ? 'grab' : 'crosshair' }}
                     onPointerDown={(e) => (down.current = { x: e.clientX, y: e.clientY })}
@@ -431,17 +514,23 @@ export default function ReviewClient({ slug, title, client, status, approval, la
                 </TransformComponent>
               </TransformWrapper>
             )}
-            {!live && !size && <div className="rv-loading">Loading design…</div>}
-            {!live && <div className="rv-mobhint">{locked ? 'Approved · view only' : 'Tap the design to comment'}</div>}
+            {showImg && !size && <div className="rv-loading">{figBusy ? 'Loading this screen from Figma. A long page can take up to a minute…' : figma && !img ? 'Switch to Comment to pin a note on a screen.' : 'Loading design…'}</div>}
+            {figma && figMode === 'browse' && (
+              figma.links[figDevice]
+                ? <FigmaStage src={figma.links[figDevice].embed} width={DEVICES.find((d) => d.key === figDevice)?.width ?? null} onNode={setFigNode} />
+                : <div className="rv-loading">There is no design for this screen size.</div>
+            )}
+            {figmaMissing && <div className="rv-loading">This Figma proof is not ready yet. Please ask Reyal Design to check it.</div>}
+            {showImg && <div className="rv-mobhint">{locked ? 'Approved · view only' : 'Tap the design to comment'}</div>}
 
-            {!live && <div className="rv-controls">
+            {showImg && <div className="rv-controls">
               <button className="rv-ctl" aria-label="Zoom in" onClick={() => tw.current?.zoomIn()}>+</button>
               <button className="rv-ctl" aria-label="Zoom out" onClick={() => tw.current?.zoomOut()}>−</button>
               <button className="rv-ctl txt" onClick={() => tw.current?.resetTransform()}>Fit</button>
             </div>}
-            <div className="rv-hint">{locked ? 'Approved · view only' : live ? (bridge === 'missing' ? 'Pinned comments are off for this site · use the general comment box' : liveMode === 'browse' ? 'Browse mode: use the links on the site, switch to Comment to leave notes' : 'Comment mode: click any part of the page') : `Page ${idx + 1} of ${images.length} · click to comment`}</div>
+            <div className="rv-hint">{locked ? 'Approved · view only' : live ? (bridge === 'missing' ? 'Pinned comments are off for this site · use the general comment box' : liveMode === 'browse' ? 'Browse mode: use the links on the site, switch to Comment to leave notes' : 'Comment mode: click any part of the page') : figma ? (figMode === 'browse' ? 'Browse mode: click through the prototype, then switch to Comment to leave notes on a screen' : 'Comment mode: click the screen to pin a note') : `Page ${idx + 1} of ${images.length} · click to comment`}</div>
 
-            {!live && pop && newDraft && (
+            {showImg && pop && newDraft && (
               <div
                 className="rv-pop"
                 style={{

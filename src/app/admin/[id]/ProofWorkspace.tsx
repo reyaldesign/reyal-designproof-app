@@ -7,6 +7,7 @@ import { TransformComponent, TransformWrapper, type ReactZoomPanPinchRef } from 
 import LiveStage, { type LiveHandle, type LivePin } from '@/components/LiveStage';
 import SourcePicker from '@/components/SourcePicker';
 import SubmitButton from '@/components/SubmitButton';
+import { parseFigma } from '@/lib/figmaShared';
 import { hostOf, pathOf } from '@/lib/live';
 import { PROOF_TYPES } from '@/lib/types';
 import { addVersion, deleteProject, markSent, reopenApproval, replyTo, setResolved, updateProject } from '../actions';
@@ -17,7 +18,7 @@ export type PComment = {
   x: number | null; y: number | null; pin: number | null; resolved: boolean; fromDesigner: boolean; createdAt: string;
   pageUrl?: string | null; selector?: string | null; elementText?: string | null; rx?: number | null; ry?: number | null; vw?: number | null; device?: string | null; shot?: string | null;
 };
-export type PVersion = { id: string; number: number; label: string; createdAt: string; liveUrl: string | null; images: PImage[]; comments: PComment[] };
+export type PVersion = { id: string; number: number; label: string; createdAt: string; liveUrl: string | null; figma: string | null; images: PImage[]; comments: PComment[] };
 type Props = {
   proof: {
     id: string; slug: string; title: string; type: string | null; status: string; password: string | null; expires: string | null;
@@ -62,6 +63,7 @@ export default function ProofWorkspace({ proof, client, revisions, versions, lin
   const version = versions[vIdx] ?? versions[0];
   const images = version.images;
   const live = version.liveUrl;
+  const figma = !!version.figma;
   const img = images[Math.min(page, images.length - 1)];
   const comments = version.comments;
   const roots = comments.filter((c) => !c.parentId);
@@ -181,7 +183,7 @@ export default function ProofWorkspace({ proof, client, revisions, versions, lin
       <div className="pp-bar">
         {versions.map((v, i) => (
           <button key={v.id} className={`pp-ver ${i === vIdx ? 'on' : ''}`} onClick={() => { setVIdx(i); setPage(0); }}>
-            <b>v{v.number}</b>{v.label}<span className="meta">{shortDay(v.createdAt)} · {v.liveUrl ? 'live site' : `${v.images.length} page${v.images.length === 1 ? '' : 's'}`}</span>
+            <b>v{v.number}</b>{v.label}<span className="meta">{shortDay(v.createdAt)} · {v.liveUrl ? 'live site' : v.figma ? 'Figma prototype' : `${v.images.length} page${v.images.length === 1 ? '' : 's'}`}</span>
             {proof.approvedVersion === v.number && <span className="ok" title="Approved" />}
           </button>
         ))}
@@ -235,7 +237,7 @@ export default function ProofWorkspace({ proof, client, revisions, versions, lin
                 </TransformComponent>
               </TransformWrapper>
             )}
-            {!live && !size && <div className="pp-loading">Loading design…</div>}
+            {!live && !size && <div className="pp-loading">{figma && !images.length ? 'Screens appear here when the client comments on them in the Figma prototype.' : 'Loading design…'}</div>}
           </div>
           <div className="pp-vfoot">
             <span className="pg">{live ? hostOf(live) : `Page ${page + 1} of ${images.length}`}</span>
@@ -269,7 +271,7 @@ export default function ProofWorkspace({ proof, client, revisions, versions, lin
                 </div>
                 <div className="pp-before">
                   <b>Before sending</b>
-                  <span>{live ? `Live site ${hostOf(live)}` : `${images.length} page${images.length === 1 ? '' : 's'} uploaded`} as v{version.number} · {version.label}</span>
+                  <span>{live ? `Live site ${hostOf(live)}` : figma ? 'Figma prototype' : `${images.length} page${images.length === 1 ? '' : 's'} uploaded`} as v{version.number} · {version.label}</span>
                   <span>{shownInc} revision{shownInc === 1 ? '' : 's'} included{inc === null ? ' (client default)' : ''}</span>
                   <span>{proof.password ? 'Password protected' : 'No password'}, {proof.expires ? `expires ${proof.expires}` : 'no expiry date'}</span>
                 </div>
@@ -415,7 +417,7 @@ export default function ProofWorkspace({ proof, client, revisions, versions, lin
               <form action={addVersion} style={{ display: 'grid', gap: 14 }}>
                 <input type="hidden" name="projectId" value={proof.id} />
                 <input className="in" name="label" placeholder="Label, e.g. changes #1" style={{ padding: '11px 16px', borderRadius: 99, border: '1px solid var(--line-2)', background: 'var(--surface-2)', color: 'var(--ink)', outline: 'none' }} />
-                <SourcePicker key={version.id} startLive={!!versions[0].liveUrl} initialUrl={versions[0].liveUrl ?? ''} inputClass="in" note="Address of the site for this round. It is the same address unless the update is somewhere else." />
+                <SourcePicker key={version.id} start={versions[0].figma ? 'figma' : versions[0].liveUrl ? 'live' : 'files'} figma={{ desktop: parseFigma(versions[0].figma)?.desktop?.url, tablet: parseFigma(versions[0].figma)?.tablet?.url, mobile: parseFigma(versions[0].figma)?.mobile?.url }} initialUrl={versions[0].liveUrl ?? ''} inputClass="in" note="Address of the site for this round. It is the same address unless the update is somewhere else." />
                 {error && <p className="pp-err">{error}</p>}
                 <div className="pp-macts">
                   <button type="button" className="pp-btn" onClick={() => setModal(null)}>Cancel</button>

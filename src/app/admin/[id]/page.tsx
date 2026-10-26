@@ -38,7 +38,7 @@ export default async function ProofPage({ params, searchParams }: { params: Prom
       client={{ id: p.client.id, name: p.client.name, email: p.client.email, revisionsIncluded: p.client.revisionsIncluded }}
       revisions={{ used: rev.used, included: rev.included }}
       versions={p.versions.map((v) => ({
-        id: v.id, number: v.number, label: v.label, createdAt: v.createdAt.toISOString(), liveUrl: v.liveUrl,
+        id: v.id, number: v.number, label: v.label, createdAt: v.createdAt.toISOString(), liveUrl: v.liveUrl, figma: v.figma,
         images: v.images.map((i) => ({ id: i.id, file: i.file })),
         comments: v.comments.map((c) => ({
           id: c.id, imageId: c.imageId, parentId: c.parentId, author: c.author, text: c.text, x: c.x, y: c.y, pin: c.pin,

@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import { mirrorToFigma } from '@/lib/figmaSync';
 import { isDevice, pathOf, sameSite } from '@/lib/live';
 import { notify } from '@/lib/mail';
 import { loadProject } from '@/lib/review';
@@ -70,12 +71,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     };
   });
   const number = rev.used + 1;
+  let submissionId = '';
   await db.$transaction(async (tx) => {
     const sub = await tx.submission.create({ data: { projectId: project.id, versionId: version.id, number, author } });
+    submissionId = sub.id;
     await tx.comment.createMany({ data: rows.map((r) => ({ ...r, submissionId: sub.id })) });
     await tx.project.update({ where: { id: project.id }, data: { status: 'Feedback Received' } });
   });
 
+  if (version.figma) void mirrorToFigma(version.id, submissionId, number, author); // posted into the Figma file in the background
   const base = process.env.APP_URL || '';
   const ordered = [...version.images].sort((a, b) => a.position - b.position);
   const pageOf = (id: string | null) => ordered.findIndex((i) => i.id === id) + 1;

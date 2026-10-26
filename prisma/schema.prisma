@@ -46,6 +46,7 @@ model Version {
   label     String
   createdAt DateTime  @default(now())
   liveUrl   String? // a live website reviewed in its place (WordPress staging). Empty for image and PDF proofs.
+  figma     String? // JSON: the Figma prototype links, one per screen size. Empty for every other kind of proof.
   project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   images    Image[]
   comments  Comment[]
@@ -59,6 +60,12 @@ model Image {
   versionId String
   file      String
   position  Int
+  // Figma proofs: a screen of the prototype, exported from Figma the first time a client comments on it.
+  frameId   String?
+  frameName String?
+  device    String? // desktop | tablet | mobile
+  fw        Int? // the frame's size in Figma, used to place a comment back on it
+  fh        Int?
   version   Version   @relation(fields: [versionId], references: [id], onDelete: Cascade)
   comments  Comment[]
 }
@@ -99,6 +106,7 @@ model Comment {
   vw           Int?
   device       String? // desktop | tablet | mobile
   shot         String? // screenshot file name under uploads
+  figmaId      String? // the matching comment in the Figma file, once it has been posted there
   resolved     Boolean   @default(false)
   fromDesigner Boolean   @default(false)
   createdAt    DateTime  @default(now())
