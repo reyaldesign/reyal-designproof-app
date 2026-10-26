@@ -230,10 +230,10 @@ export default function ReviewClient({ slug, title, client, status, approval, la
     const link = figma?.links[figDevice];
     if (!link) return '';
     const node = img?.device === figDevice && img.frameId ? img.frameId : link.start;
-    if (!node || node === link.start) return link.embed;
     const u = new URL(link.embed);
-    u.searchParams.set('node-id', node.replace(':', '-'));
-    u.searchParams.set('starting-point-node-id', node);
+    if (node && node !== link.start) { u.searchParams.set('node-id', node.replace(':', '-')); u.searchParams.set('starting-point-node-id', node); }
+    // Figma draws a phone inside a phone-shaped frame and shrinks all of it to fit the height, which makes the screen small. Fitting the width makes it larger.
+    if (figDevice === 'mobile') u.searchParams.set('scaling', 'scale-down-width');
     return u.toString();
   })();
   // As the client clicks through the prototype, each screen is fetched from Figma in the background, so Comment is usually ready at once.
@@ -568,7 +568,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
             {showImg && (figma ? !(img && nat) : !size) && <div className="rv-loading">{figBusy ? 'Loading this screen from Figma. A long page can take up to a minute…' : figma && !img ? 'Switch to Comment to pin a note on a screen.' : 'Loading design…'}</div>}
             {figma && figMode === 'browse' && (
               figma.links[figDevice]
-                ? <FigmaStage src={previewSrc} width={DEVICES.find((d) => d.key === figDevice)?.width ?? null} onNode={setFigNode} />
+                ? <FigmaStage src={previewSrc} width={figDevice === 'mobile' ? 470 : DEVICES.find((d) => d.key === figDevice)?.width ?? null} onNode={setFigNode} />
                 : <div className="rv-loading">There is no design for this screen size.</div>
             )}
             {figmaMissing && <div className="rv-loading">This Figma proof is not ready yet. Please ask Reyal Design to check it.</div>}
