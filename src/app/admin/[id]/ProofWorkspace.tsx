@@ -12,7 +12,7 @@ import { hostOf, pathOf } from '@/lib/live';
 import { PROOF_TYPES } from '@/lib/types';
 import { addVersion, deleteProject, markSent, reopenApproval, replyTo, setResolved, updateProject } from '../actions';
 
-export type PImage = { id: string; file: string };
+export type PImage = { id: string; file: string; device?: string | null };
 export type PComment = {
   id: string; imageId: string | null; parentId: string | null; author: string; text: string;
   x: number | null; y: number | null; pin: number | null; resolved: boolean; fromDesigner: boolean; createdAt: string;
@@ -213,7 +213,7 @@ export default function ProofWorkspace({ proof, client, revisions, versions, lin
             return (
               <button key={m.id} className={`pp-page ${i === page ? 'on' : ''}`} onClick={() => setPage(i)} aria-label={`Go to page ${i + 1}`}>
                 <span className="pp-pthumb"><img src={`/files/${m.file}?w=320`} alt="" loading="lazy" />{n > 0 && <span className="n">{n}</span>}</span>
-                <span className="lbl">{i + 1}</span>
+                <span className="lbl">{figma && m.device ? ({ desktop: 'Desktop', tablet: 'Tablet', mobile: 'Phone' } as Record<string, string>)[m.device] : i + 1}</span>
               </button>
             );
           })}

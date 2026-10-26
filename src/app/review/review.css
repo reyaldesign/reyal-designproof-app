@@ -208,3 +208,9 @@
 .rv-where { display: block; font-size: 12px; color: var(--muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rv-shotthumb { width: 100%; max-height: 110px; object-fit: cover; object-position: top; border-radius: 10px; border: 1px solid var(--line-2); }
 .review .rv-canvas > .lv { position: absolute; inset: 0; }
+
+/* Figma proofs: the Preview / Back to comments button hovers over the screen and stays put while the page scrolls */
+.fg-float { position: absolute; top: 14px; right: 18px; z-index: 7; display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border: 1px solid var(--line-2); border-radius: 99px; background: rgba(20,20,23,.92); backdrop-filter: blur(6px); color: #fff; font: 700 13px/1 var(--sans); cursor: pointer; box-shadow: 0 8px 24px -8px rgba(0,0,0,.7); }
+.fg-float:hover { background: var(--surface-3); }
+.fg-float:disabled { opacity: .6; cursor: progress; }
+@media (max-width: 760px) { .fg-float { top: 10px; right: 10px; padding: 9px 14px; } }

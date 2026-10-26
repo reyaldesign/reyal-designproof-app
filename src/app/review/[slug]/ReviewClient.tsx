@@ -76,7 +76,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   const images: Img[] = [...savedImages, ...extra.filter((e) => !savedImages.some((i) => i.id === e.id))];
   const figDevices = figma ? DEVICES.filter((d) => figma.links[d.key]) : [];
   const [figDevice, setFigDevice] = useState<Device>((figDevices[0]?.key ?? 'desktop') as Device);
-  const [figMode, setFigMode] = useState<'browse' | 'comment'>('browse');
+  const [figMode, setFigMode] = useState<'browse' | 'comment'>('comment'); // opens on the screen, ready to comment; Preview is one click away
   const [figNode, setFigNode] = useState<string | null>(null);
   const [figBusy, setFigBusy] = useState(false);
   const [figErr, setFigErr] = useState('');
@@ -194,29 +194,48 @@ export default function ReviewClient({ slug, title, client, status, approval, la
     const m = images[i];
     if (figma && m?.device && figma.links[m.device]) { setFigDevice(m.device as Device); setFigMode('comment'); }
   };
+  // Figma proofs name a screen by its size (Desktop, Tablet, Phone), with a number only when a size has more than one screen.
+  const viewLabel = (i: number) => {
+    const m = images[i];
+    const dev = DEVICES.find((d) => d.key === m?.device)?.label;
+    if (!dev) return `Screen ${i + 1}`;
+    const same = images.filter((x) => x.device === m.device);
+    return same.length > 1 ? `${dev} ${same.indexOf(m) + 1}` : dev;
+  };
   const pageLabel = (imageId: string | null) => {
     const i = images.findIndex((m) => m.id === imageId);
-    if (figma) return i >= 0 ? `${images[i].frameName || `Screen ${i + 1}`}${images[i].device ? ` · ${images[i].device}` : ''}` : 'General';
+    if (figma) return i >= 0 ? viewLabel(i) : 'General';
     return `Page ${i + 1}`;
   };
-  // Switch to Comment on the screen the prototype is showing. A screen is exported from Figma the first time it is needed.
-  async function figComment() {
-    const n = figNode ?? figma?.links[figDevice]?.start ?? null;
-    if (!figma || !n) return;
+  // Show one screen of the prototype as an image to comment on. A screen is exported from Figma the first time it is needed.
+  async function showFrame(node: string | null, device: Device) {
+    if (!figma || !node) return;
     setFigErr('');
-    const have = images.findIndex((m) => m.frameId === n);
+    const have = images.findIndex((m) => m.frameId === node);
     if (have >= 0) { setIdx(have); setPop(null); setFigMode('comment'); return; }
     setFigBusy(true);
-    const r = await fetch(`/api/review/${slug}/figma-frame`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ versionId: current.id, node: n, device: figDevice }) }).catch(() => null);
+    const r = await fetch(`/api/review/${slug}/figma-frame`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ versionId: current.id, node, device }) }).catch(() => null);
     const j = r ? ((await r.json().catch(() => null)) as { image?: Img; error?: string } | null) : null;
     setFigBusy(false);
     if (!r?.ok || !j?.image) return setFigErr(j?.error || 'Could not load this screen from Figma. Check your connection and try again.');
     const image = j.image;
-    setExtra((x) => [...x, image]);
-    setIdx(images.length);
+    setExtra((x) => (x.some((e) => e.id === image.id) ? x : [...x, image]));
+    setIdx(images.some((m) => m.id === image.id) ? images.findIndex((m) => m.id === image.id) : images.length);
     setPop(null);
     setFigMode('comment');
   }
+  // Comment mode shows the screen being reviewed; Preview opens the prototype of that same size, at that screen.
+  const figComment = () => showFrame(figNode ?? figma?.links[figDevice]?.start ?? null, figDevice);
+  const previewSrc = (() => {
+    const link = figma?.links[figDevice];
+    if (!link) return '';
+    const node = img?.device === figDevice && img.frameId ? img.frameId : link.start;
+    if (!node || node === link.start) return link.embed;
+    const u = new URL(link.embed);
+    u.searchParams.set('node-id', node.replace(':', '-'));
+    u.searchParams.set('starting-point-node-id', node);
+    return u.toString();
+  })();
   // As the client clicks through the prototype, each screen is fetched from Figma in the background, so Comment is usually ready at once.
   useEffect(() => {
     if (!figma || !figNode || figMode !== 'browse' || images.some((m) => m.frameId === figNode)) return;
@@ -226,7 +245,12 @@ export default function ReviewClient({ slug, title, client, status, approval, la
       .catch(() => {});
     return () => { on = false; };
   }, [figNode, figDevice, figMode]); // eslint-disable-line react-hooks/exhaustive-deps
-  function figSize(d: Device) { setFigDevice(d); setFigNode(null); setFigMode('browse'); setFigErr(''); setPop(null); }
+  function figSize(d: Device) {
+    setFigDevice(d); setFigNode(null); setFigErr(''); setPop(null);
+    if (figMode === 'comment') void showFrame(figma?.links[d]?.start ?? null, d);
+  }
+  // Open on the first size's starting screen, ready to comment.
+  useEffect(() => { if (figma) void showFrame(figma.links[figDevice]?.start ?? null, figDevice); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ----- live website: a pick inside the site starts a draft, and its screenshot is uploaded as soon as it arrives -----
   const [focus, setFocus] = useState<string | null>(null);
@@ -408,12 +432,12 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   const pageThumb = (m: { id: string; file: string }, n: number) => {
     const count = pageCount(m.id);
     return (
-      <button key={m.id} className={`rv-page ${n === idx ? 'on' : ''}`} onClick={() => goPage(n)} aria-label={`Go to page ${n + 1}`}>
+      <button key={m.id} className={`rv-page ${n === idx ? 'on' : ''}`} onClick={() => goPage(n)} aria-label={figma ? `Go to ${viewLabel(n)}` : `Go to page ${n + 1}`}>
         <span className="rv-thumb">
           <img src={`/files/${m.file}?w=320`} alt="" loading="lazy" />
           {count > 0 && <span className="rv-pins">{count}</span>}
         </span>
-        <span className="n">Page {n + 1}</span>
+        <span className="n">{figma ? viewLabel(n) : `Page ${n + 1}`}</span>
       </button>
     );
   };
@@ -462,16 +486,15 @@ export default function ReviewClient({ slug, title, client, status, approval, la
               <div className="lv-seg" role="group" aria-label="Screen size">
                 {figDevices.map((d) => <button key={d.key} className={figDevice === d.key ? 'on' : ''} onClick={() => figSize(d.key)}>{d.label}</button>)}
               </div>
-              {!locked && (
-                <div className="lv-seg" role="group" aria-label="Mode">
-                  <button className={figMode === 'browse' ? 'on' : ''} onClick={() => { setFigMode('browse'); setPop(null); }}>Browse</button>
-                  <button className={figMode === 'comment' ? 'on' : ''} disabled={figBusy || !(figNode ?? figma.links[figDevice]?.start)} onClick={() => void figComment()}>{figBusy ? 'Loading…' : 'Comment'}</button>
-                </div>
-              )}
               {figErr && <span className="rv-err" role="alert" style={{ margin: 0 }}>{figErr}</span>}
             </div>
           )}
           <div ref={canvasRef} className="rv-canvas">
+            {figma && figma.links[figDevice] && (
+              figMode === 'comment'
+                ? <button className="fg-float" onClick={() => { setFigNode(null); setFigMode('browse'); setPop(null); }} aria-label={`Preview the ${DEVICES.find((d) => d.key === figDevice)?.label} prototype`}><span aria-hidden>▶</span> Preview</button>
+                : !locked && <button className="fg-float" disabled={figBusy} onClick={() => void figComment()}><span aria-hidden>✎</span> {figBusy ? 'Loading…' : 'Back to comments'}</button>
+            )}
             {live && (
               <LiveStage ref={liveRef} url={live} pins={livePins} readOnly={locked} focusId={focus} onPick={livePick} onShot={liveShot} onBridge={setBridge} onMode={setLiveMode} onPinClick={(id) => { setTab('sent'); setFocus(id); }}>
                 {pop && newDraft && (
@@ -517,7 +540,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
             {showImg && !size && <div className="rv-loading">{figBusy ? 'Loading this screen from Figma. A long page can take up to a minute…' : figma && !img ? 'Switch to Comment to pin a note on a screen.' : 'Loading design…'}</div>}
             {figma && figMode === 'browse' && (
               figma.links[figDevice]
-                ? <FigmaStage src={figma.links[figDevice].embed} width={DEVICES.find((d) => d.key === figDevice)?.width ?? null} onNode={setFigNode} />
+                ? <FigmaStage src={previewSrc} width={DEVICES.find((d) => d.key === figDevice)?.width ?? null} onNode={setFigNode} />
                 : <div className="rv-loading">There is no design for this screen size.</div>
             )}
             {figmaMissing && <div className="rv-loading">This Figma proof is not ready yet. Please ask Reyal Design to check it.</div>}
@@ -528,7 +551,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
               <button className="rv-ctl" aria-label="Zoom out" onClick={() => tw.current?.zoomOut()}>−</button>
               <button className="rv-ctl txt" onClick={() => tw.current?.resetTransform()}>Fit</button>
             </div>}
-            <div className="rv-hint">{locked ? 'Approved · view only' : live ? (bridge === 'missing' ? 'Pinned comments are off for this site · use the general comment box' : liveMode === 'browse' ? 'Browse mode: use the links on the site, switch to Comment to leave notes' : 'Comment mode: click any part of the page') : figma ? (figMode === 'browse' ? 'Browse mode: click through the prototype, then switch to Comment to leave notes on a screen' : 'Comment mode: click the screen to pin a note') : `Page ${idx + 1} of ${images.length} · click to comment`}</div>
+            <div className="rv-hint">{locked ? 'Approved · view only' : live ? (bridge === 'missing' ? 'Pinned comments are off for this site · use the general comment box' : liveMode === 'browse' ? 'Browse mode: use the links on the site, switch to Comment to leave notes' : 'Comment mode: click any part of the page') : figma ? (figMode === 'browse' ? 'Preview: click through the prototype, then press Back to comments' : 'Click the screen to pin a note · Preview shows how it works') : `Page ${idx + 1} of ${images.length} · click to comment`}</div>
 
             {showImg && pop && newDraft && (
               <div
