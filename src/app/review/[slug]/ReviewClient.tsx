@@ -352,6 +352,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   // The guided tour of a Figma proof: it starts on each visit until "Don't show this again" is ticked, and the ? button starts it again.
   const tourSteps: TourStep[] = [
     { target: '', title: 'Welcome to your design review', body: 'This short tour shows how to review. Please use a laptop or desktop, and look at each size: Desktop, Tablet and Phone.' },
+    { target: '[data-tour="version"]', place: 'bottom', title: 'Which version you are reviewing', body: `You are reviewing ${versionName}${isLatest ? ', the latest version' : ', which is an older version. Open the latest one before you comment'}. Check this line each time you open your link, so you know you are on the right round.` },
     { target: '[data-tour="sizes"]', place: 'bottom', title: 'Review every size', body: 'Your design comes in three sizes. Switch between Desktop, Tablet and Phone here and review each one. For the best view, use a laptop or desktop.' },
     { target: '[data-tour="design"]', place: 'left', title: 'Click to leave a comment', body: 'Click anywhere on the design to pin a note. Scroll to see the whole page.' },
     { target: '[data-tour="pager"]', place: 'top', title: 'Move between pages', body: 'Each size has several pages. Use the arrows, or open the list to jump to a page.' },
@@ -562,7 +563,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
           )}
           {figma && (
             <div className="lv-bar fg-bar" role="toolbar" aria-label="Screen size">
-              <div className={`fg-ver ${isLatest ? '' : 'old'}`} role="status">
+              <div className={`fg-ver ${isLatest ? '' : 'old'}`} role="status" data-tour="version">
                 <span>You are reviewing <b>{versionName}</b></span>
                 {isLatest ? <span className="tag">Latest version</span> : <button onClick={() => router.push(`/review/${slug}?v=${latest}`)}>This is an older version. Open the latest</button>}
               </div>
