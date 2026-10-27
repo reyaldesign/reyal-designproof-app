@@ -6,7 +6,7 @@
 .ws-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .ws-filters .input { width: auto; flex: 1 1 200px; max-width: 320px; }
 .ws-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
-.ws-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
+.ws-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 15px; }
 .ws-table th { text-align: left; padding: 11px 14px; font: 600 11.5px/1.2 var(--display); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border-bottom: 1px solid var(--line); white-space: nowrap; }
 .ws-table td { padding: 11px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle; color: var(--ink-2); }
 .ws-table tbody tr:hover td { background: rgba(255,255,255,.025); }
