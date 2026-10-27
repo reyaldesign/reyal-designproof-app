@@ -1,0 +1,20 @@
+/* Guided tour. Uses the review page's colors, with fallbacks so it also works elsewhere. */
+.tour { position: fixed; inset: 0; z-index: 1000; }
+.tour-dim { position: absolute; inset: 0; background: rgba(0, 0, 0, .74); }
+.tour-hl { position: absolute; border-radius: 16px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .74); outline: 2px solid var(--yellow, #ffd308); outline-offset: 0; transition: left .28s ease, top .28s ease, width .28s ease, height .28s ease; animation: tour-pulse 1.8s ease-in-out infinite; pointer-events: none; }
+@keyframes tour-pulse { 0%, 100% { outline-color: var(--yellow, #ffd308); outline-offset: 0; } 50% { outline-color: rgba(255, 211, 8, .35); outline-offset: 6px; } }
+.tour-card { position: absolute; width: min(340px, calc(100vw - 24px)); box-sizing: border-box; padding: 18px 18px 14px; border-radius: 18px; background: var(--surface, #141417); border: 1px solid var(--line-2, #32323a); color: var(--ink, #f6f6f7); box-shadow: 0 24px 60px -16px rgba(0, 0, 0, .8); animation: tour-in .25s ease both; transition: left .28s ease, top .28s ease; }
+.tour-card.mid { left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.tour-card.dock { left: 12px; right: 12px; bottom: 12px; top: auto; width: auto; }
+@keyframes tour-in { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
+.tour-count { font: 700 11px/1 var(--sans, system-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted, #8b8b95); }
+.tour-card h2 { margin: 10px 0 6px; font: 800 19px/1.2 var(--sans, system-ui); }
+.tour-card p { margin: 0 0 14px; color: var(--ink-2, #c7c7cd); font-size: 14px; line-height: 1.5; }
+.tour-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.tour-actions button { padding: 10px 18px; border-radius: 99px; border: 1px solid var(--line-2, #32323a); background: none; color: var(--ink, #fff); font: 700 13px/1 var(--sans, system-ui); cursor: pointer; }
+.tour-actions .tour-next { background: #fff; color: #09090b; border-color: #fff; }
+.tour-actions button:hover { filter: brightness(1.1); }
+.tour-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line, #222227); font-size: 12px; color: var(--muted, #8b8b95); }
+.tour-foot label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.tour-skip { background: none; border: 0; padding: 4px 0; color: var(--muted, #8b8b95); font: 600 12px/1 var(--sans, system-ui); cursor: pointer; text-decoration: underline; }
+@media (prefers-reduced-motion: reduce) { .tour-hl, .tour-card { animation: none; transition: none; } }

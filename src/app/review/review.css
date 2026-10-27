@@ -222,3 +222,29 @@
 .fg-spin { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--line-2); border-top-color: var(--ink-2); animation: fg-turn .9s linear infinite; }
 @keyframes fg-turn { to { transform: rotate(360deg); } }
 @media (max-width: 760px) { .fg-scroll { padding: 12px 8px 80px; } }
+
+/* Figma proofs: the screen selector in the corner of the design, large and highlighted */
+.fg-pager { position: absolute; right: 18px; bottom: 18px; z-index: 8; display: flex; align-items: stretch; gap: 6px; padding: 6px; border-radius: 22px; background: rgba(20,20,23,.95); backdrop-filter: blur(8px); border: 2px solid var(--yellow, #ffd308); box-shadow: 0 0 0 0 rgba(255,211,8,.5), 0 14px 36px -10px rgba(0,0,0,.8); animation: fg-glow 2.2s ease-out 3; }
+@keyframes fg-glow { 0% { box-shadow: 0 0 0 0 rgba(255,211,8,.55), 0 14px 36px -10px rgba(0,0,0,.8); } 70%, 100% { box-shadow: 0 0 0 14px rgba(255,211,8,0), 0 14px 36px -10px rgba(0,0,0,.8); } }
+.fg-step { width: 44px; border: 0; border-radius: 16px; background: var(--surface-3); color: #fff; font: 700 26px/1 var(--sans); cursor: pointer; }
+.fg-step:hover:not(:disabled) { background: #fff; color: #09090b; }
+.fg-step:disabled { opacity: .35; cursor: not-allowed; }
+.fg-pick { display: grid; gap: 4px; min-width: 190px; max-width: 280px; padding: 8px 14px; border: 0; border-radius: 16px; background: none; color: #fff; text-align: left; cursor: pointer; }
+.fg-pick:hover { background: var(--surface-2); }
+.fg-pick .lbl { font: 700 11px/1 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--yellow, #ffd308); }
+.fg-pick .nm { font: 800 15px/1.2 var(--sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fg-pop { position: absolute; right: 0; bottom: calc(100% + 10px); width: min(320px, calc(100vw - 36px)); max-height: min(60vh, 440px); overflow-y: auto; display: grid; gap: 4px; padding: 8px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line-2); box-shadow: 0 24px 60px -16px rgba(0,0,0,.85); }
+.fg-pop .rv-page { display: flex; align-items: center; gap: 12px; width: 100%; padding: 6px; border-radius: 12px; text-align: left; }
+.fg-pop .rv-page:hover { background: var(--surface-2); }
+.fg-pop .rv-page.on { background: var(--surface-3); }
+.fg-pop .rv-thumb { flex: none; width: 64px; height: 44px; }
+.fg-pop .rv-page .n { flex: 1; min-width: 0; font: 700 13px/1.25 var(--sans); color: #fff; white-space: normal; }
+.fg-hint { right: auto; left: 20px; }
+.fg-note { color: var(--muted); font: 600 12px/1.3 var(--sans); }
+.fg-warn { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 10px 14px 0; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(255,211,8,.45); background: rgba(255,211,8,.08); color: var(--ink-2); font-size: 13px; line-height: 1.45; }
+.fg-warn b { color: var(--yellow, #ffd308); }
+.fg-warn button { flex: none; padding: 8px 14px; border-radius: 99px; border: 1px solid var(--line-2); background: none; color: #fff; font: 700 12px/1 var(--sans); cursor: pointer; }
+@media (max-width: 900px) { .fg-note { display: none; } }
+@media (max-width: 760px) { .fg-pager { right: 10px; bottom: 10px; } .fg-pick { min-width: 150px; } .fg-hint { display: none; } }
+/* Figma proofs need the size buttons on a phone too (a live site hides them there) */
+@media (max-width: 760px) { .review .lv-bar .lv-seg[aria-label="Screen size"] { display: inline-flex; } }
