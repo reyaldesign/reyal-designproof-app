@@ -259,6 +259,14 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   const allPages = figma ? DEVICES.flatMap((d) => (figma.links[d.key]?.pages ?? []).map((p) => ({ device: d.key, size: d.label, id: p.id, name: shortName(p.name) || d.label }))) : [];
   const reviewed = allPages.filter((p) => seen[p.id] === 2).length;
   const todo = allPages.filter((p) => seen[p.id] !== 2);
+  // Screens still being fetched from Figma: look again every few seconds until they have all arrived.
+  const missing = figma ? allPages.filter((p) => !images.some((m) => m.frameId === p.id)).length : 0;
+  useEffect(() => {
+    if (!missing) return;
+    let n = 0;
+    const t = setInterval(() => { if (++n > 80) clearInterval(t); else router.refresh(); }, 12_000);
+    return () => clearInterval(t);
+  }, [missing]); // eslint-disable-line react-hooks/exhaustive-deps
   const goTo = (p: { device: Device; id: string }) => { setConfirmSend(false); setTerms(false); setFigDevice(p.device); setFigErr(''); setPop(null); setPager(false); void showFrame(p.id, p.device); };
   const previewSrc = (() => {
     const link = figma?.links[figDevice];
@@ -587,7 +595,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
               const name = shortName(figPages[k]?.name) || DEVICES.find((d) => d.key === figDevice)?.label || 'Screen';
               return (
                 <div className="fg-pager" data-tour="pager">
-                  {pager && <div className="fg-pop" role="listbox" aria-label="Screens">{figRail}</div>}
+                  {pager && <div className="fg-pop" role="listbox" aria-label="Screens">{figRail}{missing > 0 && <p className="fg-load">{missing === 1 ? '1 page is' : `${missing} pages are`} still loading from Figma in the background. You can tap a page to load it now.</p>}</div>}
                   <button className="fg-step" disabled={k <= 0 || figBusy} onClick={() => go(k - 1)} aria-label="Previous screen">‹</button>
                   <button className="fg-pick" onClick={() => setPager(!pager)} aria-expanded={pager} aria-haspopup="listbox">
                     <span className="lbl">{DEVICES.find((d) => d.key === figDevice)?.label} · page {k >= 0 ? k + 1 : 1} of {figPages.length}</span>
