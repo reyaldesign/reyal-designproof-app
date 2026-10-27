@@ -34,7 +34,7 @@ export async function ensureFrame(versionId: string, device: string, node: strin
 export function prefetchStartFrames(versionId: string, figmaJson: string | null) {
   const proof = parseFigma(figmaJson);
   if (!proof) return;
-  for (const d of ['desktop', 'tablet', 'mobile'] as const) {
+  for (const d of ['desktop', 'mobile', 'tablet'] as const) {
     const l = proof[d];
     if (!l?.start) continue;
     const nodes = [l.start, ...(l.pages ?? []).map((p) => p.id).filter((id) => id !== l.start)];

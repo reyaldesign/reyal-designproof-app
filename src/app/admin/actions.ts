@@ -23,7 +23,7 @@ const BAD_FIGMA = 'Paste a Figma prototype link (it starts with figma.com/proto)
 async function figmaFrom(f: FormData): Promise<{ json: string } | { error: string }> {
   if (!figmaConfigured()) return { error: 'Figma is not set up on this server yet (FIGMA_TOKEN and FIGMA_CLIENT_ID).' };
   const out: Record<string, unknown> = {};
-  for (const [key, field] of [['desktop', 'figmaDesktop'], ['tablet', 'figmaTablet'], ['mobile', 'figmaMobile']] as const) {
+  for (const [key, field] of [['desktop', 'figmaDesktop'], ['mobile', 'figmaMobile'], ['tablet', 'figmaTablet']] as const) {
     const v = str(f, field);
     if (!v) continue;
     const link = parseFigmaUrl(v);

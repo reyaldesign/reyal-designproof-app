@@ -1,9 +1,10 @@
+// Screen sizes are always listed in this order: Desktop, Phone, Tablet.
 // Live website proofs: shared bits for the review page, the admin page and the API.
 export type Device = 'desktop' | 'tablet' | 'mobile';
 export const DEVICES: { key: Device; label: string; width: number | null }[] = [
   { key: 'desktop', label: 'Desktop', width: null }, // fills the stage
-  { key: 'tablet', label: 'Tablet', width: 820 },
   { key: 'mobile', label: 'Phone', width: 390 },
+  { key: 'tablet', label: 'Tablet', width: 820 },
 ];
 export const isDevice = (v: unknown): v is Device => v === 'desktop' || v === 'tablet' || v === 'mobile';
 
