@@ -85,6 +85,10 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   const [tourOpen, setTourOpen] = useState(false);
   const [small, setSmall] = useState(false); // a phone or other small screen: asked to use a laptop or desktop instead
   const [smallGone, setSmallGone] = useState(false);
+  // Which screens of a Figma proof the person has looked at: 1 = opened, 2 = opened and scrolled to the bottom. Kept per version in this browser.
+  const [seen, setSeen] = useState<Record<string, 1 | 2>>({});
+  const [skipOk, setSkipOk] = useState(false); // "I have no comments on the pages I have not finished"
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -117,6 +121,9 @@ export default function ReviewClient({ slug, title, client, status, approval, la
     setReady(true);
   }, [draftKey]);
   useEffect(() => { if (ready) store.set(draftKey, JSON.stringify(drafts)); }, [drafts, ready, draftKey]);
+  const seenKey = `rp:seen:${current.id}`;
+  useEffect(() => { try { setSeen(JSON.parse(store.get(seenKey) || '{}')); } catch { setSeen({}); } }, [seenKey]);
+  useEffect(() => { if (ready && Object.keys(seen).length) store.set(seenKey, JSON.stringify(seen)); }, [seen, ready, seenKey]);
 
   useEffect(() => {
     const el = canvasRef.current;
@@ -148,6 +155,23 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   const tall = !!nat && nat.h / nat.w > 2.2; // a long web page: fit the width and scroll down it, not shrink it to fit the height
   const fit = nat && stage.w ? (tall ? Math.min((stage.w - 48) / nat.w, 1) : Math.min((stage.w - 48) / nat.w, (stage.h - 48) / nat.h, 1)) : 0;
   const size = nat && fit ? { width: Math.round(nat.w * fit), height: Math.round(nat.h * fit) } : null;
+
+  useEffect(() => {
+    const fid = img?.frameId;
+    const el = scrollRef.current;
+    if (!figma || !fid || !el || !nat || !showImg) return;
+    const mark = (v: 1 | 2) => setSeen((m) => ((m[fid] ?? 0) >= v ? m : { ...m, [fid]: v }));
+    const opened = setTimeout(() => mark(1), 600);
+    const check = () => {
+      const im = el.querySelector('img');
+      if (!im || !im.complete || !im.naturalHeight) return; // not drawn yet, so it cannot count as seen
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) mark(2);
+    };
+    check();
+    el.addEventListener('scroll', check, { passive: true });
+    const poll = setInterval(check, 700);
+    return () => { clearTimeout(opened); clearInterval(poll); el.removeEventListener('scroll', check); };
+  }, [img?.id, nat, showImg]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // On a long page the wheel scrolls down it (zoom stays on the + and - buttons).
   useEffect(() => {
@@ -231,6 +255,10 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   }
   // Comment mode shows the screen being reviewed; Preview opens the prototype of that same size, at that screen.
   const figComment = () => showFrame(figNode ?? figma?.links[figDevice]?.start ?? null, figDevice);
+  const allPages = figma ? DEVICES.flatMap((d) => (figma.links[d.key]?.pages ?? []).map((p) => ({ device: d.key, size: d.label, id: p.id, name: shortName(p.name) || d.label }))) : [];
+  const reviewed = allPages.filter((p) => seen[p.id] === 2).length;
+  const todo = allPages.filter((p) => seen[p.id] !== 2);
+  const goTo = (p: { device: Device; id: string }) => { setConfirmSend(false); setTerms(false); setFigDevice(p.device); setFigErr(''); setPop(null); setPager(false); void showFrame(p.id, p.device); };
   const previewSrc = (() => {
     const link = figma?.links[figDevice];
     if (!link) return '';
@@ -326,8 +354,9 @@ export default function ReviewClient({ slug, title, client, status, approval, la
     { target: '[data-tour="sizes"]', place: 'bottom', title: 'Review every size', body: 'Your design comes in three sizes. Switch between Desktop, Tablet and Phone here and review each one. For the best view, use a laptop or desktop.' },
     { target: '[data-tour="design"]', place: 'left', title: 'Click to leave a comment', body: 'Click anywhere on the design to pin a note. Scroll to see the whole page.' },
     { target: '[data-tour="pager"]', place: 'top', title: 'Move between pages', body: 'Each size has several pages. Use the arrows, or open the list to jump to a page.' },
+    { target: '[data-tour="progress"]', place: 'left', title: 'Review every page', body: 'We keep count of the pages you have been through. Open each page and scroll to the bottom. Before you send, we check that no page was missed.' },
     { target: '[data-tour="comments"]', place: 'left', title: 'Your comments', body: 'Every note you pin collects here, ready to send together.' },
-    { target: '[data-tour="send"]', place: 'left', title: 'Send your revision', body: 'When you have added all your changes, send them as one revision.' },
+    { target: '[data-tour="send"]', place: 'left', title: 'Send your revision', body: 'When every page is reviewed and your changes are added, send them as one revision. If a page was missed, we will ask you first.' },
     { target: '[data-tour="approve"]', place: 'left', title: 'Approve when it is right', body: 'If the design is final, approve it here. You can only approve the latest version.' },
   ];
   useEffect(() => {
@@ -432,6 +461,13 @@ export default function ReviewClient({ slug, title, client, status, approval, la
       )}
       {!locked && (
         <>
+          {figma && !!allPages.length && (
+            <div className="fg-prog" data-tour="progress" role="status">
+              <span><b>{reviewed} of {allPages.length}</b> pages reviewed</span>
+              <span className="bar"><i style={{ width: `${(reviewed / allPages.length) * 100}%` }} /></span>
+              <small>{todo.length ? 'Open each page and scroll to the bottom.' : 'You have been through every page.'}</small>
+            </div>
+          )}
           <div className="rv-meter">
             <span>Revisions</span>
             <span className="segs">{segs.map((s, k) => <span key={k} className={`seg ${s}`} />)}</span>
@@ -441,7 +477,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
           {outOfRevisions ? (
             <div className="rv-warn">All {revisions.included} included revisions have been used. Contact Reyal Design to arrange more.</div>
           ) : (
-            <button className="rv-send" data-tour="send" disabled={busy || !unsent} onClick={() => setConfirmSend(true)}>
+            <button className="rv-send" data-tour="send" disabled={busy || !unsent} onClick={() => { setSkipOk(false); setConfirmSend(true); }}>
               {busy ? 'Sending…' : `Send revision ${nextRev}${unsent ? ` · ${plural(unsent)}` : ''}`}
             </button>
           )}
@@ -463,6 +499,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
       <button key={p.id} className={`rv-page ${m && k === idx ? 'on' : ''}`} onClick={() => { setPager(false); void showFrame(p.id, figDevice); }} aria-label={`Go to ${name}`} title={name}>
         <span className={`rv-thumb ${m ? '' : 'fg-wait'}`}>
           {m ? <img src={`/files/${m.file}?w=320`} alt="" loading="lazy" /> : <span className="fg-spin" aria-hidden />}
+          {seen[p.id] && <span className={`fg-seen s${seen[p.id]}`} title={seen[p.id] === 2 ? 'Reviewed' : 'Opened, not scrolled to the bottom'} aria-hidden>{seen[p.id] === 2 ? '✓' : '•'}</span>}
           {count > 0 && <span className="rv-pins">{count}</span>}
         </span>
         <span className="n">{name}</span>
@@ -574,7 +611,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
               </LiveStage>
             )}
             {showImg && figma && img && nat && (
-              <div className="fg-scroll" onPointerDown={(e) => (down.current = { x: e.clientX, y: e.clientY })} onPointerUp={place}>
+              <div ref={scrollRef} className="fg-scroll" onPointerDown={(e) => (down.current = { x: e.clientX, y: e.clientY })} onPointerUp={place}>
                 <div className="fg-sheet" style={{ width: Math.max(160, Math.min(img.fw || nat.w / 2, stage.w - 48)), cursor: locked ? 'default' : 'crosshair' }}>
                   <img ref={imgRef} className="rv-img" src={`/files/${img.file}`} alt={`${title}, ${viewLabel(idx)}`} draggable={false} style={{ width: '100%', height: 'auto', display: 'block' }} />
                   {sentHere.map((c) => <Pin key={c.id} n={c.pin!} kind={c.resolved ? 'done' : 'open'} x={c.x!} y={c.y!} scale={1} onClick={() => setTab('sent')} />)}
@@ -681,7 +718,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
                   {outOfRevisions ? (
                     <div className="rv-warn">All {revisions.included} revisions used. Contact Reyal Design.</div>
                   ) : (
-                    <button className="rv-send" disabled={busy || !unsent} onClick={() => setConfirmSend(true)}>{`Send revision ${nextRev}${unsent ? ` (${unsent})` : ''}`}</button>
+                    <button className="rv-send" disabled={busy || !unsent} onClick={() => { setSkipOk(false); setConfirmSend(true); }}>{`Send revision ${nextRev}${unsent ? ` (${unsent})` : ''}`}</button>
                   )}
                   {canApprove && <button className="rv-approve" onClick={openTerms}>Approve</button>}
                 </div>
@@ -695,13 +732,42 @@ export default function ReviewClient({ slug, title, client, status, approval, la
       {confirmSend && (
         <div className="rv-overlay" role="dialog" aria-modal="true" aria-labelledby="rev-h" onKeyDown={(e) => { if (e.key === 'Escape' && !busy) setConfirmSend(false); }}>
           <div className="rv-modal">
-            <h2 id="rev-h">Send revision {nextRev} of {revisions.included}?</h2>
-            <p>You&apos;re sending <b>{plural(unsent)}</b>. Make sure this is everything you want changed in this round. Anything you add later goes into the next revision.</p>
+            <h2 id="rev-h">{figma && todo.length ? 'Have you reviewed every page?' : `Send revision ${nextRev} of ${revisions.included}?`}</h2>
+            {figma && todo.length > 0 ? (
+              <>
+                <p>You have not finished <b>{todo.length} of {allPages.length} pages</b>. Each page should be opened and scrolled to the bottom before you send. Please review these pages first:</p>
+                <ul className="fg-todo">
+                  {todo.map((p) => (
+                    <li key={p.id}>
+                      <span><b>{p.size}</b> · {p.name}<em>{seen[p.id] === 1 ? 'Opened, not scrolled to the bottom' : 'Not opened'}</em></span>
+                      <button onClick={() => goTo(p)}>Review</button>
+                    </li>
+                  ))}
+                </ul>
+                <label className="rv-check">
+                  <input type="checkbox" checked={skipOk} onChange={(e) => setSkipOk(e.target.checked)} />
+                  <i>{skipOk ? '✓' : ''}</i>
+                  I have looked at every page and have no comments on the pages listed above.
+                </label>
+              </>
+            ) : (
+              <p>{figma && <><b>You have been through all {allPages.length} pages.</b> </>}You&apos;re sending <b>{plural(unsent)}</b>. Make sure this is everything you want changed in this round. Anything you add later goes into the next revision.</p>
+            )}
+            {figma && todo.length > 0 && <p style={{ marginTop: 0 }}>You are sending <b>{plural(unsent)}</b>.</p>}
             {nextRev === revisions.included && <div className="rv-warn">This is your last included revision.</div>}
             <input className="rv-field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" aria-label="Your name" />
             <div className="rv-actions">
-              <button className="rv-ghost" onClick={() => setConfirmSend(false)} disabled={busy}>Keep editing</button>
-              <button className="rv-primary" onClick={send} disabled={busy}>{busy ? 'Sending…' : `Send revision ${nextRev}`}</button>
+              {figma && todo.length > 0 ? (
+                <>
+                  <button className="rv-ghost" onClick={() => goTo(todo[0] as { device: Device; id: string })} disabled={busy}>Review remaining pages</button>
+                  <button className="rv-primary" onClick={send} disabled={busy || !skipOk || !name.trim()}>{busy ? 'Sending…' : `Send revision ${nextRev} anyway`}</button>
+                </>
+              ) : (
+                <>
+                  <button className="rv-ghost" onClick={() => setConfirmSend(false)} disabled={busy}>Keep editing</button>
+                  <button className="rv-primary" onClick={send} disabled={busy}>{busy ? 'Sending…' : `Send revision ${nextRev}`}</button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -712,6 +778,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
           <div className="rv-modal wide">
             <h2 id="terms-h">Approve v{current.number} as final</h2>
             <p>You confirm you&apos;ve reviewed every page and that the design, text, images and details are correct. <b>No more revisions can be made after approval.</b> Later changes become a new job.</p>
+            {figma && todo.length > 0 && <div className="rv-warn">You have not finished reviewing <b>{todo.length} of {allPages.length} pages</b>. <button className="fg-link" onClick={() => goTo(todo[0] as { device: Device; id: string })}>Review them first</button></div>}
             {unsent > 0 && <div className="rv-warn">You have {plural(unsent)} you haven&apos;t sent. They&apos;ll be discarded if you approve.</div>}
             <input className="rv-field" value={aname} onChange={(e) => setAname(e.target.value)} placeholder="Your full name" autoComplete="name" aria-label="Your full name" />
             <label className="rv-check">
