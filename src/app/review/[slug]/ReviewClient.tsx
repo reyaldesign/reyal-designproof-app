@@ -109,6 +109,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   const pinned = drafts.filter((d) => d.x != null);
   const draftPin = (tid: string) => maxPin + pinned.findIndex((d) => d.tid === tid) + 1;
   const isLatest = current.number === latest;
+  const versionName = `Version ${current.number}${current.label && !/^(v|version)\s*\d+$/i.test(current.label.trim()) ? ` · ${current.label.trim()}` : ''}`;
   const waiting = status === 'Feedback Received' && isLatest;
   const pill = locked ? { cls: 'ok', long: 'Approved', short: 'Approved' }
     : lastSent || waiting ? { cls: 'sent', long: 'Revision sent · Reyal is working on it', short: 'Sent' }
@@ -530,7 +531,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
         <span className="rv-mark">R</span>
         <div className="rv-titles">
           <span className="rv-title">{title}</span>
-          <span className="rv-sub"><span className="desk">{client} · shared by Reyal Design</span><span className="mob">v{current.number}{isLatest ? ' · Latest' : ''}{live ? ' · Live site' : figma ? ' · Figma prototype' : ` · Page ${idx + 1} of ${images.length}`}</span></span>
+          <span className="rv-sub"><span className="desk">{client} · {versionName}{isLatest ? ' · Latest' : ''}</span><span className="mob">v{current.number}{isLatest ? ' · Latest' : ''}{live ? ' · Live site' : figma ? ' · Figma prototype' : ` · Page ${idx + 1} of ${images.length}`}</span></span>
         </div>
         <div className="rv-head-right">
           <span className={`rv-status ${pill.cls}`}><span className="long">{pill.long}</span><span className="short">{pill.short}</span></span>
@@ -561,6 +562,10 @@ export default function ReviewClient({ slug, title, client, status, approval, la
           )}
           {figma && (
             <div className="lv-bar fg-bar" role="toolbar" aria-label="Screen size">
+              <div className={`fg-ver ${isLatest ? '' : 'old'}`} role="status">
+                <span>You are reviewing <b>{versionName}</b></span>
+                {isLatest ? <span className="tag">Latest version</span> : <button onClick={() => router.push(`/review/${slug}?v=${latest}`)}>This is an older version. Open the latest</button>}
+              </div>
               <div className="lv-seg" role="group" aria-label="Screen size" data-tour="sizes">
                 {figDevices.map((d) => <button key={d.key} className={figDevice === d.key ? 'on' : ''} onClick={() => figSize(d.key)}>{d.label}</button>)}
               </div>
@@ -733,6 +738,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
         <div className="rv-overlay" role="dialog" aria-modal="true" aria-labelledby="rev-h" onKeyDown={(e) => { if (e.key === 'Escape' && !busy) setConfirmSend(false); }}>
           <div className="rv-modal">
             <h2 id="rev-h">{figma && todo.length ? 'Have you reviewed every page?' : `Send revision ${nextRev} of ${revisions.included}?`}</h2>
+            <p className="fg-verline">Reviewing: <b>{versionName}</b> · This will be revision {nextRev} of {revisions.included}.</p>
             {figma && todo.length > 0 ? (
               <>
                 <p>You have not finished <b>{todo.length} of {allPages.length} pages</b>. Each page should be opened and scrolled to the bottom before you send. Please review these pages first:</p>
