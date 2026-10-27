@@ -281,3 +281,5 @@
 .fg-ver.old button { padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line-2); background: var(--surface-3); color: #fff; font: 700 12px/1 var(--sans); cursor: pointer; }
 .fg-verline { margin: 0 0 10px; color: var(--ink-2); font-size: 13px; }
 .fg-verline b { color: #fff; }
+
+.fg-load { margin: 6px 6px 2px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.4; }

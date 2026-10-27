@@ -28,7 +28,7 @@ type Props = {
 
 const touch = () => typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
 
-/** A live website in an iframe, with Desktop / Tablet / Phone sizes and a Sections list. Picking and pins come from the Review Bridge running inside the site. */
+/** A live website in an iframe, with Desktop / Phone / Tablet sizes and a Sections list. Picking and pins come from the Review Bridge running inside the site. */
 const LiveStage = forwardRef<LiveHandle, Props>(function LiveStage({ url, pins, readOnly, focusId, onPick, onPinClick, onShot, onBridge, onMode, children }, ref) {
   const frame = useRef<HTMLIFrameElement>(null);
   const box = useRef<HTMLDivElement>(null);

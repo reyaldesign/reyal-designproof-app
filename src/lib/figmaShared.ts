@@ -32,7 +32,7 @@ export function parseFigma(json: string | null | undefined): FigmaProof | null {
   try {
     const raw = JSON.parse(json) as Record<string, FigmaLink | undefined>;
     const out: FigmaProof = {};
-    for (const d of ['desktop', 'tablet', 'mobile'] as const) {
+    for (const d of ['desktop', 'mobile', 'tablet'] as const) {
       const l = raw[d] && parseFigmaUrl(raw[d]!.url);
       if (!l) continue;
       const pages = (raw[d]!.pages ?? []).filter((p) => p && NODE_RE.test(p.id) && Number.isFinite(p.w) && Number.isFinite(p.h)).slice(0, 40).map((p) => ({ id: p.id, name: String(p.name ?? '').slice(0, 120), w: Math.round(p.w), h: Math.round(p.h) }));

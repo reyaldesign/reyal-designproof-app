@@ -90,7 +90,7 @@ A **Tasks** page (`/clickup`, sidebar item, tool `CLICKUP`) shows Reyal's ClickU
 
 ## Live website proofs (WordPress)
 
-A proof can be a **live website** instead of images: choose **Live website** in New proof (or New version) and enter the staging address. The client sees the real site in a **Desktop / Tablet / Phone** frame, picks any part of a page to pin a comment, and uses the same To send / Sent panel, Send revision (with the confirm pop-up) and Approve as every other proof. You see the same view with pins, a screenshot of each spot and the element that was commented on, and reply and resolve as usual.
+A proof can be a **live website** instead of images: choose **Live website** in New proof (or New version) and enter the staging address. The client sees the real site in a **Desktop / Phone / Tablet** frame, picks any part of a page to pin a comment, and uses the same To send / Sent panel, Send revision (with the confirm pop-up) and Approve as every other proof. You see the same view with pins, a screenshot of each spot and the element that was commented on, and reply and resolve as usual.
 
 **Why a plugin:** a page on another address cannot be read from inside the review page, so picking an element, drawing pins and taking a screenshot need a small script running inside the site. The **Reyal Review Bridge** plugin (`wordpress/reyal-review-bridge/reyal-review-bridge.php`) does that. It also lets the review page show the site in a frame (many hosts and security plugins forbid it). It does nothing for normal visitors: the script loads only when the page is inside a frame, and it talks only to `https://client.reyaldesign.com`.
 
@@ -107,7 +107,7 @@ A single-screen workspace. The header shows the title, type and a status track (
 
 ## Figma prototype proofs
 
-A third kind of proof, next to images/PDF and live websites. The designer pastes a Figma **prototype link** (the Present link, `figma.com/proto/...`) for each screen size: Desktop, Tablet and Phone. Any size can be left empty.
+A third kind of proof, next to images/PDF and live websites. The designer pastes a Figma **prototype link** (the Present link, `figma.com/proto/...`) for each screen size: Desktop, Phone and Tablet. Any size can be left empty.
 
 - **How it works:** each size's screens are found automatically (every frame on that Figma page that is as wide as the start screen, minus anything named `[Handoff...]` or `[Note...]`). Each screen is exported from Figma as an image the first time it is needed, and every screen is fetched in the background right after the proof is made (a long page takes Figma up to about a minute). Clients pin comments on those images with the same flow as image proofs, switch size with the buttons at the top, and move between pages with the selector in the bottom right corner of the design.
 - **Into Figma:** when a client sends a revision, each pinned comment is also posted into the Figma file on its screen at the spot they clicked, as `Name (client review, revision N): text`. One way only: nothing in Figma is read back. If Figma is unreachable the client's revision still saves; the comment is just not posted in Figma. General (unpinned) comments stay in the app.

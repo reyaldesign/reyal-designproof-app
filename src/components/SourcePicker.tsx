@@ -4,7 +4,7 @@ import { useState } from 'react';
 import FilePicker from './FilePicker';
 
 type Source = 'files' | 'live' | 'figma';
-const SIZES = [['figmaDesktop', 'Desktop'], ['figmaTablet', 'Tablet'], ['figmaMobile', 'Phone']] as const;
+const SIZES = [['figmaDesktop', 'Desktop'], ['figmaMobile', 'Phone'], ['figmaTablet', 'Tablet']] as const;
 
 /** Chooses what is being reviewed: uploaded images or a PDF, a live website opened by its address, or a Figma prototype. */
 export default function SourcePicker({ initialUrl = '', startLive = false, start, figma = {}, inputClass = 'input mt-1', note }: {

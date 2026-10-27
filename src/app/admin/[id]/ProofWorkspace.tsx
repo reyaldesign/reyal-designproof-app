@@ -63,8 +63,8 @@ export default function ProofWorkspace({ proof, client, revisions, versions, lin
   const version = versions[vIdx] ?? versions[0];
   const live = version.liveUrl;
   const figma = !!version.figma;
-  // A Figma proof lists its screens by size (Desktop, Tablet, Phone), and within a size in the order of the Figma file.
-  const sizeOrder = ['desktop', 'tablet', 'mobile'];
+  // A Figma proof lists its screens by size (Desktop, Phone, Tablet), and within a size in the order of the Figma file.
+  const sizeOrder = ['desktop', 'mobile', 'tablet'];
   const sizeName: Record<string, string> = { desktop: 'Desktop', tablet: 'Tablet', mobile: 'Phone' };
   const shortName = (n: string | null | undefined) => (n ?? '').replace(/^\[[^\]]*\]\s*/, '').replace(/\s*\/\s*(Desktop|Tablet|Mobile|Phone)\b.*$/i, '').trim();
   const figmaProof = figma ? parseFigma(version.figma) : null;

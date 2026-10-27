@@ -259,6 +259,14 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   const allPages = figma ? DEVICES.flatMap((d) => (figma.links[d.key]?.pages ?? []).map((p) => ({ device: d.key, size: d.label, id: p.id, name: shortName(p.name) || d.label }))) : [];
   const reviewed = allPages.filter((p) => seen[p.id] === 2).length;
   const todo = allPages.filter((p) => seen[p.id] !== 2);
+  // Screens still being fetched from Figma: look again every few seconds until they have all arrived.
+  const missing = figma ? allPages.filter((p) => !images.some((m) => m.frameId === p.id)).length : 0;
+  useEffect(() => {
+    if (!missing) return;
+    let n = 0;
+    const t = setInterval(() => { if (++n > 80) clearInterval(t); else router.refresh(); }, 12_000);
+    return () => clearInterval(t);
+  }, [missing]); // eslint-disable-line react-hooks/exhaustive-deps
   const goTo = (p: { device: Device; id: string }) => { setConfirmSend(false); setTerms(false); setFigDevice(p.device); setFigErr(''); setPop(null); setPager(false); void showFrame(p.id, p.device); };
   const previewSrc = (() => {
     const link = figma?.links[figDevice];
@@ -351,9 +359,9 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   }
   // The guided tour of a Figma proof: it starts on each visit until "Don't show this again" is ticked, and the ? button starts it again.
   const tourSteps: TourStep[] = [
-    { target: '', title: 'Welcome to your design review', body: 'This short tour shows how to review. Please use a laptop or desktop, and look at each size: Desktop, Tablet and Phone.' },
+    { target: '', title: 'Welcome to your design review', body: 'This short tour shows how to review. Please use a laptop or desktop, and look at each size: Desktop, Phone and Tablet.' },
     { target: '[data-tour="version"]', place: 'bottom', title: 'Which version you are reviewing', body: `You are reviewing ${versionName}${isLatest ? ', the latest version' : ', which is an older version. Open the latest one before you comment'}. Check this line each time you open your link, so you know you are on the right round.` },
-    { target: '[data-tour="sizes"]', place: 'bottom', title: 'Review every size', body: 'Your design comes in three sizes. Switch between Desktop, Tablet and Phone here and review each one. For the best view, use a laptop or desktop.' },
+    { target: '[data-tour="sizes"]', place: 'bottom', title: 'Review every size', body: 'Your design comes in three sizes. Switch between Desktop, Phone and Tablet here and review each one. For the best view, use a laptop or desktop.' },
     { target: '[data-tour="design"]', place: 'left', title: 'Click to leave a comment', body: 'Click anywhere on the design to pin a note. Scroll to see the whole page.' },
     { target: '[data-tour="pager"]', place: 'top', title: 'Move between pages', body: 'Each size has several pages. Use the arrows, or open the list to jump to a page.' },
     { target: '[data-tour="progress"]', place: 'left', title: 'Review every page', body: 'We keep count of the pages you have been through. Open each page and scroll to the bottom. Before you send, we check that no page was missed.' },
@@ -570,7 +578,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
               <div className="lv-seg" role="group" aria-label="Screen size" data-tour="sizes">
                 {figDevices.map((d) => <button key={d.key} className={figDevice === d.key ? 'on' : ''} onClick={() => figSize(d.key)}>{d.label}</button>)}
               </div>
-              <span className="fg-note"><b>Please review on a laptop or desktop.</b> Check all three sizes: Desktop, Tablet and Phone.</span>
+              <span className="fg-note"><b>Please review on a laptop or desktop.</b> Check all three sizes: Desktop, Phone and Tablet.</span>
               {figErr && <span className="rv-err" role="alert" style={{ margin: 0 }}>{figErr}</span>}
             </div>
           )}
@@ -587,7 +595,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
               const name = shortName(figPages[k]?.name) || DEVICES.find((d) => d.key === figDevice)?.label || 'Screen';
               return (
                 <div className="fg-pager" data-tour="pager">
-                  {pager && <div className="fg-pop" role="listbox" aria-label="Screens">{figRail}</div>}
+                  {pager && <div className="fg-pop" role="listbox" aria-label="Screens">{figRail}{missing > 0 && <p className="fg-load">{missing === 1 ? '1 page is' : `${missing} pages are`} still loading from Figma in the background. You can tap a page to load it now.</p>}</div>}
                   <button className="fg-step" disabled={k <= 0 || figBusy} onClick={() => go(k - 1)} aria-label="Previous screen">‹</button>
                   <button className="fg-pick" onClick={() => setPager(!pager)} aria-expanded={pager} aria-haspopup="listbox">
                     <span className="lbl">{DEVICES.find((d) => d.key === figDevice)?.label} · page {k >= 0 ? k + 1 : 1} of {figPages.length}</span>

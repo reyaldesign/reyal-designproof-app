@@ -5,6 +5,7 @@ import { notFound, redirect } from 'next/navigation';
 import { cookieOpts, safeEq } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { embedUrl, figmaConfigured, parseFigma } from '@/lib/figma';
+import { prefetchMissing } from '@/lib/figmaFrames';
 import { loadProject, reviewCookie, reviewToken } from '@/lib/review';
 import { revisionInfo } from '@/lib/revisions';
 import '../review.css';
@@ -79,6 +80,7 @@ export default async function Review({
   });
   const rev = await revisionInfo(project.id);
   const proof = parseFigma(data.figma);
+  if (proof && figmaConfigured()) prefetchMissing(data.id, data.figma); // any screen not fetched yet is fetched now
   const figma = proof && figmaConfigured()
     ? { links: Object.fromEntries(Object.entries(proof).map(([d, l]) => [d, { embed: embedUrl(l), start: l.start, name: l.name, pages: l.pages ?? (l.start ? [{ id: l.start, name: l.name, w: 0, h: 0 }] : []) }])) as Record<string, { embed: string; start: string | null; name: string; pages: { id: string; name: string; w: number; h: number }[] }> }
     : null;
