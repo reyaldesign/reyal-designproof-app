@@ -10,8 +10,8 @@ export default async function WebsitesPage({ searchParams }: { searchParams: Pro
     const st = stats.get(s.id);
     const monitored = isMonitored(s);
     return {
-      id: s.id, clientName: s.clientName, url: s.url, status: s.status, server: s.server, captcha: s.captcha, backup: s.backup, forwardLinks: s.forwardLinks,
-      backupTime: s.backupTime, maintenanceCheck: s.maintenanceCheck, desktopStatus: s.desktopStatus, mobileStatus: s.mobileStatus, seo: s.seo,
+      id: s.id, clientName: s.clientName, url: s.url, status: s.status, server: s.server, captcha: s.captcha, backup: s.backup,
+      desktopStatus: s.desktopStatus, mobileStatus: s.mobileStatus, seo: s.seo,
       formSubmission: s.formSubmission, emailUsed: s.emailUsed,
       state: !monitored ? 'off' : !st?.last ? 'none' : st.last.ok ? 'up' : 'down',
       ms: st?.last?.ms ?? null, error: st?.last?.error ?? null, lastAt: st?.last?.at.toISOString() ?? null,

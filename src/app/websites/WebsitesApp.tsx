@@ -86,7 +86,7 @@ export default function WebsitesApp({ rows, options, editId }: { rows: Row[]; op
 
   const shown = useMemo(() => rows.filter((r) =>
     (!status || r.status === status) && (!server || r.server === server) &&
-    (!q.trim() || `${r.clientName} ${r.url} ${r.forwardLinks}`.toLowerCase().includes(q.trim().toLowerCase()))), [rows, q, status, server]);
+    (!q.trim() || `${r.clientName} ${r.url}`.toLowerCase().includes(q.trim().toLowerCase()))), [rows, q, status, server]);
 
   const watched = rows.filter((r) => r.state !== 'off');
   const sum = { up: watched.filter((r) => r.state === 'up').length, down: watched.filter((r) => r.state === 'down').length };
