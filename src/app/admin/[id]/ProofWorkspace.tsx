@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { Fragment, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { TransformComponent, TransformWrapper, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import LiveStage, { type LiveHandle, type LivePin } from '@/components/LiveStage';
@@ -12,7 +12,7 @@ import { hostOf, pathOf } from '@/lib/live';
 import { PROOF_TYPES } from '@/lib/types';
 import { addVersion, deleteProject, markSent, reopenApproval, replyTo, setResolved, updateProject } from '../actions';
 
-export type PImage = { id: string; file: string; device?: string | null };
+export type PImage = { id: string; file: string; device?: string | null; frameId?: string | null; frameName?: string | null };
 export type PComment = {
   id: string; imageId: string | null; parentId: string | null; author: string; text: string;
   x: number | null; y: number | null; pin: number | null; resolved: boolean; fromDesigner: boolean; createdAt: string;
@@ -61,9 +61,19 @@ export default function ProofWorkspace({ proof, client, revisions, versions, lin
   const liveRef = useRef<LiveHandle>(null);
 
   const version = versions[vIdx] ?? versions[0];
-  const images = version.images;
   const live = version.liveUrl;
   const figma = !!version.figma;
+  // A Figma proof lists its screens by size (Desktop, Tablet, Phone), and within a size in the order of the Figma file.
+  const sizeOrder = ['desktop', 'tablet', 'mobile'];
+  const sizeName: Record<string, string> = { desktop: 'Desktop', tablet: 'Tablet', mobile: 'Phone' };
+  const shortName = (n: string | null | undefined) => (n ?? '').replace(/^\[[^\]]*\]\s*/, '').replace(/\s*\/\s*(Desktop|Tablet|Mobile|Phone)\b.*$/i, '').trim();
+  const figmaProof = figma ? parseFigma(version.figma) : null;
+  const rank = (m: PImage) => {
+    const k = (figmaProof?.[m.device as 'desktop']?.pages ?? []).findIndex((p) => p.id === m.frameId);
+    return Math.max(0, sizeOrder.indexOf(m.device ?? '')) * 1000 + (k >= 0 ? k : 500);
+  };
+  const images = figma ? [...version.images].sort((a, b) => rank(a) - rank(b)) : version.images;
+  const screenLabel = (m: PImage | undefined) => (m ? `${sizeName[m.device ?? ''] ?? 'Screen'}${shortName(m.frameName) ? ` · ${shortName(m.frameName)}` : ''}` : '');
   const img = images[Math.min(page, images.length - 1)];
   const comments = version.comments;
   const roots = comments.filter((c) => !c.parentId);
@@ -206,15 +216,18 @@ export default function ProofWorkspace({ proof, client, revisions, versions, lin
         </div>
       )}
 
-      <div className={`pp-work ${live ? 'live' : ''}`}>
-        {!live && <nav className="pp-rail" aria-label="Pages">
+      <div className={`pp-work ${live ? 'live' : ''} ${figma ? 'fg' : ''}`}>
+        {!live && <nav className={`pp-rail ${figma ? 'fg' : ''}`} aria-label={figma ? 'Screens' : 'Pages'}>
           {images.map((m, i) => {
             const n = pinsOnPage(m.id);
             return (
-              <button key={m.id} className={`pp-page ${i === page ? 'on' : ''}`} onClick={() => setPage(i)} aria-label={`Go to page ${i + 1}`}>
-                <span className="pp-pthumb"><img src={`/files/${m.file}?w=320`} alt="" loading="lazy" />{n > 0 && <span className="n">{n}</span>}</span>
-                <span className="lbl">{figma && m.device ? ({ desktop: 'Desktop', tablet: 'Tablet', mobile: 'Phone' } as Record<string, string>)[m.device] : i + 1}</span>
-              </button>
+              <Fragment key={m.id}>
+                {figma && (i === 0 || images[i - 1].device !== m.device) && <span className="pp-grp">{sizeName[m.device ?? ''] ?? 'Screens'}</span>}
+                <button className={`pp-page ${i === page ? 'on' : ''}`} onClick={() => setPage(i)} aria-label={figma ? `Go to ${screenLabel(m)}` : `Go to page ${i + 1}`} title={figma ? screenLabel(m) : undefined}>
+                  <span className="pp-pthumb"><img src={`/files/${m.file}?w=320`} alt="" loading="lazy" />{n > 0 && <span className="n">{n}</span>}</span>
+                  <span className="lbl">{figma ? shortName(m.frameName) || sizeName[m.device ?? ''] : i + 1}</span>
+                </button>
+              </Fragment>
             );
           })}
         </nav>}
@@ -240,7 +253,7 @@ export default function ProofWorkspace({ proof, client, revisions, versions, lin
             {!live && !size && <div className="pp-loading">{figma && !images.length ? 'Screens appear here when the client comments on them in the Figma prototype.' : 'Loading design…'}</div>}
           </div>
           <div className="pp-vfoot">
-            <span className="pg">{live ? hostOf(live) : `Page ${page + 1} of ${images.length}`}</span>
+            <span className="pg">{live ? hostOf(live) : figma ? screenLabel(img) || 'No screens yet' : `Page ${page + 1} of ${images.length}`}</span>
             <span className="tip">{live ? '· pins are where the client commented. Click a comment to jump to it.' : '· use ← → to move between pages'}</span>
             {!live && <span className="sp">
               <button className="pp-ctl" aria-label="Zoom out" onClick={() => tw.current?.zoomOut()}>−</button>
@@ -291,7 +304,7 @@ export default function ProofWorkspace({ proof, client, revisions, versions, lin
                   <div className="meta">
                     <span className={`pp-pill ${c.resolved ? 'done' : ''}`}>{c.pin ?? '•'}</span>
                     <span className="who">{c.author}</span>
-                    <span className="where">{live ? (c.pageUrl ? `${pathOf(c.pageUrl)}${c.device ? ` · ${c.device}` : ''}` : 'General') : p >= 0 ? `Page ${p + 1}` : 'General'} · {dayStamp(c.createdAt)}</span>
+                    <span className="where">{live ? (c.pageUrl ? `${pathOf(c.pageUrl)}${c.device ? ` · ${c.device}` : ''}` : 'General') : p >= 0 ? (figma ? screenLabel(images[p]) : `Page ${p + 1}`) : 'General'} · {dayStamp(c.createdAt)}</span>
                     <span className={`pp-chip ${st.cls}`}>{st.label}</span>
                   </div>
                   {file && c.x != null && (
