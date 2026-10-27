@@ -4,6 +4,7 @@ import Script from 'next/script';
 import { notFound, redirect } from 'next/navigation';
 import { cookieOpts, safeEq } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { embedUrl, figmaConfigured, parseFigma } from '@/lib/figma';
 import { loadProject, reviewCookie, reviewToken } from '@/lib/review';
 import { revisionInfo } from '@/lib/revisions';
 import '../review.css';
@@ -77,6 +78,10 @@ export default async function Review({
     include: { images: { orderBy: { position: 'asc' } }, comments: { orderBy: { createdAt: 'asc' } } },
   });
   const rev = await revisionInfo(project.id);
+  const proof = parseFigma(data.figma);
+  const figma = proof && figmaConfigured()
+    ? { links: Object.fromEntries(Object.entries(proof).map(([d, l]) => [d, { embed: embedUrl(l), start: l.start, name: l.name, pages: l.pages ?? (l.start ? [{ id: l.start, name: l.name, w: 0, h: 0 }] : []) }])) as Record<string, { embed: string; start: string | null; name: string; pages: { id: string; name: string; w: number; h: number }[] }> }
+    : null;
   return (
     <ReviewClient
       slug={slug}
@@ -88,13 +93,15 @@ export default async function Review({
       revisions={{ used: rev.used, included: rev.included }}
       versions={project.versions.map((x) => ({ number: x.number, label: x.label }))}
       current={{ id: data.id, number: data.number, label: data.label }}
-      images={data.images.map((i) => ({ id: i.id, file: i.file }))}
+      images={data.images.map((i) => ({ id: i.id, file: i.file, frameId: i.frameId, frameName: i.frameName, device: i.device, fw: i.fw, fh: i.fh }))}
       comments={data.comments.map((c) => ({
         id: c.id, imageId: c.imageId, parentId: c.parentId, author: c.author, text: c.text, x: c.x, y: c.y,
         pin: c.pin, resolved: c.resolved, fromDesigner: c.fromDesigner, createdAt: c.createdAt.toISOString(),
         pageUrl: c.pageUrl, selector: c.selector, elementText: c.elementText, rx: c.rx, ry: c.ry, vw: c.vw, device: c.device, shot: c.shot,
       }))}
       live={data.liveUrl}
+      figma={figma}
+      figmaMissing={!!proof && !figma}
     />
   );
 }

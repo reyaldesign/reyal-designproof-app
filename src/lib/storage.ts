@@ -78,3 +78,11 @@ export async function saveShot(dataUrl: string) {
     return name;
   } catch { return null; }
 }
+
+/** Stores one JPEG that was made on the server (a Figma frame export) and returns its file name. */
+export async function saveJpeg(buf: Buffer) {
+  await mkdir(uploadDir(), { recursive: true });
+  const name = newName('jpg');
+  await writeFile(path.join(uploadDir(), name), buf);
+  return name;
+}

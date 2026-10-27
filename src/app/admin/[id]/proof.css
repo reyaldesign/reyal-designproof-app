@@ -199,3 +199,19 @@
 @media (max-width: 1000px) { .studio .pp-work.live { grid-template-columns: minmax(0, 1fr); } }
 .studio .pp-shot { width: 100%; max-height: 150px; object-fit: cover; object-position: top; border-radius: 10px; border: 1px solid var(--line-2); }
 .studio .pp-where { display: block; font-size: 12px; color: var(--muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Figma proofs: the screens are grouped by size, each with its own name */
+.pp-rail.fg .pp-grp { font: 800 10px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.pp-rail.fg .pp-pthumb { width: 96px; height: 62px; }
+.pp-rail.fg .pp-page .lbl { max-width: 112px; text-align: center; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+@media (min-width: 1101px) {
+  .pp-work.fg { grid-template-columns: 132px minmax(0, 1fr) 380px; }
+  .pp-rail.fg { gap: 8px; padding: 12px 8px 24px; }
+  .pp-rail.fg .pp-grp { justify-self: stretch; margin: 10px 4px 2px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .pp-rail.fg .pp-grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+}
+@media (max-width: 1100px) {
+  .pp-rail.fg { align-items: center; gap: 12px; }
+  .pp-rail.fg .pp-grp { flex: none; padding: 6px 10px; border-radius: 99px; background: var(--surface-2); }
+  .pp-rail.fg .pp-page { flex: none; }
+}
