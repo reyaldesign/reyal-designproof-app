@@ -1,0 +1,49 @@
+.ws-good { color: var(--ok); } .ws-warn { color: var(--yellow); } .ws-bad { color: var(--bad); } .ws-none { color: var(--muted); }
+.ws-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 22px; }
+.ws-sum .card { display: grid; gap: 4px; align-content: start; }
+.ws-sum .card b { font: 700 26px/1.15 var(--display); }
+.ws-sum .card > span { color: var(--muted); font-size: 13px; }
+.ws-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.ws-filters .input { width: auto; flex: 1 1 200px; max-width: 320px; }
+.ws-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.ws-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
+.ws-table th { text-align: left; padding: 11px 14px; font: 600 11.5px/1.2 var(--display); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border-bottom: 1px solid var(--line); white-space: nowrap; }
+.ws-table td { padding: 11px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle; color: var(--ink-2); }
+.ws-table tbody tr:hover td { background: rgba(255,255,255,.025); }
+.ws-table tbody tr:last-child td { border-bottom: 0; }
+.ws-sticky { position: sticky; left: 0; z-index: 2; background: var(--surface); box-shadow: 1px 0 0 var(--line); }
+.ws-table th.ws-sticky { z-index: 3; background: var(--surface-2); }
+.ws-table tbody tr:hover td.ws-sticky { background: #18181c; }
+.ws-name { font-weight: 600; color: var(--ink); } .ws-name:hover { text-decoration: underline; }
+.ws-url a { color: var(--ink-2); } .ws-url a:hover { color: var(--ink); text-decoration: underline; }
+.ws-num { font-variant-numeric: tabular-nums; font-weight: 600; }
+.ws-dash { color: var(--muted); }
+.ws-empty { text-align: center; color: var(--muted); padding: 32px !important; }
+.ws-edit { padding: 6px 12px; }
+.ws-state { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.ws-state i { width: 9px; height: 9px; border-radius: 50%; background: var(--line-2); flex: none; }
+.ws-state small { color: var(--muted); font-weight: 500; }
+.ws-s-up { color: var(--ok); } .ws-s-up i { background: var(--ok); box-shadow: 0 0 0 3px rgba(61,220,151,.18); }
+.ws-s-down { color: var(--bad); } .ws-s-down i { background: var(--bad); box-shadow: 0 0 0 3px rgba(255,92,108,.2); animation: ws-pulse 1.6s ease-in-out infinite; }
+.ws-s-none, .ws-s-off { color: var(--muted); }
+@keyframes ws-pulse { 50% { box-shadow: 0 0 0 6px rgba(255,92,108,.05); } }
+.ws-chip { display: inline-flex; padding: 2px 9px; border-radius: 99px; font: 700 11px/1.5 var(--sans); }
+.ws-c-live { background: rgba(61,220,151,.14); color: var(--ok); }
+.ws-c-wip { background: rgba(255,211,8,.16); color: var(--yellow); }
+.ws-c-fwd { background: rgba(106,169,255,.16); color: #6aa9ff; }
+.ws-c-off { background: var(--surface-3); color: var(--muted); }
+.ws-dlg { width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
+.ws-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+.ws-form label { display: grid; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.ws-wide { grid-column: 1 / -1; }
+.ws-err { color: var(--bad); font-size: 13px; } .ws-ok { color: var(--ok); font-size: 13px; }
+.ws-h { font: 700 16px/1.2 var(--display); margin: 26px 0 10px; }
+.ws-note { margin-bottom: 16px; color: var(--ink-2); }
+.ws-bars { display: grid; grid-template-columns: repeat(30, 1fr); gap: 3px; height: 44px; }
+.ws-bars i { border-radius: 4px; background: var(--surface-3); }
+.ws-bars i.ws-good { background: var(--ok); } .ws-bars i.ws-warn { background: var(--yellow); } .ws-bars i.ws-bad { background: var(--bad); }
+.ws-axis { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
+.ws-mini { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.ws-mini th { text-align: left; padding: 6px 10px 8px 0; font: 600 11.5px/1.2 var(--display); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.ws-mini td { padding: 8px 10px 8px 0; border-top: 1px solid var(--line); color: var(--ink-2); }
+@media (max-width: 700px) { .ws-sum { grid-template-columns: 1fr 1fr; gap: 10px; } .ws-sum .card { padding: 14px; } .ws-sum .card b { font-size: 22px; } .ws-form { grid-template-columns: 1fr; } .ws-filters .input { max-width: none; } }

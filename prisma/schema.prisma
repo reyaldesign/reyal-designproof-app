@@ -247,3 +247,40 @@ model SignInEvent {
 
   @@index([at])
 }
+
+// ----- Websites: the live sites Reyal looks after, and an uptime check on each one that is Live -----
+model Website {
+  id               String         @id @default(cuid())
+  clientName       String
+  url              String         @default("")
+  status           String         @default("Live") // Live | In Progress | Forward Only | For Transfer | Not live | Discontinued. Only Live is checked.
+  server           String         @default("")
+  captcha          String         @default("")
+  backup           String         @default("")
+  forwardLinks     String         @default("")
+  backupTime       String         @default("")
+  maintenanceCheck String         @default("")
+  desktopStatus    String         @default("")
+  mobileStatus     String         @default("")
+  seo              String         @default("")
+  formSubmission   String         @default("")
+  emailUsed        String         @default("")
+  position         Int            @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  checks           WebsiteCheck[]
+}
+
+model WebsiteCheck {
+  id        String   @id @default(cuid())
+  websiteId String
+  at        DateTime @default(now())
+  ok        Boolean
+  code      Int?
+  ms        Int?
+  error     String?
+  website   Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId, at])
+  @@index([at])
+}
