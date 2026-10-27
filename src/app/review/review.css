@@ -248,3 +248,11 @@
 @media (max-width: 760px) { .fg-pager { right: 10px; bottom: 10px; } .fg-pick { min-width: 150px; } .fg-hint { display: none; } }
 /* Figma proofs need the size buttons on a phone too (a live site hides them there) */
 @media (max-width: 760px) { .review .lv-bar .lv-seg[aria-label="Screen size"] { display: inline-flex; } }
+
+/* Figma proofs: the size buttons sit in the middle, large, with the laptop or desktop note beneath */
+.review .lv-bar.fg-bar { flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 14px 14px 12px; }
+.fg-bar .lv-seg { padding: 4px; }
+.fg-bar .lv-seg button { padding: 12px 28px; font-size: 15px; }
+.fg-bar .fg-note { max-width: 560px; text-align: center; font-size: 13px; color: var(--ink-2); }
+.fg-bar .fg-note b { color: var(--yellow, #ffd308); }
+@media (max-width: 900px) { .review .lv-bar.fg-bar { flex-direction: row; justify-content: center; flex-wrap: wrap; } .fg-bar .lv-seg button { padding: 10px 20px; font-size: 14px; } }

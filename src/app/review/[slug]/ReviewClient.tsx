@@ -323,10 +323,9 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   // The guided tour of a Figma proof: it starts on each visit until "Don't show this again" is ticked, and the ? button starts it again.
   const tourSteps: TourStep[] = [
     { target: '', title: 'Welcome to your design review', body: 'This short tour shows how to review. Please use a laptop or desktop, and look at each size: Desktop, Tablet and Phone.' },
-    { target: '[data-tour="sizes"]', place: 'bottom', title: 'Review every size', body: 'Your design comes in three sizes. Switch between them here and review each one.' },
+    { target: '[data-tour="sizes"]', place: 'bottom', title: 'Review every size', body: 'Your design comes in three sizes. Switch between Desktop, Tablet and Phone here and review each one. For the best view, use a laptop or desktop.' },
     { target: '[data-tour="design"]', place: 'left', title: 'Click to leave a comment', body: 'Click anywhere on the design to pin a note. Scroll to see the whole page.' },
     { target: '[data-tour="pager"]', place: 'top', title: 'Move between pages', body: 'Each size has several pages. Use the arrows, or open the list to jump to a page.' },
-    { target: '[data-tour="preview"]', place: 'bottom', title: 'See how it works', body: 'Preview opens the clickable version of this size. Press Back to comments to return.' },
     { target: '[data-tour="comments"]', place: 'left', title: 'Your comments', body: 'Every note you pin collects here, ready to send together.' },
     { target: '[data-tour="send"]', place: 'left', title: 'Send your revision', body: 'When you have added all your changes, send them as one revision.' },
     { target: '[data-tour="approve"]', place: 'left', title: 'Approve when it is right', body: 'If the design is final, approve it here. You can only approve the latest version.' },
@@ -524,11 +523,11 @@ export default function ReviewClient({ slug, title, client, status, approval, la
             </div>
           )}
           {figma && (
-            <div className="lv-bar" role="toolbar" aria-label="Figma prototype">
+            <div className="lv-bar fg-bar" role="toolbar" aria-label="Screen size">
               <div className="lv-seg" role="group" aria-label="Screen size" data-tour="sizes">
                 {figDevices.map((d) => <button key={d.key} className={figDevice === d.key ? 'on' : ''} onClick={() => figSize(d.key)}>{d.label}</button>)}
               </div>
-              <span className="fg-note">Best reviewed on a laptop or desktop. Check each size.</span>
+              <span className="fg-note"><b>Please review on a laptop or desktop.</b> Check all three sizes: Desktop, Tablet and Phone.</span>
               {figErr && <span className="rv-err" role="alert" style={{ margin: 0 }}>{figErr}</span>}
             </div>
           )}
@@ -539,11 +538,6 @@ export default function ReviewClient({ slug, title, client, status, approval, la
             </div>
           )}
           <div ref={canvasRef} className="rv-canvas" data-tour="design">
-            {figma && figma.links[figDevice] && (
-              figMode === 'comment'
-                ? <button className="fg-float" data-tour="preview" onClick={() => { setFigNode(img?.device === figDevice ? img.frameId ?? null : null); setFigMode('browse'); setPop(null); }} aria-label={`Preview the ${DEVICES.find((d) => d.key === figDevice)?.label} prototype`}><span aria-hidden>▶</span> Preview</button>
-                : !locked && <button className="fg-float" disabled={figBusy} onClick={() => void figComment()}><span aria-hidden>✎</span> {figBusy ? 'Loading…' : 'Back to comments'}</button>
-            )}
             {figma && figMode === 'comment' && figPages.length > 0 && (() => {
               const k = figPages.findIndex((p) => p.id === img?.frameId);
               const go = (n: number) => { setPager(false); void showFrame(figPages[n]?.id ?? null, figDevice); };
@@ -626,7 +620,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
               <button className="rv-ctl" aria-label="Zoom out" onClick={() => tw.current?.zoomOut()}>−</button>
               <button className="rv-ctl txt" onClick={() => tw.current?.resetTransform()}>Fit</button>
             </div>}
-            <div className={`rv-hint ${figma ? 'fg-hint' : ''}`}>{locked ? 'Approved · view only' : live ? (bridge === 'missing' ? 'Pinned comments are off for this site · use the general comment box' : liveMode === 'browse' ? 'Browse mode: use the links on the site, switch to Comment to leave notes' : 'Comment mode: click any part of the page') : figma ? (figMode === 'browse' ? 'Preview: click through the prototype, then press Back to comments' : 'Click the screen to pin a note · Preview shows how it works') : `Page ${idx + 1} of ${images.length} · click to comment`}</div>
+            <div className={`rv-hint ${figma ? 'fg-hint' : ''}`}>{locked ? 'Approved · view only' : live ? (bridge === 'missing' ? 'Pinned comments are off for this site · use the general comment box' : liveMode === 'browse' ? 'Browse mode: use the links on the site, switch to Comment to leave notes' : 'Comment mode: click any part of the page') : figma ? (figMode === 'browse' ? 'Preview: click through the prototype, then press Back to comments' : 'Click the screen to pin a note') : `Page ${idx + 1} of ${images.length} · click to comment`}</div>
 
             {showImg && pop && newDraft && (
               <div
