@@ -47,3 +47,4 @@
 .ws-mini th { text-align: left; padding: 6px 10px 8px 0; font: 600 11.5px/1.2 var(--display); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 .ws-mini td { padding: 8px 10px 8px 0; border-top: 1px solid var(--line); color: var(--ink-2); }
 @media (max-width: 700px) { .ws-sum { grid-template-columns: 1fr 1fr; gap: 10px; } .ws-sum .card { padding: 14px; } .ws-sum .card b { font-size: 22px; } .ws-form { grid-template-columns: 1fr; } .ws-filters .input { max-width: none; } }
+.ws-sort { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; } .ws-sort:hover, .ws-sort:focus-visible { color: var(--ink); } .ws-sort span { font-size: 9px; min-width: 9px; }

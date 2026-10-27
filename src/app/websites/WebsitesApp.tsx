@@ -14,6 +14,11 @@ export type Row = Record<FieldKey, string> & {
   up1: number | null; up7: number | null; up30: number | null;
 };
 
+// Sorting: each column's value to sort on. Empty values always go last.
+const STATE_RANK = { down: 0, up: 1, none: 2, off: 3 } as const;
+const sortValue = (r: Row, key: string): string | number | null =>
+  key === 'state' ? STATE_RANK[r.state] : key === 'up1' || key === 'up7' || key === 'up30' ? (r.state === 'off' ? null : r[key]) : r[key as FieldKey]?.toLowerCase() || null;
+
 const statusChip = (s: string) => {
   const k = s.toLowerCase();
   return k === 'live' ? 'ws-c-live' : k === 'in progress' || k === 'for transfer' ? 'ws-c-wip' : k === 'forward only' ? 'ws-c-fwd' : 'ws-c-off';
@@ -72,6 +77,7 @@ export default function WebsitesApp({ rows, options, editId }: { rows: Row[]; op
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
   const [server, setServer] = useState('');
+  const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
   const [editing, setEditing] = useState<Row | 'new' | null>(() => rows.find((r) => r.id === editId) ?? null);
   const [importing, setImporting] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -84,9 +90,24 @@ export default function WebsitesApp({ rows, options, editId }: { rows: Row[]; op
   // The page keeps itself current: the numbers are re-read every minute.
   useEffect(() => { const t = setInterval(() => router.refresh(), 60_000); return () => clearInterval(t); }, [router]);
 
-  const shown = useMemo(() => rows.filter((r) =>
-    (!status || r.status === status) && (!server || r.server === server) &&
-    (!q.trim() || `${r.clientName} ${r.url}`.toLowerCase().includes(q.trim().toLowerCase()))), [rows, q, status, server]);
+  const shown = useMemo(() => {
+    const list = rows.filter((r) =>
+      (!status || r.status === status) && (!server || r.server === server) &&
+      (!q.trim() || `${r.clientName} ${r.url}`.toLowerCase().includes(q.trim().toLowerCase())));
+    if (!sort) return list;
+    return [...list].sort((a, b) => {
+      const x = sortValue(a, sort.key), y = sortValue(b, sort.key);
+      if (x == null || y == null) return x == null && y == null ? 0 : x == null ? 1 : -1;
+      return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true })) * sort.dir;
+    });
+  }, [rows, q, status, server, sort]);
+  // First click sorts A to Z (or lowest first), second click reverses, third click goes back to the saved order.
+  const toggleSort = (key: string) => setSort((s) => (s?.key !== key ? { key, dir: 1 } : s.dir === 1 ? { key, dir: -1 } : null));
+  const Th = ({ k, children, className }: { k: string; children: string; className?: string }) => (
+    <th className={className} aria-sort={sort?.key === k ? (sort.dir === 1 ? 'ascending' : 'descending') : undefined}>
+      <button type="button" className="ws-sort" onClick={() => toggleSort(k)}>{children}<span aria-hidden>{sort?.key === k ? (sort.dir === 1 ? '▲' : '▼') : ''}</span></button>
+    </th>
+  );
 
   const watched = rows.filter((r) => r.state !== 'off');
   const sum = { up: watched.filter((r) => r.state === 'up').length, down: watched.filter((r) => r.state === 'down').length };
@@ -139,10 +160,10 @@ export default function WebsitesApp({ rows, options, editId }: { rows: Row[]; op
           <table className="ws-table">
             <thead>
               <tr>
-                <th className="ws-sticky">Client Name</th>
-                <th>Uptime</th>
-                <th>24 h</th><th>7 days</th><th>30 days</th>
-                {FIELDS.slice(1).map((f) => <th key={f.key}>{f.label}</th>)}
+                <Th k="clientName" className="ws-sticky">Client Name</Th>
+                <Th k="state">Uptime</Th>
+                <Th k="up1">24 h</Th><Th k="up7">7 days</Th><Th k="up30">30 days</Th>
+                {FIELDS.slice(1).map((f) => <Th key={f.key} k={f.key}>{f.label}</Th>)}
                 <th />
               </tr>
             </thead>
