@@ -106,7 +106,8 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   const unsent = sendable.length;
   const roots = comments.filter((c) => !c.parentId);
   const maxPin = Math.max(0, ...roots.map((c) => c.pin ?? 0));
-  const pinned = drafts.filter((d) => d.x != null);
+  // A pin takes the next number only once it has text (the one being typed counts too). A click that was abandoned never uses one up.
+  const pinned = drafts.filter((d) => d.x != null && (d.text || d.tid === pop?.tid));
   const draftPin = (tid: string) => maxPin + pinned.findIndex((d) => d.tid === tid) + 1;
   const isLatest = current.number === latest;
   const versionName = `Version ${current.number}${current.label && !/^(v|version)\s*\d+$/i.test(current.label.trim()) ? ` · ${current.label.trim()}` : ''}`;
@@ -122,6 +123,8 @@ export default function ReviewClient({ slug, title, client, status, approval, la
     setReady(true);
   }, [draftKey]);
   useEffect(() => { if (ready) store.set(draftKey, JSON.stringify(drafts)); }, [drafts, ready, draftKey]);
+  // A click with no comment typed is dropped as soon as the person moves on (another click, another page, closing the box).
+  useEffect(() => { setDrafts((d) => (d.some((x) => !x.text && x.tid !== pop?.tid) ? d.filter((x) => x.text || x.tid === pop?.tid) : d)); }, [pop?.tid]);
   const seenKey = `rp:seen:${current.id}`;
   useEffect(() => { try { setSeen(JSON.parse(store.get(seenKey) || '{}')); } catch { setSeen({}); } }, [seenKey]);
   useEffect(() => { if (ready && Object.keys(seen).length) store.set(seenKey, JSON.stringify(seen)); }, [seen, ready, seenKey]);
