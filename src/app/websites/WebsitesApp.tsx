@@ -254,6 +254,7 @@ export default function WebsitesApp({ rows, days, options, editId }: { rows: Row
         <div className="card"><b className="ws-good">{sum.up}</b><span>Up now</span></div>
         <div className="card"><b className={sum.down ? 'ws-bad' : ''}>{sum.down}</b><span>Down now</span></div>
         <div className="card"><b className={upClass(avg)}>{avg == null ? 'No data yet' : `${avg}%`}</b><span>Uptime, last 30 days</span></div>
+        <div className="card"><b>{rows.filter((r) => r.status.trim().toLowerCase() === 'discontinued').length}</b><span>Discontinued</span></div>
       </div>
 
       <div className="ws-filters">
