@@ -114,6 +114,13 @@ function SiteView({ row: r, days, detail, rechecking, onCheck, onEdit, onClose }
         ))}
       </div>
 
+      <h3 className="ws-h">Details</h3>
+      <div className="card">
+        <dl className="ws-dl">
+          {FIELDS.filter((f) => DETAILS.includes(f.key)).map((f) => <div key={f.key}><dt>{f.label}</dt><dd><Cell field={f.key} v={r[f.key]} /></dd></div>)}
+        </dl>
+      </div>
+
       <h3 className="ws-h">Last 30 days</h3>
       <div className="card">
         <div className="ws-bars" role="img" aria-label="Uptime for each of the last 30 days">
