@@ -46,6 +46,24 @@ function Cell({ field, v }: { field: FieldKey; v: string }) {
   return <>{v}</>;
 }
 
+/** A real dropdown of the usual values (a datalist only shows the ones that match what is already typed). "Other" lets a new value be typed. */
+function ListField({ name, defaultValue, options }: { name: string; defaultValue: string; options: string[] }) {
+  const [other, setOther] = useState(false);
+  const all = defaultValue && !options.includes(defaultValue) ? [defaultValue, ...options] : options;
+  return other ? (
+    <span className="ws-other">
+      <input className="input" name={name} autoFocus placeholder="Type a new value" autoComplete="off" />
+      <button type="button" className="btn-ghost" onClick={() => setOther(false)}>Back to list</button>
+    </span>
+  ) : (
+    <select className="input" name={name} defaultValue={defaultValue} onChange={(e) => { if (e.target.value === '__other__') setOther(true); }}>
+      <option value="">Not set</option>
+      {all.map((o) => <option key={o}>{o}</option>)}
+      <option value={'__other__'}>Other…</option>
+    </select>
+  );
+}
+
 function SiteForm({ row, options, onDone }: { row: Row | null; options: Record<string, string[]>; onDone: () => void }) {
   const [state, action] = useActionState(saveWebsite, null);
   useEffect(() => { if (state?.ok) onDone(); }, [state, onDone]);
@@ -55,9 +73,10 @@ function SiteForm({ row, options, onDone }: { row: Row | null; options: Record<s
       {FIELDS.map((f) => (
         <label key={f.key} className={f.key === 'clientName' || f.key === 'url' ? 'ws-wide' : ''}>
           <span>{f.label}</span>
-          <input className="input" name={f.key} defaultValue={state?.values?.[f.key] ?? row?.[f.key] ?? (f.key === 'status' ? 'Live' : '')} list={'list' in f ? `ws-${f.key}` : undefined}
-            placeholder={f.key === 'url' ? 'https://example.com' : ''} required={f.key === 'clientName'} autoComplete="off" />
-          {'list' in f && <datalist id={`ws-${f.key}`}>{options[f.key]?.map((o) => <option key={o} value={o} />)}</datalist>}
+          {'list' in f
+            ? <ListField name={f.key} defaultValue={state?.values?.[f.key] ?? row?.[f.key] ?? (f.key === 'status' ? 'Live' : '')} options={options[f.key] ?? []} />
+            : <input className="input" name={f.key} defaultValue={state?.values?.[f.key] ?? row?.[f.key] ?? ''}
+                placeholder={f.key === 'url' ? 'https://example.com' : ''} required={f.key === 'clientName'} autoComplete="off" />}
         </label>
       ))}
       <p className="muted ws-wide" style={{ fontSize: 12 }}>Only sites with the status Live are checked for uptime, every {CHECK_EVERY_MIN} minutes.</p>

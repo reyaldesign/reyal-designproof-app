@@ -67,3 +67,4 @@
 .ws-view .ws-bars { height: 32px; }
 .ws-dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 28px; margin: 0; font-size: 14px; } .ws-dl div { display: flex; justify-content: space-between; gap: 12px; } .ws-dl dt { color: var(--muted); } .ws-dl dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
 @media (max-width: 700px) { .ws-dl { grid-template-columns: 1fr; } }
+.ws-other { display: flex; gap: 8px; align-items: center; } .ws-other .input { flex: 1; min-width: 0; }
