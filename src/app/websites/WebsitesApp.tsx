@@ -193,7 +193,7 @@ const DETAILS: FieldKey[] = ['captcha', 'backup', 'desktopStatus', 'mobileStatus
 export default function WebsitesApp({ rows, days, options, editId }: { rows: Row[]; days: string[]; options: Record<string, string[]>; editId?: string }) {
   const router = useRouter();
   const [q, setQ] = useState('');
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState(() => (rows.some((r) => r.status === 'Live') ? 'Live' : '')); // the page opens on the Live sites; pick another status, or All statuses, to see the rest
   const [server, setServer] = useState('');
   const [sort, setSort] = useState<SortKey>('order');
   const [viewId, setViewId] = useState<string | null>(null);
