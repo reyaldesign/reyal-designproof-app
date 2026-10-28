@@ -301,12 +301,6 @@ export default function WebsitesApp({ rows, days, options, editId }: { rows: Row
                 <Cell field="status" v={r.status} />
                 {r.server && r.server !== 'N/A' && <span className="ws-tag">{r.server}</span>}
               </div>
-              <details>
-                <summary>Details</summary>
-                <dl>
-                  {FIELDS.filter((f) => DETAILS.includes(f.key)).map((f) => <div key={f.key}><dt>{f.label}</dt><dd><Cell field={f.key} v={r[f.key]} /></dd></div>)}
-                </dl>
-              </details>
             </article>
           ))}
           {!shown.length && <p className="ws-empty">No websites match.</p>}
