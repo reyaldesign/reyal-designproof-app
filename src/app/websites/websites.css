@@ -57,3 +57,6 @@
 .ws-card dl div { display: flex; justify-content: space-between; gap: 12px; }
 .ws-card dt { color: var(--muted); } .ws-card dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
 .ws-cards .ws-empty { grid-column: 1 / -1; }
+.ws-icon { position: relative; flex: none; width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; font: 700 15px/1 var(--display); letter-spacing: .02em; color: hsl(var(--h) 80% 78%); background: hsl(var(--h) 45% 22%); }
+.ws-icon .ws-state { position: absolute; right: -3px; bottom: -3px; width: 13px; height: 13px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; }
+.ws-icon .ws-state i { width: 9px; height: 9px; }

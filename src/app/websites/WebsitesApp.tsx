@@ -30,6 +30,10 @@ const compare = (key: SortKey) => (a: Row, b: Row) => {
   return x == null || y == null ? (x == null ? 1 : 0) - (y == null ? 1 : 0) : x - y;
 };
 
+/** The letters shown in a site's icon, and a steady colour picked from its name. */
+const initials = (name: string) => name.split(/[\s.]+/).filter((w) => /^[a-z0-9]/i.test(w)).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
+const hue = (name: string) => [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+
 const statusChip = (s: string) => {
   const k = s.toLowerCase();
   return k === 'live' ? 'ws-c-live' : k === 'in progress' || k === 'for transfer' ? 'ws-c-wip' : k === 'forward only' ? 'ws-c-fwd' : 'ws-c-off';
@@ -164,7 +168,10 @@ export default function WebsitesApp({ rows, days, options, editId }: { rows: Row
           {shown.map((r) => (
             <article key={r.id} className={`card ws-card ws-k-${r.state}`}>
               <header>
-                <span className={`ws-state ws-s-${r.state}`} title={STATE_LABEL[r.state]}><i /></span>
+                <span className="ws-icon" style={{ '--h': hue(r.clientName) } as React.CSSProperties} aria-hidden="true">
+                  {initials(r.clientName)}
+                  <span className={`ws-state ws-s-${r.state}`} title={STATE_LABEL[r.state]}><i /></span>
+                </span>
                 <Link href={`/websites/${r.id}`} className="ws-name">{r.clientName}</Link>
                 <button className="btn-ghost ws-edit" onClick={() => setEditing(r)}>Edit</button>
               </header>
