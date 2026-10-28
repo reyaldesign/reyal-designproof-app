@@ -283,3 +283,7 @@
 .fg-verline b { color: #fff; }
 
 .fg-load { margin: 6px 6px 2px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.4; }
+
+/* Phone and Tablet: a reminder that Desktop changes carry over */
+.fg-carry { max-width: 620px; padding: 10px 14px; border-radius: 14px; border: 1px solid rgba(61,220,151,.4); background: rgba(61,220,151,.08); color: var(--ink-2); font-size: 13px; line-height: 1.45; text-align: center; }
+.fg-carry b { color: #fff; }
