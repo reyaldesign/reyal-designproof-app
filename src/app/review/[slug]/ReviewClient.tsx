@@ -296,7 +296,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   const desktopCount = roots.filter((c) => c.imageId && deskIds.has(c.imageId) && c.x != null).length + drafts.filter((d) => d.text && d.imageId && deskIds.has(d.imageId)).length;
   // The first time in a visit that Phone or Tablet is opened with Desktop comments in place, say plainly that those changes carry over.
   function maybeCarry(d: Device) {
-    if (d === 'desktop' || !desktopCount || tourOpen || store.get('rp:carry') === 'never') return;
+    if (d === 'desktop' || tourOpen || store.get('rp:carry') === 'never') return;
     try { if (sessionStorage.getItem(`rp:carry:${current.id}`)) return; sessionStorage.setItem(`rp:carry:${current.id}`, '1'); } catch { /* storage unavailable: the banner still shows */ }
     setCarryNever(false);
     setCarry(true);
@@ -597,6 +597,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
               {figDevice !== 'desktop' && (
                 <div className="fg-carry" role="note">
                   <b>{desktopCount ? `Your Desktop comments (${desktopCount}) will be applied to this size too.` : 'Changes you ask for on Desktop will also be applied to this size.'}</b> Only add notes here for things that look different at this size.
+                  <button className="fg-carry-btn" onClick={() => { setCarryNever(store.get('rp:carry') === 'never'); setCarry(true); }}>Show message again</button>
                 </div>
               )}
               {figErr && <span className="rv-err" role="alert" style={{ margin: 0 }}>{figErr}</span>}
@@ -767,14 +768,14 @@ export default function ReviewClient({ slug, title, client, status, approval, la
         <div className="rv-overlay" role="dialog" aria-modal="true" aria-labelledby="carry-h" onKeyDown={(e) => { if (e.key === 'Escape') setCarry(false); }}>
           <div className="rv-modal">
             <h2 id="carry-h">Your Desktop comments carry over</h2>
-            <p>The {desktopCount === 1 ? 'change' : `${desktopCount} changes`} you asked for on Desktop will also be applied to {figDevice === 'mobile' ? 'the Phone' : 'the Tablet'} size. Please only comment here on things that look wrong at this size, such as spacing, text wrapping or images that are cut off.</p>
+            <p>{desktopCount ? <>The {desktopCount === 1 ? 'change' : `${desktopCount} changes`} you asked for on Desktop will</> : <>Any changes you ask for on Desktop will</>} also be applied to {figDevice === 'mobile' ? 'the Phone' : 'the Tablet'} size. Please only comment here on things that look wrong at this size, such as spacing, text wrapping or images that are cut off.</p>
             <label className="rv-check">
               <input type="checkbox" checked={carryNever} onChange={(e) => setCarryNever(e.target.checked)} />
               <i>{carryNever ? '✓' : ''}</i>
               Don&apos;t show this message again
             </label>
             <div className="rv-actions">
-              <button className="rv-primary" autoFocus onClick={() => { if (carryNever) store.set('rp:carry', 'never'); setCarry(false); }}>Got it</button>
+              <button className="rv-primary" autoFocus onClick={() => { store.set('rp:carry', carryNever ? 'never' : ''); setCarry(false); }}>Got it</button>
             </div>
           </div>
         </div>
