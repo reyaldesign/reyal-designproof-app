@@ -55,7 +55,7 @@ export async function siteDetail(id: string): Promise<Detail> {
   const checks = await db.websiteCheck.findMany({ where: { websiteId: id }, orderBy: { at: 'desc' }, select: { at: true, ok: true, error: true } });
   return {
     outages: outagesOf(checks).slice(0, 12).map((o) => ({ from: o.from.toISOString(), to: o.to?.toISOString() ?? null, error: o.error })),
-    recent: checks.slice(0, 15).map((c) => ({ at: c.at.toISOString(), ok: c.ok, error: c.error })),
+    recent: checks.slice(0, 5).map((c) => ({ at: c.at.toISOString(), ok: c.ok, error: c.error })),
   };
 }
 
