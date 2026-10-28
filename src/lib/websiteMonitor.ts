@@ -77,6 +77,22 @@ export async function loadStats(): Promise<Map<string, SiteStats>> {
   return out;
 }
 
+/** For every site, uptime % per day over the last `days` days (oldest first, null when nothing was checked that day). Days are UTC, like the bars on a site's own page. */
+export async function loadStrips(days = 30): Promise<Map<string, (number | null)[]>> {
+  const since = Date.now() - (days - 1) * 864e5;
+  const rows = await db.$queryRaw<{ websiteId: string; d: string; n: number; up: number }[]>`
+    SELECT websiteId, date(at / 1000, 'unixepoch') AS d, COUNT(*) AS n, SUM(ok) AS up FROM WebsiteCheck WHERE at >= ${since} GROUP BY websiteId, d`;
+  const keys = Array.from({ length: days }, (_, i) => new Date(Date.now() - (days - 1 - i) * 864e5).toISOString().slice(0, 10));
+  const out = new Map<string, (number | null)[]>();
+  for (const r of rows) {
+    const strip = out.get(r.websiteId) ?? keys.map(() => null);
+    const i = keys.indexOf(r.d);
+    if (i >= 0) strip[i] = Math.round((Number(r.up) / Number(r.n)) * 1000) / 10;
+    out.set(r.websiteId, strip);
+  }
+  return out;
+}
+
 export type Outage = { from: Date; to: Date | null; checks: number; error: string | null };
 /** Runs of failed checks in a row, newest first. An outage with no end is still going. */
 export function outagesOf(checks: { at: Date; ok: boolean; error: string | null }[]): Outage[] {
