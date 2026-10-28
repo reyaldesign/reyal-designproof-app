@@ -149,3 +149,12 @@ Each client includes a number of revision rounds per proof (default **2**). Chan
 - Real-time updates (admin page refreshes on load; add Pusher or SSE if needed)
 - Offline viewing, version comparison, CSV or PDF export, white-label, view analytics
 - Image optimization and thumbnails (originals are served as uploaded; add `sharp` if proofs are very large)
+
+## Websites (uptime tracker)
+
+A **Websites** page in the sidebar lists the sites the team looks after, with these columns from the team's sheet: Client Name, Website Link, Status, Server Used, Forms Captcha V3, Backup Enabled, Desktop Status, Mobile/Tablet Status, SEO, Form Submission and E-mail Used. Add, edit and delete a site, search and filter by Status or Server, or use **Import CSV** (File, Download, Comma Separated Values in Google Sheets) to load the sheet once. Importing again skips sites that are already in the list.
+
+- **Uptime:** only sites with the status **Live** are checked, every 30 minutes, by the app itself (no outside service). A check is one visit to the home page. Up means a normal answer within 15 seconds. An error, a timeout, an address that does not exist, or a 404 or 5xx page is Down. A firewall answering a bot with 401, 403 or 429 still counts as Up. The list shows Up or Down with the response time and uptime for 24 hours, 7 days and 30 days. A site's own page shows daily bars for 30 days, its outages and its recent checks. **Check now** and **Check all now** run a check straight away.
+- **History:** check results are kept for 90 days. If the app is stopped, no checks happen for that time and the gap is not counted as downtime.
+- **Access:** a **Websites** permission under Team & access. Admins and Project Managers have it to start with.
+- **Settings:** set `WEBSITES_MONITOR=off` in `.env` to stop the scheduled checks (for example on a test copy of the database). No alerts are sent.
