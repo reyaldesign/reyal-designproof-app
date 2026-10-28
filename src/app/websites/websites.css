@@ -60,3 +60,8 @@
 .ws-icon { position: relative; flex: none; width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; font: 700 15px/1 var(--display); letter-spacing: .02em; color: hsl(var(--h) 80% 78%); background: hsl(var(--h) 45% 22%); }
 .ws-icon .ws-state { position: absolute; right: -3px; bottom: -3px; width: 13px; height: 13px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; }
 .ws-icon .ws-state i { width: 9px; height: 9px; }
+.ws-card .ws-name { all: unset; cursor: pointer; flex: 1; min-width: 0; font-size: 16px; overflow-wrap: anywhere; font-weight: 600; color: var(--ink); } .ws-card .ws-name:hover { text-decoration: underline; } .ws-card .ws-name:focus-visible { outline: 2px solid var(--line-2); outline-offset: 2px; }
+.ws-view-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; } .ws-view-head > div { flex: 1; min-width: 0; } .ws-x { padding: 6px 10px; }
+.ws-view .ws-sum { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-bottom: 0; }
+.ws-view .ws-h { font-size: 15px; margin: 20px 0 8px; }
+.ws-view .ws-bars { height: 32px; }

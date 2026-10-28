@@ -15,7 +15,7 @@ export default async function WebsitesPage({ searchParams }: { searchParams: Pro
       desktopStatus: s.desktopStatus, mobileStatus: s.mobileStatus, seo: s.seo,
       formSubmission: s.formSubmission, emailUsed: s.emailUsed,
       state: !monitored ? 'off' : !st?.last ? 'none' : st.last.ok ? 'up' : 'down',
-      ms: st?.last?.ms ?? null, error: st?.last?.error ?? null, lastAt: st?.last?.at.toISOString() ?? null,
+      error: st?.last?.error ?? null, lastAt: st?.last?.at.toISOString() ?? null,
       up1: pct(st?.d1), up7: pct(st?.d7), up30: pct(st?.d30),
       strip: strips.get(s.id) ?? Array<null>(30).fill(null),
     };

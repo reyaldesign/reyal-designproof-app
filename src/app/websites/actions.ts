@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireTool } from '@/lib/access';
 import { db } from '@/lib/db';
-import { runChecks } from '@/lib/websiteMonitor';
+import { outagesOf, runChecks } from '@/lib/websiteMonitor';
 import { FIELDS, cleanUrl, parseCsv, siteKey, type FieldKey } from '@/lib/websitesShared';
 
 export type FormState = { error?: string; ok?: string; values?: Record<string, string> } | null;
@@ -43,6 +43,20 @@ export async function deleteWebsite(f: FormData) {
   await db.website.delete({ where: { id: String(f.get('id') ?? '') } }).catch(() => {}); // its check history goes with it
   refresh();
   redirect('/websites');
+}
+
+export type Detail = {
+  outages: { from: string; to: string | null; error: string | null }[];
+  recent: { at: string; ok: boolean; error: string | null }[];
+};
+/** What the site popup shows besides the numbers already on the card: its outages and its latest checks. */
+export async function siteDetail(id: string): Promise<Detail> {
+  await requireTool('WEBSITES');
+  const checks = await db.websiteCheck.findMany({ where: { websiteId: id }, orderBy: { at: 'desc' }, select: { at: true, ok: true, error: true } });
+  return {
+    outages: outagesOf(checks).slice(0, 12).map((o) => ({ from: o.from.toISOString(), to: o.to?.toISOString() ?? null, error: o.error })),
+    recent: checks.slice(0, 15).map((c) => ({ at: c.at.toISOString(), ok: c.ok, error: c.error })),
+  };
 }
 
 /** One site now, and the answer is waiting when this returns. */

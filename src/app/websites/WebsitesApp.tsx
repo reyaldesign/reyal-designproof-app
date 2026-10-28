@@ -1,16 +1,15 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import SubmitButton from '@/components/SubmitButton';
 import { CHECK_EVERY_MIN, FIELDS, STATE_LABEL, ago, hostOf, upClass, type FieldKey } from '@/lib/websitesShared';
-import { checkAll, importCsv, saveWebsite } from './actions';
+import { checkAll, checkOne, deleteWebsite, importCsv, saveWebsite, siteDetail, type Detail } from './actions';
 
 export type Row = Record<FieldKey, string> & {
   id: string;
   state: 'up' | 'down' | 'none' | 'off'; // up and down come from the latest check; none is not checked yet; off is not monitored
-  ms: number | null; error: string | null; lastAt: string | null;
+  error: string | null; lastAt: string | null;
   up1: number | null; up7: number | null; up30: number | null;
   strip: (number | null)[]; // uptime % for each of the last 30 days, oldest first; null when nothing was checked that day
 };
@@ -87,6 +86,82 @@ function ImportForm({ onDone }: { onDone: () => void }) {
   );
 }
 
+const when = (iso: string) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+const span = (ms: number) => { const m = Math.round(ms / 60000); return m < 1 ? 'under a minute' : m < 90 ? `${m} min` : m < 2880 ? `${Math.round(m / 60)} h` : `${Math.round(m / 1440)} d`; };
+
+/** The popup for one site: how it is doing now, the last 30 days, its outages and its latest checks. */
+function SiteView({ row: r, days, detail, rechecking, onCheck, onEdit, onClose }: { row: Row; days: string[]; detail: Detail | null; rechecking: boolean; onCheck: () => void; onEdit: () => void; onClose: () => void }) {
+  return (
+    <div className="ws-view">
+      <header className="ws-view-head">
+        <span className="ws-icon" style={{ '--h': hue(r.clientName) } as React.CSSProperties} aria-hidden="true">
+          {initials(r.clientName)}
+          <span className={`ws-state ws-s-${r.state}`}><i /></span>
+        </span>
+        <div>
+          <h2 style={{ margin: 0 }}>{r.clientName}</h2>
+          <p className="muted" style={{ margin: '4px 0 0' }}>{r.url ? <a href={r.url} target="_blank" rel="noreferrer">{hostOf(r.url)} ↗</a> : 'No website link'} · <Cell field="status" v={r.status} /></p>
+        </div>
+        <button className="btn-ghost ws-x" onClick={onClose} aria-label="Close">✕</button>
+      </header>
+
+      {r.state === 'off' && <div className="card ws-note">This website is not monitored{r.status.toLowerCase() === 'live' ? ' because it has no link' : `, because its status is ${r.status}`}. Only Live websites are checked.</div>}
+
+      <div className="ws-sum">
+        <div className="card"><span className={`ws-state ws-s-${r.state}`}><i />{STATE_LABEL[r.state]}</span><span>{r.lastAt ? `Checked ${ago(r.lastAt)}${r.state === 'down' && r.error ? ` · ${r.error}` : ''}` : `Checked every ${CHECK_EVERY_MIN} minutes`}</span></div>
+        {([['24 hours', r.up1], ['7 days', r.up7], ['30 days', r.up30]] as const).map(([label, p]) => (
+          <div className="card" key={label}><b className={upClass(r.state === 'off' ? null : p)}>{r.state === 'off' || p == null ? '·' : `${p}%`}</b><span>Uptime, {label}</span></div>
+        ))}
+      </div>
+
+      <h3 className="ws-h">Last 30 days</h3>
+      <div className="card">
+        <div className="ws-bars" role="img" aria-label="Uptime for each of the last 30 days">
+          {r.strip.map((p, i) => <i key={i} className={upClass(r.state === 'off' ? null : p)} title={`${days[i]}: ${p == null ? 'no checks' : `${p}%`}`} />)}
+        </div>
+        <div className="ws-axis"><span>{days[0]}</span><span>Today</span></div>
+      </div>
+
+      {r.state !== 'off' && (<>
+        <h3 className="ws-h">Outages</h3>
+        <div className="card">
+          {!detail ? <p className="muted">Loading…</p> : !detail.outages.length ? <p className="muted">No outages recorded.</p> : (
+            <table className="ws-mini">
+              <thead><tr><th>Started</th><th>Lasted</th><th>Cause</th></tr></thead>
+              <tbody>{detail.outages.map((o, i) => (
+                <tr key={i}><td>{when(o.from)}</td><td>{o.to ? span(new Date(o.to).getTime() - new Date(o.from).getTime()) : <span className="ws-bad">Still down</span>}</td><td>{o.error ?? ''}</td></tr>
+              ))}</tbody>
+            </table>
+          )}
+        </div>
+
+        <h3 className="ws-h">Recent checks</h3>
+        <div className="card">
+          {!detail ? <p className="muted">Loading…</p> : !detail.recent.length ? <p className="muted">No checks yet.</p> : (
+            <table className="ws-mini">
+              <thead><tr><th>When</th><th>Result</th></tr></thead>
+              <tbody>{detail.recent.map((c, i) => (
+                <tr key={i}><td>{when(c.at)}</td><td className={c.ok ? 'ws-good' : 'ws-bad'}>{c.ok ? 'Up' : `Down${c.error ? ` · ${c.error}` : ''}`}</td></tr>
+              ))}</tbody>
+            </table>
+          )}
+        </div>
+      </>)}
+
+      <div className="head-actions" style={{ justifyContent: 'space-between', marginTop: 20 }}>
+        <form action={deleteWebsite} onSubmit={(e) => { if (!confirm(`Delete "${r.clientName}" and its uptime history? This cannot be undone.`)) e.preventDefault(); }}>
+          <input type="hidden" name="id" value={r.id} />
+          <button className="btn-ghost" style={{ color: 'var(--bad)' }}>Delete</button>
+        </form>
+        <div className="head-actions">
+          {r.state !== 'off' && <button className="btn" onClick={onCheck} disabled={rechecking}>{rechecking ? 'Checking…' : 'Check now'}</button>}
+          <button className="btn" onClick={onEdit}>Edit</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const DETAILS: FieldKey[] = ['captcha', 'backup', 'desktopStatus', 'mobileStatus', 'seo', 'formSubmission', 'emailUsed'];
 
 export default function WebsitesApp({ rows, days, options, editId }: { rows: Row[]; days: string[]; options: Record<string, string[]>; editId?: string }) {
@@ -95,14 +170,23 @@ export default function WebsitesApp({ rows, days, options, editId }: { rows: Row
   const [status, setStatus] = useState('');
   const [server, setServer] = useState('');
   const [sort, setSort] = useState<SortKey>('order');
+  const [viewId, setViewId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<Detail | null>(null);
+  const [rechecking, setRechecking] = useState(false);
   const [editing, setEditing] = useState<Row | 'new' | null>(() => rows.find((r) => r.id === editId) ?? null);
   const [importing, setImporting] = useState(false);
   const [checking, setChecking] = useState(false);
   const dlg = useRef<HTMLDialogElement>(null);
   const imp = useRef<HTMLDialogElement>(null);
+  const view = useRef<HTMLDialogElement>(null);
+  const viewing = rows.find((r) => r.id === viewId) ?? null;
 
   useEffect(() => { const d = dlg.current; if (!d) return; if (editing && !d.open) d.showModal(); if (!editing && d.open) d.close(); }, [editing]);
   useEffect(() => { const d = imp.current; if (!d) return; if (importing && !d.open) d.showModal(); if (!importing && d.open) { d.close(); router.refresh(); } }, [importing, router]);
+
+  useEffect(() => { const d = view.current; if (!d) return; if (viewId && !d.open) d.showModal(); if (!viewId && d.open) d.close(); }, [viewId]);
+  useEffect(() => { setDetail(null); if (viewId) siteDetail(viewId).then(setDetail).catch(() => {}); }, [viewId, rows]);
+  async function recheck(id: string) { setRechecking(true); const f = new FormData(); f.set('id', id); await checkOne(f); router.refresh(); setRechecking(false); }
 
   // The page keeps itself current: the numbers are re-read every minute.
   useEffect(() => { const t = setInterval(() => router.refresh(), 60_000); return () => clearInterval(t); }, [router]);
@@ -172,7 +256,7 @@ export default function WebsitesApp({ rows, days, options, editId }: { rows: Row
                   {initials(r.clientName)}
                   <span className={`ws-state ws-s-${r.state}`} title={STATE_LABEL[r.state]}><i /></span>
                 </span>
-                <Link href={`/websites/${r.id}`} className="ws-name">{r.clientName}</Link>
+                <button className="ws-name" onClick={() => setViewId(r.id)}>{r.clientName}</button>
                 <button className="btn-ghost ws-edit" onClick={() => setEditing(r)}>Edit</button>
               </header>
               {r.url ? <a className="ws-host" href={r.url} target="_blank" rel="noreferrer">{hostOf(r.url)} ↗</a> : <span className="ws-host ws-dash">No link</span>}
@@ -183,7 +267,7 @@ export default function WebsitesApp({ rows, days, options, editId }: { rows: Row
               )}
               <div className="ws-line">
                 <span className={`ws-s-${r.state}`} title={r.error ?? (r.lastAt ? `Last check ${ago(r.lastAt)}` : '')}>
-                  {r.state === 'up' ? `Up${r.ms != null ? ` · ${r.ms} ms` : ''}` : r.state === 'down' ? `Down${r.error ? ` · ${r.error}` : ''}` : STATE_LABEL[r.state]}
+                  {r.state === 'up' ? 'Up' : r.state === 'down' ? `Down${r.error ? ` · ${r.error}` : ''}` : STATE_LABEL[r.state]}
                 </span>
                 {r.state !== 'off' && <span className={`ws-num ${upClass(r.up30)}`}>{r.up30 == null ? '·' : `${r.up30}%`}<small> 30 d</small></span>}
               </div>
@@ -203,6 +287,10 @@ export default function WebsitesApp({ rows, days, options, editId }: { rows: Row
         </div>
       )}
 
+      <dialog ref={view} className="dlg ws-dlg" onClose={() => setViewId(null)} onClick={(e) => { if (e.target === view.current) setViewId(null); }}>
+        {viewing && <SiteView row={viewing} days={days} detail={detail} rechecking={rechecking}
+          onCheck={() => recheck(viewing.id)} onEdit={() => { setViewId(null); setEditing(viewing); }} onClose={() => setViewId(null)} />}
+      </dialog>
       <dialog ref={dlg} className="dlg ws-dlg" onClose={() => setEditing(null)} onClick={(e) => { if (e.target === dlg.current) setEditing(null); }}>
         <h2>{editing && editing !== 'new' ? 'Edit website' : 'Add website'}</h2>
         {editing && <SiteForm key={editing === 'new' ? 'new' : editing.id} row={editing === 'new' ? null : editing} options={options} onDone={() => { setEditing(null); router.refresh(); setTimeout(() => router.refresh(), 6000); }} />}
