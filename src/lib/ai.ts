@@ -25,9 +25,6 @@ import type { Check, ReviewResult } from './aiShared';
 const MODEL = () => process.env.AI_REVIEWER_MODEL || 'claude-sonnet-5';
 const EFFORT = () => (process.env.AI_REVIEWER_EFFORT || 'high') as 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 const MAX_TOKENS = () => Number(process.env.AI_REVIEWER_MAX_TOKENS || 32000);
-const PRICE_IN = () => Number(process.env.PRICE_PER_MTOK_INPUT || 2.0);
-const PRICE_OUT = () => Number(process.env.PRICE_PER_MTOK_OUTPUT || 10.0);
-export const estimateCostUsd = (inTok: number, outTok: number) => (inTok / 1e6) * PRICE_IN() + (outTok / 1e6) * PRICE_OUT();
 export const MAX_REFERENCE = 12000; // characters of reference guidance sent with a review
 export const aiKeyConfigured = () => !!process.env.ANTHROPIC_API_KEY?.trim();
 export const aiModel = MODEL;
@@ -103,11 +100,6 @@ export async function prepareForClaude(buf: Buffer) {
 }
 
 export class AiFailure extends Error {}
-
-/** One image, as the Social media reviewer has always done it. */
-export async function reviewWithClaude(image: Buffer, criteria: string[]) {
-  return reviewImages([{ buf: image }], criteria);
-}
 
 /** Said to the AI only when a review has more than one image (pages, or slices of a tall page). One image is reviewed exactly as before. */
 export const MULTI_NOTE =

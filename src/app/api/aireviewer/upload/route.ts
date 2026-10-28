@@ -12,15 +12,13 @@ export async function POST(req: Request) {
   const tooBig = `Files can be up to ${KIND_RULES[kind].maxFileMb} MB.`;
   if (Number(req.headers.get('content-length')) > max) return Response.json({ error: tooBig }, { status: 413 });
 
-  let name = 'file';
-  try { name = decodeURIComponent(req.headers.get('x-filename') ?? 'file'); } catch { /* keep the default */ }
   void cleanupTmp();
   let token = '';
   try {
-    const saved = await saveUpload(req, name, max);
+    const saved = await saveUpload(req, max);
     token = saved.token;
     const info = await inspect(token);
-    return Response.json({ token, name, size: saved.size, ...info });
+    return Response.json({ token, size: saved.size, ...info });
   } catch (e) {
     if (token) await discard(token);
     if (e instanceof UploadError) return Response.json({ error: e.status === 413 ? tooBig : e.message }, { status: e.status });

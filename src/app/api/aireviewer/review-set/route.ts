@@ -1,5 +1,5 @@
 import { AiFailure, GENERAL, refuseAi, reviewImages, withSlot } from '@/lib/ai';
-import { TOKEN_RE, UploadError, readMeta, renderPages, sliceCount, sliceTall, type Rendered } from '@/lib/aiPdf';
+import { TOKEN_RE, UploadError, renderPages, sliceCount, sliceTall, type Rendered } from '@/lib/aiPdf';
 import { AI_MAX_SLICES, KIND_RULES, isKind, type Check, type PageRef } from '@/lib/aiShared';
 import { recordReviewOutcome } from '@/lib/aiStatus';
 import { saveAiImage } from '@/lib/aiStorage';
@@ -38,7 +38,6 @@ export async function POST(req: Request) {
     for (let si = 0; si < tokens.length; si++) {
       const wanted = [...new Set(picks.filter((p) => p.si === si).map((p) => p.page))];
       if (!wanted.length) continue;
-      if (!(await readMeta(tokens[si]))) throw new UploadError(404, 'That upload is no longer available. Add the file again.');
       const out = await renderPages(tokens[si], wanted);
       wanted.forEach((pg, i) => rendered.set(`${si}:${pg}`, out[i]));
     }

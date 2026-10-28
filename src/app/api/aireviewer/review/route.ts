@@ -1,4 +1,4 @@
-import { AI_IMAGE_TYPES, AI_MAX_IMAGE_MB, AiFailure, refuseAi, reviewWithClaude, prepareForClaude, withSlot } from '@/lib/ai';
+import { AI_IMAGE_TYPES, AI_MAX_IMAGE_MB, AiFailure, refuseAi, reviewImages, prepareForClaude, withSlot } from '@/lib/ai';
 import { saveAiImage } from '@/lib/aiStorage';
 import { recordReviewOutcome } from '@/lib/aiStatus';
 import { db } from '@/lib/db';
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
 
   const original = Buffer.from(await file.arrayBuffer());
   try {
-    const { result, inputTokens, outputTokens } = await withSlot(async () => reviewWithClaude(await prepareForClaude(original), criteria));
+    const { result, inputTokens, outputTokens } = await withSlot(async () => reviewImages([{ buf: await prepareForClaude(original) }], criteria));
     const imageFile = await saveAiImage(original, file.type);
     const saved = await db.aiReview.create({
       data: {

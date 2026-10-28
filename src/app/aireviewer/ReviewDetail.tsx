@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { VERDICT_LABEL } from '@/lib/aiShared';
 import { useLang } from './Lang';
 import type { ReviewView } from './types';
 import { useReviewText } from './useReviewText';
@@ -15,7 +14,7 @@ export default function ReviewDetail({ r, imageUrl, footer }: { r: ReviewView; i
   const [copied, setCopied] = useState(false);
   const { t, verdict, locale } = useLang();
   const text = useReviewText(r);
-  const v = { ...VERDICT_LABEL[r.verdict], ...verdict(r.verdict) };
+  const v = verdict(r.verdict);
   const marked = r.checks.map((c, i) => ({ c, i })).filter((x) => x.c.status !== 'pass' && x.c.location);
   const num = (i: number) => marked.findIndex((m) => m.i === i) + 1;
   // A review of several pages shows one page at a time, with the markers that belong to it. A single image behaves as it always has.

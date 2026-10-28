@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
-import { mkdir, open, readdir, readFile, stat, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, open, readdir, readFile, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -53,7 +53,7 @@ export async function cleanupTmp(maxAgeMs = 12 * 3600_000, maxBytes = 3 * 1024 *
 }
 
 /** Streams the request body to a temporary file, refusing anything over maxBytes. */
-export async function saveUpload(req: Request, name: string, maxBytes: number): Promise<{ token: string; size: number }> {
+export async function saveUpload(req: Request, maxBytes: number): Promise<{ token: string; size: number }> {
   if (!req.body) throw new UploadError(400, 'No file received.');
   await mkdir(tmp(), { recursive: true });
   const token = randomBytes(18).toString('base64url');
@@ -68,19 +68,13 @@ export async function saveUpload(req: Request, name: string, maxBytes: number): 
     throw e instanceof UploadError ? e : new UploadError(400, 'The upload was interrupted. Try again.');
   }
   if (!size) { await unlink(bin(token)).catch(() => {}); throw new UploadError(400, 'No file received.'); }
-  await writeFile(path.join(tmp(), `${token}.json`), JSON.stringify({ name: name.slice(0, 200), size, at: Date.now() }));
   return { token, size };
 }
 
 /** Deletes an upload that could not be used. */
 export async function discard(token: string) {
   if (!TOKEN_RE.test(token)) return;
-  await Promise.all([bin(token), path.join(tmp(), `${token}.json`)].map((f) => unlink(f).catch(() => {})));
-}
-
-export async function readMeta(token: string): Promise<{ name: string; size: number } | null> {
-  if (!TOKEN_RE.test(token)) return null;
-  try { return JSON.parse(await readFile(path.join(tmp(), `${token}.json`), 'utf8')) as { name: string; size: number }; } catch { return null; }
+  await unlink(bin(token)).catch(() => {});
 }
 
 async function isPdf(token: string) {
@@ -130,7 +124,7 @@ export type Rendered = { buf: Buffer; w: number; h: number };
 
 /** The chosen pages of one upload, each brought to PAGE_WIDTH. The file is opened once for all of them. */
 export async function renderPages(token: string, pages: number[]): Promise<Rendered[]> {
-  if (!(await readMeta(token))) throw new UploadError(404, 'That upload is no longer available. Add the file again.');
+  if (!TOKEN_RE.test(token) || !(await stat(bin(token)).catch(() => null))) throw new UploadError(404, 'That upload is no longer available. Add the file again.');
   if (!(await isPdf(token))) {
     const { data, info } = await sharp(bin(token), { limitInputPixels: 400_000_000 }).rotate()
       .resize({ width: PAGE_WIDTH, height: MAX_PAGE_HEIGHT, fit: 'inside', withoutEnlargement: true }).flatten({ background: '#ffffff' }).jpeg({ quality: 85 }).toBuffer({ resolveWithObject: true });
