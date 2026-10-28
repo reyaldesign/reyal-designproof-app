@@ -79,7 +79,7 @@ export async function importCsv(_: FormState, f: FormData): Promise<FormState> {
   if (file.size > 2 * 1024 * 1024) return { error: 'That file is over 2 MB.' };
   const rows = parseCsv(await file.text());
   const head = (rows.shift() ?? []).map((h) => h.trim().toLowerCase());
-  const col = Object.fromEntries(FIELDS.map((x) => [x.key, head.indexOf(x.csv.toLowerCase())])) as Record<FieldKey, number>;
+  const col = Object.fromEntries(FIELDS.map((x) => [x.key, head.indexOf(x.label.toLowerCase())])) as Record<FieldKey, number>;
   if (col.clientName < 0 || col.url < 0) return { error: 'The first row must be the column names, including Client Name and Website Link.' };
 
   const have = await db.website.findMany({ select: { url: true, clientName: true } });

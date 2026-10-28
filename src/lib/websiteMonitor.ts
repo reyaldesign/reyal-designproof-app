@@ -1,5 +1,5 @@
 import { db } from './db';
-import { CHECK_EVERY_MIN, KEEP_DAYS, MONITORED, type Stat } from './websitesShared';
+import { CHECK_EVERY_MIN, KEEP_DAYS, isMonitored, type Stat } from './websitesShared';
 
 const TIMEOUT_MS = 15_000;
 const PARALLEL = 5;
@@ -28,7 +28,8 @@ export async function checkSite(url: string): Promise<CheckResult> {
 
 /** Checks the given sites (or every Live one) and stores each result. */
 export async function runChecks(ids?: string[]) {
-  const sites = await db.website.findMany({ where: { status: MONITORED, url: { not: '' }, ...(ids ? { id: { in: ids } } : {}) }, select: { id: true, url: true } });
+  const all = await db.website.findMany({ where: ids ? { id: { in: ids } } : {}, select: { id: true, url: true, status: true } });
+  const sites = all.filter(isMonitored); // the same rule the page uses, so Live in any letter case is checked
   const queue = [...sites];
   await Promise.all(Array.from({ length: Math.min(PARALLEL, queue.length) }, async () => {
     for (let s = queue.shift(); s; s = queue.shift()) {
@@ -56,7 +57,7 @@ export function startMonitor() {
 }
 
 // ----- numbers for the screens -----
-export type SiteStats = { last?: { at: Date; ok: boolean; ms: number | null; code: number | null; error: string | null }; d1?: Stat; d7?: Stat; d30?: Stat };
+export type SiteStats = { last?: { at: Date; ok: boolean; error: string | null }; d1?: Stat; d7?: Stat; d30?: Stat };
 
 /** Latest result and 24 hour, 7 day and 30 day uptime for every site, in three small queries. */
 export async function loadStats(): Promise<Map<string, SiteStats>> {
@@ -72,8 +73,8 @@ export async function loadStats(): Promise<Map<string, SiteStats>> {
       if (r.ok) s.up += r._count._all;
     }
   }
-  const latest = await db.websiteCheck.findMany({ orderBy: { at: 'desc' }, distinct: ['websiteId'], select: { websiteId: true, at: true, ok: true, ms: true, code: true, error: true } });
-  for (const l of latest) entry(l.websiteId).last = { at: l.at, ok: l.ok, ms: l.ms, code: l.code, error: l.error };
+  const latest = await db.websiteCheck.findMany({ orderBy: { at: 'desc' }, distinct: ['websiteId'], select: { websiteId: true, at: true, ok: true, error: true } });
+  for (const l of latest) entry(l.websiteId).last = { at: l.at, ok: l.ok, error: l.error };
   return out;
 }
 

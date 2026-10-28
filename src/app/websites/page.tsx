@@ -3,8 +3,7 @@ import { loadStats, loadStrips } from '@/lib/websiteMonitor';
 import { FIELDS, isMonitored, pct } from '@/lib/websitesShared';
 import WebsitesApp, { type Row } from './WebsitesApp';
 
-export default async function WebsitesPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
-  const { edit } = await searchParams;
+export default async function WebsitesPage() {
   const [sites, stats, strips] = await Promise.all([db.website.findMany({ orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] }), loadStats(), loadStrips()]);
   const days = Array.from({ length: 30 }, (_, i) => new Date(Date.now() - (29 - i) * 864e5).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
   const rows: Row[] = sites.map((s) => {
@@ -23,5 +22,5 @@ export default async function WebsitesPage({ searchParams }: { searchParams: Pro
   // Suggestions for each dropdown field: the usual values plus whatever is already in the list.
   const options: Record<string, string[]> = {};
   for (const f of FIELDS) if ('list' in f) options[f.key] = [...new Set([...f.list, ...sites.map((s) => (s as unknown as Record<string, string>)[f.key]).filter(Boolean)])];
-  return <WebsitesApp rows={rows} days={days} options={options} editId={edit} />;
+  return <WebsitesApp rows={rows} days={days} options={options} />;
 }

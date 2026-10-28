@@ -136,7 +136,7 @@ function SiteView({ row: r, days, detail, rechecking, onCheck, onEdit, onClose }
       <h3 className="ws-h">Details</h3>
       <div className="card">
         <dl className="ws-dl">
-          {FIELDS.filter((f) => DETAILS.includes(f.key)).map((f) => <div key={f.key}><dt>{f.label}</dt><dd><Cell field={f.key} v={r[f.key]} /></dd></div>)}
+          {FIELDS.slice(4).map((f) => <div key={f.key}><dt>{f.label}</dt><dd><Cell field={f.key} v={r[f.key]} /></dd></div>)}
         </dl>
       </div>
 
@@ -188,9 +188,7 @@ function SiteView({ row: r, days, detail, rechecking, onCheck, onEdit, onClose }
   );
 }
 
-const DETAILS: FieldKey[] = ['captcha', 'backup', 'desktopStatus', 'mobileStatus', 'seo', 'formSubmission', 'emailUsed'];
-
-export default function WebsitesApp({ rows, days, options, editId }: { rows: Row[]; days: string[]; options: Record<string, string[]>; editId?: string }) {
+export default function WebsitesApp({ rows, days, options }: { rows: Row[]; days: string[]; options: Record<string, string[]> }) {
   const router = useRouter();
   const [q, setQ] = useState('');
   const [status, setStatus] = useState(() => (rows.some((r) => r.status === 'Live') ? 'Live' : '')); // the page opens on the Live sites; pick another status, or All statuses, to see the rest
@@ -199,7 +197,7 @@ export default function WebsitesApp({ rows, days, options, editId }: { rows: Row
   const [viewId, setViewId] = useState<string | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [rechecking, setRechecking] = useState(false);
-  const [editing, setEditing] = useState<Row | 'new' | null>(() => rows.find((r) => r.id === editId) ?? null);
+  const [editing, setEditing] = useState<Row | 'new' | null>(null);
   const [importing, setImporting] = useState(false);
   const [checking, setChecking] = useState(false);
   const dlg = useRef<HTMLDialogElement>(null);

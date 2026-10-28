@@ -5,17 +5,17 @@ export const KEEP_DAYS = 90; // how long check history is kept
 
 /** The columns, in the order of the team's sheet. `list` fields offer the values already in use as suggestions, and accept new ones. */
 export const FIELDS = [
-  { key: 'clientName', label: 'Client Name', csv: 'Client Name' },
-  { key: 'url', label: 'Website Link', csv: 'Website Link' },
-  { key: 'status', label: 'Status', csv: 'Status', list: ['Live', 'In Progress', 'Forward Only', 'For Transfer', 'Not live', 'Discontinued'] },
-  { key: 'server', label: 'Server Used', csv: 'Server Used', list: ['VPS54387 Enterprise', 'VPS53108 Professional', 'Client Hosting', 'Namecheap Server', 'Shopify', 'N/A'] },
-  { key: 'captcha', label: 'Forms Captcha V3', csv: 'Forms Captcha V3', list: ['Active (Forms/NL)', 'Active', 'Not Active', 'Shopify Built In', 'N/A'] },
-  { key: 'backup', label: 'Backup Enabled', csv: 'Backup Enabled', list: ['Active', 'N/A'] },
-  { key: 'desktopStatus', label: 'Desktop Status', csv: 'Desktop Status', list: ['Good'] },
-  { key: 'mobileStatus', label: 'Mobile/Tablet Status', csv: 'Mobile/Tablet Status', list: ['Good'] },
-  { key: 'seo', label: 'SEO', csv: 'SEO', list: ['Running', 'Google Site Kit', 'Google Site Kit Only', 'Not Started', 'N/A'] },
-  { key: 'formSubmission', label: 'Form Submission', csv: 'Form Submission', list: ['Ok', 'To check'] },
-  { key: 'emailUsed', label: 'E-mail Used', csv: 'E-mail Used' },
+  { key: 'clientName', label: 'Client Name' },
+  { key: 'url', label: 'Website Link' },
+  { key: 'status', label: 'Status', list: ['Live', 'In Progress', 'Forward Only', 'For Transfer', 'Not live', 'Discontinued'] },
+  { key: 'server', label: 'Server Used', list: ['VPS54387 Enterprise', 'VPS53108 Professional', 'Client Hosting', 'Namecheap Server', 'Shopify', 'N/A'] },
+  { key: 'captcha', label: 'Forms Captcha V3', list: ['Active (Forms/NL)', 'Active', 'Not Active', 'Shopify Built In', 'N/A'] },
+  { key: 'backup', label: 'Backup Enabled', list: ['Active', 'N/A'] },
+  { key: 'desktopStatus', label: 'Desktop Status', list: ['Good'] },
+  { key: 'mobileStatus', label: 'Mobile/Tablet Status', list: ['Good'] },
+  { key: 'seo', label: 'SEO', list: ['Running', 'Google Site Kit', 'Google Site Kit Only', 'Not Started', 'N/A'] },
+  { key: 'formSubmission', label: 'Form Submission', list: ['Ok', 'To check'] },
+  { key: 'emailUsed', label: 'E-mail Used' },
 ] as const;
 export type FieldKey = (typeof FIELDS)[number]['key'];
 export type SiteFields = Record<FieldKey, string>;
