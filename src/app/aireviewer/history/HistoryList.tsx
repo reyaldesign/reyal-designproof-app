@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import SubmitButton from '@/components/SubmitButton';
-import { AI_KINDS, VERDICT_LABEL, type Kind, type Verdict } from '@/lib/aiShared';
+import { AI_KINDS, type Kind, type Verdict } from '@/lib/aiShared';
 import AiNav from '../AiNav';
 import ClientIcon from '../ClientIcon';
 import { useLang } from '../Lang';
@@ -73,7 +73,7 @@ export default function HistoryList({ rows }: { rows: HistoryRow[] }) {
           <div className="section-title">{day}</div>
           <div className="ai-rows">
             {list.map((r) => {
-              const v = { ...VERDICT_LABEL[r.verdict], ...verdict(r.verdict) };
+              const v = verdict(r.verdict);
               return (
                 <button key={r.id} className="ai-row" onClick={() => setOpen(r.id)}>
                   <span className="ai-rthumb"><img src={`/aireviewer/img/${r.imageFile}?w=320`} alt="" loading="lazy" /></span>

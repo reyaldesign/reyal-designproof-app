@@ -9,9 +9,6 @@ export function timeAgo(d: Date, now = new Date()) {
   return 'just now';
 }
 
-/** Short status letter and colour class for the small circles on cards. */
-export const statusDot = (status: string) => ({ letter: status.charAt(0), cls: `kb-${status.split(' ')[0]}` });
-
 /** Thumbnail URL for a stored image: a small version, never the full-size proof. */
 export const thumb = (file: string, w: 320 | 640 | 1280 = 640) => `/files/${file}?w=${w}`;
 

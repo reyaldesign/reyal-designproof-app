@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AI_IMAGE_TYPES, AI_KINDS, GENERAL, AI_MAX_IMAGE_MB, KIND_RULES, VERDICT_LABEL, isKind, type Kind, type Verdict } from '@/lib/aiShared';
+import { AI_IMAGE_TYPES, AI_KINDS, GENERAL, AI_MAX_IMAGE_MB, KIND_RULES, isKind, type Kind, type Verdict } from '@/lib/aiShared';
 import AiNav from './AiNav';
 import AiStatus from './AiStatus';
 import ClientIcon from './ClientIcon';
@@ -10,7 +10,7 @@ import ReviewDetail from './ReviewDetail';
 import type { AiClientLite, ReviewView } from './types';
 
 // Website and Food Menu files are uploaded first (they can be big PDFs), then their pages are picked and reviewed as one.
-type Source = { token: string; name: string; type: 'pdf' | 'image'; pages: number; thumbs: string[]; capped: boolean; size: number };
+type Source = { token: string; name: string; pages: number; thumbs: string[]; capped: boolean };
 type Pick = { si: number; page: number };
 type Item = {
   id: string; file: File; url: string; status: 'pending' | 'uploading' | 'reviewing' | 'done' | 'error'; error?: string;
@@ -119,7 +119,6 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
     const fail = (error: string) => patch(item.id, { status: 'error', error, preError: true });
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `/api/aireviewer/upload?kind=${kind}`);
-    xhr.setRequestHeader('x-filename', encodeURIComponent(item.file.name));
     xhr.upload.onprogress = (e) => { if (e.lengthComputable) patch(item.id, { progress: Math.round((e.loaded / e.total) * 100) }); };
     xhr.onerror = () => fail('Could not reach the server. Check your connection and try again.');
     xhr.onload = () => {
@@ -127,7 +126,7 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
       let data: (Source & { error?: string }) | null = null;
       try { data = JSON.parse(xhr.responseText); } catch { /* not JSON */ }
       if (xhr.status !== 200 || !data?.token) return fail(data?.error || 'That file could not be read.');
-      const src: Source = { token: data.token, name: item.file.name, type: data.type, pages: data.pages, thumbs: data.thumbs, capped: data.capped, size: data.size };
+      const src: Source = { token: data.token, name: item.file.name, pages: data.pages, thumbs: data.thumbs, capped: data.capped };
       const picks = Array.from({ length: Math.min(src.pages, rules.maxPages) }, (_, page) => ({ si: 0, page }));
       patch(item.id, { status: 'pending', url: src.thumbs[0] ?? BLANK, set: { sources: [src], picks }, progress: undefined });
     };
@@ -325,7 +324,7 @@ export default function ReviewApp({ clients, keyConfigured, model, price }: { cl
 
           <div className="ai-cards">
             {shown.map((i) => {
-              const v = i.review && { ...VERDICT_LABEL[i.review.verdict], ...verdict(i.review.verdict) };
+              const v = i.review && verdict(i.review.verdict);
               const open = i.status === 'pending' || i.status === 'error';
               return (
                 <div key={i.id} className="ai-tilewrap">

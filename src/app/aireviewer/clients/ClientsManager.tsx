@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef, useState } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import SubmitButton from '@/components/SubmitButton';
 import { AI_KINDS, type Kind } from '@/lib/aiShared';
 import AiNav from '../AiNav';
@@ -61,25 +61,23 @@ export default function ClientsManager({ clients, selectedId }: { clients: AiCli
       <div className="ai-clients">
         <aside className="ai-clist-side">
           <button className="btn btn-primary" onClick={() => dlg.current?.showModal()}>{t('+ Add client')}</button>
-          <span className="muted ai-sidelabel">{t('Shared lists')}</span>
-          {shared.map((c) => (
-            <Link key={c.id} href={`/aireviewer/clients?c=${c.id}`} className={`ai-cside ${client?.id === c.id ? 'on' : ''}`}>
-              <ClientIcon name={c.name} logo={null} size={36} />
-              <span className="ai-cside-t">
-                <b>{t(c.name)}</b>
-                <span className="muted">{t('{n} types · {m} criteria', { n: c.categories.length, m: c.base.length + c.categories.reduce((n, x) => n + x.criteria.length, 0) })}</span>
-              </span>
-            </Link>
-          ))}
-          <span className="muted ai-sidelabel">{t('Clients')}</span>
-          {own.map((c) => (
-            <Link key={c.id} href={`/aireviewer/clients?c=${c.id}`} className={`ai-cside ${client?.id === c.id ? 'on' : ''}`}>
-              <ClientIcon name={c.name} logo={c.logo} size={36} />
-              <span className="ai-cside-t">
-                <b>{c.name}</b>
-                <span className="muted">{t('{n} types · {m} criteria', { n: c.categories.filter((x) => x.kind === 'social').length, m: c.base.filter((x) => x.kind === 'social').length + c.categories.filter((x) => x.kind === 'social').reduce((n, x) => n + x.criteria.length, 0) })}</span>
-              </span>
-            </Link>
+          {([['Shared lists', shared], ['Clients', own]] as const).map(([label, list]) => (
+            <Fragment key={label}>
+              <span className="muted ai-sidelabel">{t(label)}</span>
+              {list.map((c) => {
+                const k = c.general ?? 'social'; // a client has Social media lists; a shared list has its own type
+                const cats = c.categories.filter((x) => x.kind === k);
+                return (
+                  <Link key={c.id} href={`/aireviewer/clients?c=${c.id}`} className={`ai-cside ${client?.id === c.id ? 'on' : ''}`}>
+                    <ClientIcon name={c.name} logo={c.logo} size={36} />
+                    <span className="ai-cside-t">
+                      <b>{t(c.name)}</b>
+                      <span className="muted">{t('{n} types · {m} criteria', { n: cats.length, m: c.base.filter((x) => x.kind === k).length + cats.reduce((n, x) => n + x.criteria.length, 0) })}</span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </Fragment>
           ))}
           {!own.length && <p className="muted">{t('No clients yet.')}</p>}
         </aside>

@@ -8,4 +8,3 @@ export const PROOF_TYPES = [
 
 export type ProofType = (typeof PROOF_TYPES)[number]['value'];
 export const isProofType = (v: string): v is ProofType => PROOF_TYPES.some((t) => t.value === v);
-export const typeInfo = (v: string | null | undefined) => PROOF_TYPES.find((t) => t.value === v) ?? null;

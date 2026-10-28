@@ -7,6 +7,5 @@ export const STATUS = {
 } as const;
 
 export type StatusKey = keyof typeof STATUS;
-export const statusOf = (s: string) => STATUS[s as StatusKey] ?? STATUS.Draft;
 // Order used when summarising a client's proofs: what needs the team first.
 export const STATUS_ORDER: StatusKey[] = ['Feedback Received', 'Sent', 'Draft', 'Approved'];

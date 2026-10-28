@@ -1,6 +1,6 @@
 // English and Spanish for the AI Reviewer screens. Browser-safe: nothing server-only in this file.
 // English is the key. A phrase with no Spanish entry shows in English, so nothing ever goes blank.
-import type { Verdict } from './aiShared';
+import { VERDICT_LABEL, type Verdict } from './aiShared';
 
 export type Lang = 'en' | 'es';
 export const LANG_COOKIE = 'ai_lang';
@@ -232,11 +232,6 @@ export function serverMsg(lang: Lang, s: string) {
   return s;
 }
 
-const VERDICT_EN: Record<Verdict, { label: string; short: string }> = {
-  approved: { label: 'Ready for proofing', short: 'Ready' },
-  needs_review: { label: 'Needs revisions', short: 'Needs revisions' },
-  rejected: { label: 'Fails', short: 'Fails' },
-};
-export const verdictText = (lang: Lang, v: Verdict) => ({ label: tr(lang, VERDICT_EN[v].label), short: tr(lang, VERDICT_EN[v].short) });
+export const verdictText = (lang: Lang, v: Verdict) => ({ ...VERDICT_LABEL[v], label: tr(lang, VERDICT_LABEL[v].label), short: tr(lang, VERDICT_LABEL[v].short) });
 
 export const locale = (lang: Lang) => (lang === 'es' ? 'es-US' : 'en-US');
