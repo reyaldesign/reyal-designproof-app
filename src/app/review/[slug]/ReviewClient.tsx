@@ -83,6 +83,8 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   const [figErr, setFigErr] = useState('');
   const [pager, setPager] = useState(false); // the list of screens, opened from the corner of the design
   const [tourOpen, setTourOpen] = useState(false);
+  const [carry, setCarry] = useState(false); // the "Desktop comments carry over" message on Phone and Tablet
+  const [carryNever, setCarryNever] = useState(false);
   const [small, setSmall] = useState(false); // a phone or other small screen: asked to use a laptop or desktop instead
   const [smallGone, setSmallGone] = useState(false);
   // Which screens of a Figma proof the person has looked at: 1 = opened, 2 = opened and scrolled to the bottom. Kept per version in this browser.
@@ -290,8 +292,18 @@ export default function ReviewClient({ slug, title, client, status, approval, la
       .catch(() => {});
     return () => { on = false; };
   }, [figNode, figDevice, figMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  const deskIds = new Set(images.filter((m) => m.device === 'desktop').map((m) => m.id));
+  const desktopCount = roots.filter((c) => c.imageId && deskIds.has(c.imageId) && c.x != null).length + drafts.filter((d) => d.text && d.imageId && deskIds.has(d.imageId)).length;
+  // The first time in a visit that Phone or Tablet is opened with Desktop comments in place, say plainly that those changes carry over.
+  function maybeCarry(d: Device) {
+    if (d === 'desktop' || !desktopCount || tourOpen || store.get('rp:carry') === 'never') return;
+    try { if (sessionStorage.getItem(`rp:carry:${current.id}`)) return; sessionStorage.setItem(`rp:carry:${current.id}`, '1'); } catch { /* storage unavailable: the banner still shows */ }
+    setCarryNever(false);
+    setCarry(true);
+  }
   function figSize(d: Device) {
     setFigDevice(d); setFigNode(null); setFigErr(''); setPop(null);
+    maybeCarry(d);
     if (figMode === 'comment') void showFrame(figma?.links[d]?.start ?? null, d);
   }
   // Open on the first size's starting screen, ready to comment.
@@ -364,7 +376,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   const tourSteps: TourStep[] = [
     { target: '', title: 'Welcome to your design review', body: 'This short tour shows how to review. Please use a laptop or desktop, and look at each size: Desktop, Phone and Tablet.' },
     { target: '[data-tour="version"]', place: 'bottom', title: 'Which version you are reviewing', body: `You are reviewing ${versionName}${isLatest ? ', the latest version' : ', which is an older version. Open the latest one before you comment'}. Check this line each time you open your link, so you know you are on the right round.` },
-    { target: '[data-tour="sizes"]', place: 'bottom', title: 'Review every size', body: 'Your design comes in three sizes. Switch between Desktop, Phone and Tablet here and review each one. For the best view, use a laptop or desktop.' },
+    { target: '[data-tour="sizes"]', place: 'bottom', title: 'Review every size', body: 'Your design comes in three sizes. Changes you ask for on Desktop are applied to Phone and Tablet too, so on those sizes only comment on what looks different. Switch between Desktop, Phone and Tablet here and review each one. For the best view, use a laptop or desktop.' },
     { target: '[data-tour="design"]', place: 'left', title: 'Click to leave a comment', body: 'Click anywhere on the design to pin a note. Scroll to see the whole page.' },
     { target: '[data-tour="pager"]', place: 'top', title: 'Move between pages', body: 'Each size has several pages. Use the arrows, or open the list to jump to a page.' },
     { target: '[data-tour="progress"]', place: 'left', title: 'Review every page', body: 'We keep count of the pages you have been through. Open each page and scroll to the bottom. Before you send, we check that no page was missed.' },
@@ -582,6 +594,11 @@ export default function ReviewClient({ slug, title, client, status, approval, la
                 {figDevices.map((d) => <button key={d.key} className={figDevice === d.key ? 'on' : ''} onClick={() => figSize(d.key)}>{d.label}</button>)}
               </div>
               <span className="fg-note"><b>Please review on a laptop or desktop.</b> Check all three sizes: Desktop, Phone and Tablet.</span>
+              {figDevice !== 'desktop' && (
+                <div className="fg-carry" role="note">
+                  <b>{desktopCount ? `Your Desktop comments (${desktopCount}) will be applied to this size too.` : 'Changes you ask for on Desktop will also be applied to this size.'}</b> Only add notes here for things that look different at this size.
+                </div>
+              )}
               {figErr && <span className="rv-err" role="alert" style={{ margin: 0 }}>{figErr}</span>}
             </div>
           )}
@@ -745,6 +762,23 @@ export default function ReviewClient({ slug, title, client, status, approval, la
           )}
         </div>
       </div>
+
+      {carry && (
+        <div className="rv-overlay" role="dialog" aria-modal="true" aria-labelledby="carry-h" onKeyDown={(e) => { if (e.key === 'Escape') setCarry(false); }}>
+          <div className="rv-modal">
+            <h2 id="carry-h">Your Desktop comments carry over</h2>
+            <p>The {desktopCount === 1 ? 'change' : `${desktopCount} changes`} you asked for on Desktop will also be applied to {figDevice === 'mobile' ? 'the Phone' : 'the Tablet'} size. Please only comment here on things that look wrong at this size, such as spacing, text wrapping or images that are cut off.</p>
+            <label className="rv-check">
+              <input type="checkbox" checked={carryNever} onChange={(e) => setCarryNever(e.target.checked)} />
+              <i>{carryNever ? '✓' : ''}</i>
+              Don&apos;t show this message again
+            </label>
+            <div className="rv-actions">
+              <button className="rv-primary" autoFocus onClick={() => { if (carryNever) store.set('rp:carry', 'never'); setCarry(false); }}>Got it</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmSend && (
         <div className="rv-overlay" role="dialog" aria-modal="true" aria-labelledby="rev-h" onKeyDown={(e) => { if (e.key === 'Escape' && !busy) setConfirmSend(false); }}>
