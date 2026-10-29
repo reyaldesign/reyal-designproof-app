@@ -6,6 +6,7 @@ export const TOOLS = [
   { key: 'AI_CRITERIA', label: 'AI criteria', d: "Edit each client's review criteria", href: '/aireviewer/clients' },
   { key: 'CLICKUP', label: 'ClickUp', d: 'See and update ClickUp tasks on a board', href: '/clickup' },
   { key: 'WEBSITES', label: 'Websites', d: 'Track live websites and their uptime', href: '/websites' },
+  { key: 'COSTS', label: 'Stack costs', d: 'Software, hosting and plugin costs and renewals', href: '/costs' },
   { key: 'TEAM', label: 'Team & access', d: 'Manage roles and see sign-ins', href: '/admin/team' },
 ] as const;
 export type Tool = (typeof TOOLS)[number]['key'];
