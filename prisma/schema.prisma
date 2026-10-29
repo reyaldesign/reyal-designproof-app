@@ -284,3 +284,19 @@ model WebsiteCheck {
   @@index([websiteId, at])
   @@index([at])
 }
+
+// Software, plugins, hosting and domains the studio pays for. Cost is for one whole term; renewal is a YYYY-MM-DD date.
+model StackCost {
+  id        String   @id @default(cuid())
+  name      String
+  vendor    String   @default("")
+  category  String   @default("Plugin")
+  cost      Float?
+  term      Int      @default(1)
+  termUnit  String   @default("yr")
+  renewal   String   @default("")
+  plan      String   @default("")
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
