@@ -7,8 +7,8 @@ import FigmaStage from '@/components/FigmaStage';
 import Tour, { type TourStep } from '@/components/Tour';
 import LiveStage, { type LiveHandle, type LivePick, type LivePin } from '@/components/LiveStage';
 import { DEVICES, pathOf, type Device } from '@/lib/live';
-import '../figma-review.css';
-import { ApproveDialog, FinalRoundDialog, GuardDialog, PagesList, ProgressCard, RoundBar, SendDialog, SuccessScreen, type PageState } from './FigmaParts';
+import '../review-ui.css';
+import { ApproveDialog, FinalRoundDialog, GuardDialog, PagesList, ProgressCard, RoundBar, SendDialog, SuccessScreen, type PageState } from './ReviewParts';
 
 type C = {
   id: string; imageId: string | null; parentId: string | null; author: string; text: string;
@@ -55,8 +55,6 @@ function Pin({ n, kind, x, y, scale, onClick }: { n: number | string; kind: 'ope
 export default function ReviewClient({ slug, title, client, status, approval, latest, revisions, versions, current, images: savedImages, comments, live, figma, figmaMissing }: Props) {
   const router = useRouter();
   const draftKey = `rp:draft:${current.id}`;
-  const [tab, setTab] = useState<'send' | 'sent'>('send');
-  const [guideHidden, setGuideHidden] = useState<boolean | null>(null);
   const [lastSent, setLastSent] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
   const [terms, setTerms] = useState(false);
@@ -121,6 +119,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   const pinned = drafts.filter((d) => d.x != null && (d.text || d.tid === pop?.tid));
   const draftPin = (tid: string) => maxPin + pinned.findIndex((d) => d.tid === tid) + 1;
   const isLatest = current.number === latest;
+  const noun = figma || live ? 'website' : 'design'; // what the client is reviewing, in their words
   const versionName = `Version ${current.number}${current.label && !/^(v|version)\s*\d+$/i.test(current.label.trim()) ? ` · ${current.label.trim()}` : ''}`;
   const waiting = status === 'Feedback Received' && isLatest;
   const pill = locked ? { cls: 'ok', long: 'Approved', short: 'Approved' }
@@ -129,7 +128,6 @@ export default function ReviewClient({ slug, title, client, status, approval, la
 
   useEffect(() => {
     setName(store.get('rp:name'));
-    setGuideHidden(store.get('rp:guide') === 'hidden');
     try { setDrafts(JSON.parse(store.get(draftKey) || '[]')); } catch { setDrafts([]); }
     setReady(true);
   }, [draftKey]);
@@ -201,7 +199,6 @@ export default function ReviewClient({ slug, title, client, status, approval, la
     setPopText('');
     setPopErr('');
     setLastSent(null);
-    setTab('send');
     setPanelTab('comments');
     setPop({ tid, left: e.clientX - s.left, top: e.clientY - s.top, flip: x > 55 });
   }
@@ -262,7 +259,10 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   // A page is done when it has a comment or was marked Looks good. Only Desktop counts: Phone and Tablet are for previewing.
   const primary = (figma?.links.desktop ? 'desktop' : figDevices[0]?.key ?? 'desktop') as Device;
   const draftsOn = (frameId: string) => { const m = images.find((i) => i.frameId === frameId); return m ? drafts.filter((d) => d.text && d.imageId === m.id && d.x != null).length : 0; };
-  const pageStates: PageState[] = (figma?.links[primary]?.pages ?? []).map((p) => ({ id: p.id, name: shortName(p.name) || 'Page', comments: draftsOn(p.id), good: marks.includes(p.id) }));
+  const pageStates: PageState[] = figma
+    ? (figma.links[primary]?.pages ?? []).map((p) => ({ id: p.id, name: shortName(p.name) || 'Page', comments: draftsOn(p.id), good: marks.includes(p.id) }))
+    : live ? [] : images.map((m, n) => ({ id: m.id, name: `Page ${n + 1}`, comments: drafts.filter((d) => d.text && d.imageId === m.id && d.x != null).length, good: marks.includes(m.id), thumb: m.file }));
+  const hasPages = pageStates.length > 0;
   const doneCount = pageStates.filter((p) => p.comments > 0 || p.good).length;
   const openPages = pageStates.filter((p) => p.comments === 0 && !p.good);
   // Screens still being fetched from Figma: look again every few seconds until they have all arrived.
@@ -311,7 +311,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
     setPopText('');
     setPopErr('');
     setLastSent(null);
-    setTab('send');
+    setPanelTab('comments');
     const right = p.at.left + p.at.width + 330 < stage.w;
     setPop({ tid, left: right ? p.at.left + p.at.width - 8 : p.at.left + 8, top: p.at.top, flip: !right });
     liveRef.current?.capture(tid, p.rect);
@@ -338,10 +338,10 @@ export default function ReviewClient({ slug, title, client, status, approval, la
     setBusy(true); setErr('');
     store.set('rp:name', name);
     const note = whole.trim();
-    const ordered = [...pinned, ...drafts.filter((d) => d.x == null), ...(figma && real(note) ? [{ tid: uid(), imageId: null, x: null, y: null, text: note } as Draft] : [])].filter((d) => d.text);
+    const ordered = [...pinned, ...drafts.filter((d) => d.x == null), ...(real(note) ? [{ tid: uid(), imageId: null, x: null, y: null, text: note } as Draft] : [])].filter((d) => d.text);
     const r = await fetch(`/api/review/${slug}/send`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ versionId: current.id, name, comments: ordered.map((d) => (d.live ? { text: d.text, x: d.x, y: d.y, ...d.live, rect: undefined } : d)), confirmed: true, marks: figma ? pageStates.filter((p) => p.good && !p.comments).map((p) => ({ id: p.id, name: p.name, device: primary })) : undefined }),
+      body: JSON.stringify({ versionId: current.id, name, comments: ordered.map((d) => (d.live ? { text: d.text, x: d.x, y: d.y, ...d.live, rect: undefined } : d)), confirmed: true, marks: hasPages ? pageStates.filter((p) => p.good && !p.comments).map((p) => ({ id: p.id, name: p.name, device: figma ? primary : 'desktop' })) : undefined }),
     }).catch(() => null);
     setBusy(false);
     setConfirmSend(false);
@@ -353,12 +353,12 @@ export default function ReviewClient({ slug, title, client, status, approval, la
     setMarks([]);
     setWhole('');
     setLastSent(`Revision ${nextRev} sent · ${plural(ordered.length)}`);
-    setTab('sent');
-    if (figma) setSuccess({ kind: 'sent', comments: ordered.length, pages: new Set(ordered.filter((d) => d.imageId).map((d) => d.imageId)).size, round: nextRev });
+    setSuccess({ kind: 'sent', comments: ordered.length, pages: new Set(ordered.filter((d) => d.imageId).map((d) => d.imageId)).size, round: nextRev });
     router.refresh();
   }
   // Sending asks first when some pages have nothing on them, and never blocks.
-  function startSend() { setWhole(''); if (figma && openPages.length) setGuard(true); else setConfirmSend(true); }
+  function startSend() { setWhole(''); if (hasPages && openPages.length) setGuard(true); else setConfirmSend(true); }
+  const showSent = () => { setPanelTab('comments'); setSentOpen(true); };
   const toggleGood = (id: string) => setMarks((m) => (m.includes(id) ? m.filter((x) => x !== id) : [...m, id]));
   function openTerms() {
     setAname(name);
@@ -379,21 +379,21 @@ export default function ReviewClient({ slug, title, client, status, approval, la
     setDrafts([]); // unsent comments are discarded when a version is approved
     setPop(null);
     setTerms(false);
-    if (figma) setSuccess({ kind: 'approved', comments: 0, pages: 0, round: revisions.used });
+    setSuccess({ kind: 'approved', comments: 0, pages: 0, round: revisions.used });
     router.refresh();
   }
   // The guided tour of a Figma proof: five steps, shown the first time in a browser. Quick tour in the header plays it again.
   const tourSteps: TourStep[] = [
-    { target: '', next: 'Start tour', title: 'Welcome to your website review', body: `You're looking at ${versionName}${isLatest ? ', the latest' : ''}. Here's a quick look at how it works. Best viewed on a laptop or desktop.` },
-    { target: '[data-tour="sizes"]', place: 'bottom', title: 'Check all three sizes', body: 'Switch between Desktop, Phone and Tablet. Comments on Desktop apply to the other sizes too, so only comment on Desktop.' },
-    { target: '[data-tour="design"]', place: 'inside', title: 'Click to leave a comment', body: 'Click anywhere on the page to leave a comment. Say what you\'d like changed. Your comments collect on the right.' },
-    { target: '[data-tour="pager"]', place: 'bottom', title: 'Go through every page', body: 'Use the arrows to change pages. Comment on any page that needs a change, or tap Looks good. We keep count so nothing gets missed.' },
-    { target: '[data-tour="actions"]', place: 'left', next: 'Start reviewing', title: 'Send or approve', body: 'When you\'re done, send your comments as one revision. If the website is final, approve it instead. Only the latest version can be approved.' },
+    { target: '', next: 'Start tour', title: `Welcome to your ${noun} review`, body: `You're looking at ${versionName}${isLatest ? ', the latest' : ''}. Here's a quick look at how it works. Best viewed on a laptop or desktop.` },
+    ...(figma ? [{ target: '[data-tour="sizes"]', place: 'bottom' as const, title: 'Check all three sizes', body: 'Switch between Desktop, Phone and Tablet. Comments on Desktop apply to the other sizes too, so only comment on Desktop.' }] : []),
+    { target: '[data-tour="design"]', place: 'inside', title: 'Click to leave a comment', body: live ? 'Click anything on the site to leave a comment. Say what you\'d like changed. Your comments collect on the right.' : `Click anywhere on the ${figma ? 'page' : 'design'} to leave a comment. Say what you'd like changed. Your comments collect on the right.` },
+    ...(pageStates.length > 1 ? [{ target: '[data-tour="pager"]', place: 'bottom' as const, title: 'Go through every page', body: 'Use the arrows to change pages. Comment on any page that needs a change, or tap Looks good. We keep count so nothing gets missed.' }] : []),
+    { target: '[data-tour="actions"]', place: 'left', next: 'Start reviewing', title: 'Send or approve', body: `When you're done, send your comments as one revision. If the ${noun} is final, approve it instead. Only the latest version can be approved.` },
   ];
   useEffect(() => {
-    if (!figma || !ready) return;
+    if (!ready) return;
     if (!['seen', 'never'].includes(store.get('rp:tour:figma'))) { const t = setTimeout(() => setTourOpen(true), 900); return () => clearTimeout(t); }
-  }, [figma, ready]);
+  }, [ready]);
   const closeTour = (done: boolean) => {
     setTourOpen(false);
     store.set('rp:tour:figma', 'seen');
@@ -401,9 +401,8 @@ export default function ReviewClient({ slug, title, client, status, approval, la
   };
   // The first time the last round is opened, say so once.
   const roundNo = Math.min(nextRev, revisions.included);
-  const finalRound = !!figma && !locked && isLatest && !waiting && !outOfRevisions && revisions.included > 1 && nextRev >= revisions.included;
+  const finalRound = !locked && isLatest && !waiting && !outOfRevisions && revisions.included > 1 && nextRev >= revisions.included;
   useEffect(() => { if (finalRound && ready && store.get(`rp:final:${slug}:${nextRev}`) !== '1') setFinalIntro(true); }, [finalRound, ready, slug, nextRev]);
-  const dismissGuide = (hide: boolean) => { setGuideHidden(hide); store.set('rp:guide', hide ? 'hidden' : 'shown'); };
 
   const sentHere = roots.filter((c) => c.imageId === img?.id && c.x != null);
   const draftsHere = drafts.filter((d) => d.imageId === img?.id && d.text);
@@ -414,17 +413,8 @@ export default function ReviewClient({ slug, title, client, status, approval, la
     ...drafts.filter((d) => d.live && d.text && d.tid !== pop?.tid).map((d): LivePin => ({ id: d.tid, n: draftPin(d.tid), kind: 'draft', selector: d.live!.selector, rx: d.live!.rx, ry: d.live!.ry, x: d.x, y: d.y, href: d.live!.pageUrl, device: d.live!.device })),
     ...(newDraft?.live ? [{ id: newDraft.tid, n: draftPin(newDraft.tid), kind: 'new' as const, selector: newDraft.live.selector, rx: newDraft.live.rx, ry: newDraft.live.ry, x: newDraft.x, y: newDraft.y, href: newDraft.live.pageUrl, device: newDraft.live.device }] : []),
   ];
-  const segs = Array.from({ length: Math.min(revisions.included, 12) }, (_, k) => (k < revisions.used ? (outOfRevisions ? 'full' : 'used') : ''));
-  const revLabel = `${Math.min(revisions.used, revisions.included)} of ${revisions.included} revisions used`;
 
   // ----- pieces shared by the desktop panel and the mobile sheet -----
-  const tabs = (
-    <div className="rv-tabs" role="tablist">
-      {([['send', 'Ready to send', unsent], ['sent', 'Sent', roots.length]] as const).map(([k, label, n]) => (
-        <button key={k} role="tab" aria-selected={tab === k} className={`rv-tab ${tab === k ? 'on' : ''}`} onClick={() => setTab(k)}>{label}<span className="c">{n}</span></button>
-      ))}
-    </div>
-  );
 
   const sentCard = (c: C) => {
     const replies = comments.filter((r) => r.parentId === c.id);
@@ -437,7 +427,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
         <div className="meta">
           <span className={`rv-pinpill ${c.resolved ? 'done' : ''}`}>{c.pin ?? '•'}</span>
           <span className="who">{c.author}</span>
-          <span>{live ? (c.pageUrl ? `${pathOf(c.pageUrl)}${c.device ? ` · ${c.device}` : ''}` : 'General') : page >= 0 ? pageLabel(c.imageId) : figma ? 'Whole site' : 'General'} · {when(c.createdAt)}</span>
+          <span>{live ? (c.pageUrl ? `${pathOf(c.pageUrl)}${c.device ? ` · ${c.device}` : ''}` : 'General') : page >= 0 ? pageLabel(c.imageId) : live ? 'General' : 'Whole site'} · {when(c.createdAt)}</span>
           <span className={`rv-chip ${st.cls}`}>{st.label}</span>
         </div>
         {c.elementText && <span className="rv-where">On “{c.elementText.slice(0, 80)}”</span>}
@@ -460,22 +450,22 @@ export default function ReviewClient({ slug, title, client, status, approval, la
       )}
       {!unsent && !locked && (
         <div className="rv-empty">
-          <b>{lastSent && !figma ? 'All sent' : 'No comments yet'}</b>
-          <span>{lastSent && !figma ? 'Comments you add now go into the next revision.' : figma ? 'Click anywhere on the page to leave a comment.' : 'Click anywhere on the design to pin one.'}</span>
+          <b>No comments yet</b>
+          <span>{live ? 'Click anything on the site to leave a comment.' : `Click anywhere on the ${figma ? 'page' : 'design'} to leave a comment.`}</span>
         </div>
       )}
       {sendable.map((d) => (
         <div key={d.tid} className="rv-draft">
           <div className="meta">
-            <span className="rv-num">{d.x == null ? (figma ? 'W' : 'G') : draftPin(d.tid)}</span>
-            <span>{d.x == null ? (figma ? 'Whole site · not sent yet' : 'General · not sent') : d.live ? `${pathOf(d.live.pageUrl)} · ${d.live.device} · not sent` : `${pageLabel(d.imageId)} · not sent`}</span>
+            <span className="rv-num">{d.x == null ? (live ? 'G' : 'W') : draftPin(d.tid)}</span>
+            <span>{d.x == null ? (live ? 'General · not sent' : 'Whole site · not sent yet') : d.live ? `${pathOf(d.live.pageUrl)} · ${d.live.device} · not sent` : `${pageLabel(d.imageId)} · not sent`}</span>
             <button className="rm" onClick={() => drop(d.tid)} aria-label="Delete comment">Delete</button>
           </div>
           {d.live?.elementText && <span className="rv-where">On “{d.live.elementText.slice(0, 80)}”</span>}
           <span className="rv-text">{d.text}</span>
         </div>
       ))}
-      {!locked && !figma && (
+      {!locked && live && (
         <div className="rv-general">
           <input className="rv-pill-field" value={general} onChange={(e) => setGeneral(e.target.value)} placeholder="Add a general comment" aria-label="General comment" onKeyDown={(e) => { if (e.key === 'Enter') addGeneral(); }} />
           <button className="rv-ghost" onClick={addGeneral}>Add</button>
@@ -483,57 +473,22 @@ export default function ReviewClient({ slug, title, client, status, approval, la
       )}
     </>
   );
-  const list = tab === 'send' ? (
-    <div className="rv-list">{readyList}</div>
-  ) : (
-    <div className="rv-list">
-      {!roots.length && <div className="rv-empty"><b>Nothing sent yet</b><span>Comments you send show up here, with replies from Reyal Design.</span></div>}
-      {roots.map(sentCard)}
-    </div>
-  );
-
-  const foot = (
-    <div className="rv-foot">
-      {lastSent && (
-        <div className="rv-banner" role="status">
-          <b>{lastSent}</b>
-          <span>Reyal Design has been notified. You&apos;ll get an email when the next version is ready.</span>
-        </div>
-      )}
-      {!locked && (
-        <>
-          <div className="rv-meter">
-            <span>Revisions</span>
-            <span className="segs">{segs.map((s, k) => <span key={k} className={`seg ${s}`} />)}</span>
-            <span className={`lbl ${outOfRevisions ? 'full' : ''}`}>{revLabel}</span>
-          </div>
-          {err && <p className="rv-err">{err}</p>}
-          {outOfRevisions ? (
-            <div className="rv-warn">All {revisions.included} included revisions have been used. Contact Reyal Design to arrange more.</div>
-          ) : (
-            <button className="rv-send" data-tour="send" disabled={busy || !unsent} onClick={() => startSend()}>
-              {busy ? 'Sending…' : `Send revision ${nextRev}${unsent ? ` · ${plural(unsent)}` : ''}`}
-            </button>
-          )}
-          {canApprove && <button className="rv-approve" data-tour="approve" onClick={openTerms}><i />Approve v{current.number} as final</button>}
-        </>
-      )}
-    </div>
-  );
-
-  // ----- Figma website review: the panel on the right, which a phone shows in its bottom sheet -----
+  // ----- the panel on the right, which a phone shows in its bottom sheet -----
   const sentRounds = [...new Set(roots.map((c) => c.round ?? 0))].sort((a, b) => b - a);
-  const allDone = pageStates.length > 0 && doneCount === pageStates.length;
-  const currentPrimary = images.find((m) => m.id === img?.id && m.device === primary)?.frameId ?? null;
-  const figProgress = <ProgressCard pages={pageStates} />;
-  const figTabs = (
+  const allDone = hasPages && doneCount === pageStates.length;
+  const currentPageId = figma ? (images.find((m) => m.id === img?.id && m.device === primary)?.frameId ?? null) : img?.id ?? null;
+  const goToPage = (id: string) => {
+    if (figma) { setFigDevice(primary); setFigErr(''); void showFrame(id, primary); }
+    else { const n = images.findIndex((m) => m.id === id); if (n >= 0) goPage(n); }
+  };
+  const panelTabs = hasPages ? (
     <div className="rv-tabs fr-tabs" role="tablist">
       <button role="tab" aria-selected={panelTab === 'pages'} className={`rv-tab ${panelTab === 'pages' ? 'on' : ''}`} onClick={() => setPanelTab('pages')}>Pages</button>
       <button role="tab" aria-selected={panelTab === 'comments'} className={`rv-tab ${panelTab === 'comments' ? 'on' : ''}`} onClick={() => setPanelTab('comments')}>Comments<span className="c">{unsent + roots.length}</span></button>
     </div>
-  );
-  const figBody = panelTab === 'pages' ? (
-    <div className="rv-list"><PagesList pages={pageStates} currentId={currentPrimary} onGo={(id) => { setFigDevice(primary); setFigErr(''); void showFrame(id, primary); }} /></div>
+  ) : null;
+  const panelBody = hasPages && panelTab === 'pages' ? (
+    <div className="rv-list"><PagesList pages={pageStates} currentId={currentPageId} onGo={goToPage} /></div>
   ) : (
     <div className="rv-list fr-comments">
       <div className="fr-h">Ready to send <span>({unsent})</span></div>
@@ -549,9 +504,9 @@ export default function ReviewClient({ slug, title, client, status, approval, la
       })}
     </div>
   );
-  const figFoot = (
+  const panelFoot = (
     <div className="rv-foot fr-foot">
-      <p className="fr-info"><i aria-hidden>i</i><span>Phone and Tablet are for previewing. Comments you leave on Desktop apply to all three.</span></p>
+      {figma && <p className="fr-info"><i aria-hidden>i</i><span>Phone and Tablet are for previewing. Comments you leave on Desktop apply to all three.</span></p>}
       {err && <p className="rv-err">{err}</p>}
       {locked ? (
         <div className="rv-banner"><b>Approved by {approval!.by}</b></div>
@@ -567,7 +522,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
           )}
           {canApprove && (
             <>
-              <button className={`rv-approve ${allDone && !unsent ? 'ready' : ''}`} disabled={unsent > 0} onClick={openTerms}><i />Approve website</button>
+              <button className={`rv-approve ${allDone && !unsent ? 'ready' : ''}`} disabled={unsent > 0} onClick={openTerms}><i />Approve {noun}</button>
               {unsent > 0 && <span className="fr-reason">You have unsent comments. {outOfRevisions ? 'Delete them, or ask Reyal Design.' : 'Send them first.'}</span>}
             </>
           )}
@@ -575,10 +530,10 @@ export default function ReviewClient({ slug, title, client, status, approval, la
       )}
     </div>
   );
+  const panelAll = <>{hasPages && <ProgressCard pages={pageStates} />}{panelTabs}{panelBody}{panelFoot}</>;
 
   // On a Figma proof the list on the left holds the screens of the size being reviewed. One not yet fetched from Figma shows as a tile with its name.
   const figPages = figma ? figma.links[figDevice]?.pages ?? [] : [];
-  const railCount = figma ? 0 : images.length;
   const figRail = figPages.map((p) => {
     const k = images.findIndex((m) => m.frameId === p.id);
     const m = k >= 0 ? images[k] : null;
@@ -595,22 +550,10 @@ export default function ReviewClient({ slug, title, client, status, approval, la
       </button>
     );
   });
-  const pageThumb = (m: { id: string; file: string }, n: number) => {
-    const count = pageCount(m.id);
-    return (
-      <button key={m.id} className={`rv-page ${n === idx ? 'on' : ''}`} onClick={() => goPage(n)} aria-label={`Go to page ${n + 1}`}>
-        <span className="rv-thumb">
-          <img src={`/files/${m.file}?w=320`} alt="" loading="lazy" />
-          {count > 0 && <span className="rv-pins">{count}</span>}
-        </span>
-        <span className="n">{`Page ${n + 1}`}</span>
-      </button>
-    );
-  };
 
   return (
     <div className="review">
-      {figma && <Tour steps={tourSteps} open={tourOpen} onClose={closeTour} />}
+      <Tour steps={tourSteps} open={tourOpen} onClose={closeTour} />
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Urbanist:wght@400;500;600;700;800&display=swap" />
@@ -620,51 +563,24 @@ export default function ReviewClient({ slug, title, client, status, approval, la
         <span className="rv-mark">R</span>
         <div className="rv-titles">
           <span className="rv-title">{title}</span>
-          <span className="rv-sub">{figma
-            ? <span>{versionName}{isLatest ? ', latest version' : ''}</span>
-            : <><span className="desk">{client} · {versionName}{isLatest ? ' · Latest' : ''}</span><span className="mob">v{current.number}{isLatest ? ' · Latest' : ''}{live ? ' · Live site' : ` · Page ${idx + 1} of ${images.length}`}</span></>}</span>
+          <span className="rv-sub">{versionName}{isLatest ? ', latest version' : ''}</span>
         </div>
         <div className="rv-head-right">
           <span className={`rv-status ${pill.cls}`}><span className="long">{pill.long}</span><span className="short">{pill.short}</span></span>
-          {figma ? (
-            !locked && <RoundBar round={waiting ? revisions.used : roundNo} included={revisions.included} sent={waiting} />
-          ) : (
-            <label className="rv-version">
-              <span className="vlong">{versions.find((v) => v.number === current.number)?.label ?? `v${current.number}`}</span><span className="vshort">v{current.number}</span>
-              {isLatest && <span className="latest">Latest</span>}
-              <span className="caret">▾</span>
-              <select aria-label="Version" value={current.number} onChange={(e) => router.push(`/review/${slug}?v=${e.target.value}`)}>
-                {versions.map((v) => <option key={v.number} value={v.number}>{v.label}{v.number === latest ? ' (latest)' : ''}</option>)}
-              </select>
-            </label>
-          )}
-          {figma ? (
-            <button className="rv-tourbtn" onClick={() => setTourOpen(true)} aria-label="Quick tour">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden><circle cx="8" cy="8" r="6.5" /><path d="M6.6 5.4 10.6 8l-4 2.6z" fill="currentColor" stroke="none" /></svg>
-              <span>Quick tour</span>
-            </button>
-          ) : (
-            <button className="rv-help" onClick={() => dismissGuide(!guideHidden)} aria-label="How to review" title="How to review">?</button>
-          )}
+          {!locked && <RoundBar round={waiting ? revisions.used : roundNo} included={revisions.included} sent={waiting} />}
+          <button className="rv-tourbtn" onClick={() => setTourOpen(true)} aria-label="Quick tour">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden><circle cx="8" cy="8" r="6.5" /><path d="M6.6 5.4 10.6 8l-4 2.6z" fill="currentColor" stroke="none" /></svg>
+            <span>Quick tour</span>
+          </button>
         </div>
       </header>
-      {figma && !isLatest && <div className="fr-strip old" role="status"><span>This isn&apos;t the latest version.</span><button onClick={() => router.push(`/review/${slug}?v=${latest}`)}>View latest</button></div>}
+      {!isLatest && <div className="fr-strip old" role="status"><span>This isn&apos;t the latest version.</span><button onClick={() => router.push(`/review/${slug}?v=${latest}`)}>View latest</button></div>}
       {finalRound && <div className="fr-strip final" role="status"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden><path d="M8 1.8 15 14H1z" /><path d="M8 6.5v3.4M8 11.8v.1" /></svg><span>Final round. Make sure everything is covered before you send.</span></div>}
       </div>
 
-      <div className={`rv-body ${railCount > 1 ? '' : 'single'}`}>
-        {railCount > 1 && <nav className="rv-rail" aria-label="Pages">{images.map(pageThumb)}</nav>}
+      <div className="rv-body single">
 
         <section className="rv-stage">
-          {guideHidden === false && !figma && (
-            <div className="rv-guide" role="note">
-              <b>How to review</b>
-              <span className="step"><i>1</i>Click to pin a comment</span>
-              <span className="step"><i>2</i>Add all your changes</span>
-              <span className="step"><i>3</i>Send as one revision, or approve</span>
-              <button className="gotit" onClick={() => dismissGuide(true)}>Got it</button>
-            </div>
-          )}
           {figma && figDevice !== 'desktop' && (
             <div className="fr-viewonly" role="note">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden><circle cx="8" cy="8" r="6.5" /><path d="M8 7.2v4M8 4.8v.1" /></svg>
@@ -672,49 +588,56 @@ export default function ReviewClient({ slug, title, client, status, approval, la
               <button onClick={() => figSize(primary)}>Go to Desktop</button>
             </div>
           )}
-          {figma && (() => {
-            const k = figPages.findIndex((p) => p.id === img?.frameId);
-            const go = (n: number) => { setPager(false); void showFrame(figPages[n]?.id ?? null, figDevice); };
-            const name = shortName(figPages[k]?.name) || DEVICES.find((d) => d.key === figDevice)?.label || 'Page';
-            const cur = img?.frameId ?? '';
+          {(figma || hasPages) && (() => {
+            const k = figma ? figPages.findIndex((p) => p.id === img?.frameId) : idx;
+            const total = figma ? figPages.length : images.length;
+            const go = (n: number) => { setPager(false); if (figma) void showFrame(figPages[n]?.id ?? null, figDevice); else goPage(n); };
+            const name = figma ? (shortName(figPages[k]?.name) || DEVICES.find((d) => d.key === figDevice)?.label || 'Page') : `Page ${k + 1}`;
+            const cur = (figma ? img?.frameId : img?.id) ?? '';
             const good = marks.includes(cur);
             return (
               <div className="fr-bar">
-                <div className="lv-seg fr-sizes" role="group" aria-label="Screen size" data-tour="sizes">
-                  {figDevices.map((d) => (
-                    <button key={d.key} className={figDevice === d.key ? 'on' : ''} onClick={() => figSize(d.key)}>
-                      {d.label}
-                      {d.key !== 'desktop' && <svg className="eye" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-label="preview only"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z" /><circle cx="8" cy="8" r="2" /></svg>}
-                    </button>
-                  ))}
-                </div>
-                {figPages.length > 0 && (
+                {figma && (
+                  <div className="lv-seg fr-sizes" role="group" aria-label="Screen size" data-tour="sizes">
+                    {figDevices.map((d) => (
+                      <button key={d.key} className={figDevice === d.key ? 'on' : ''} onClick={() => figSize(d.key)}>
+                        {d.label}
+                        {d.key !== 'desktop' && <svg className="eye" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-label="preview only"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z" /><circle cx="8" cy="8" r="2" /></svg>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {total > 0 && (
                   <div className="fr-stepper" data-tour="pager">
-                    {pager && <div className="fg-pop" role="listbox" aria-label="Pages">{figRail}{missing > 0 && <p className="fg-load">{missing === 1 ? '1 page is' : `${missing} pages are`} still loading from Figma in the background. You can tap a page to load it now.</p>}</div>}
+                    {pager && figma && <div className="fg-pop" role="listbox" aria-label="Pages">{figRail}{missing > 0 && <p className="fg-load">{missing === 1 ? '1 page is' : `${missing} pages are`} still loading from Figma in the background. You can tap a page to load it now.</p>}</div>}
                     <button className="fr-arrow" disabled={k <= 0 || figBusy} onClick={() => go(k - 1)} aria-label="Previous page">‹</button>
-                    <button className="fr-pick" onClick={() => setPager(!pager)} aria-expanded={pager} aria-haspopup="listbox">
-                      <span className="lbl">Page {k >= 0 ? k + 1 : 1} of {figPages.length}</span>
-                      <b>{name}</b>
-                    </button>
-                    <button className="fr-arrow" disabled={k < 0 || k >= figPages.length - 1 || figBusy} onClick={() => go(k + 1)} aria-label="Next page">›</button>
-                    {figDevice === 'desktop' && !locked && (
+                    {figma ? (
+                      <button className="fr-pick" onClick={() => setPager(!pager)} aria-expanded={pager} aria-haspopup="listbox">
+                        <span className="lbl">Page {k >= 0 ? k + 1 : 1} of {total}</span>
+                        <b>{name}</b>
+                      </button>
+                    ) : (
+                      <span className="fr-pick static"><span className="lbl">Page {k + 1} of {total}</span></span>
+                    )}
+                    <button className="fr-arrow" disabled={k < 0 || k >= total - 1 || figBusy} onClick={() => go(k + 1)} aria-label="Next page">›</button>
+                    {!locked && (!figma || figDevice === 'desktop') && (
                       <button className={`fr-good ${good ? 'on' : ''}`} aria-pressed={good} disabled={!cur} onClick={() => toggleGood(cur)}>
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="m3 8.5 3.2 3.2L13 4.8" /></svg>Looks good
                       </button>
                     )}
                   </div>
                 )}
-                <p className="fr-helper">{locked ? 'Approved · view only' : figDevice === 'desktop' ? 'Click anywhere on the page to leave a comment.' : `You are previewing how your website looks on ${figDevice === 'mobile' ? 'a phone' : 'a tablet'}.`}</p>
+                <p className="fr-helper">{locked ? 'Approved · view only' : figma && figDevice !== 'desktop' ? `You are previewing how your website looks on ${figDevice === 'mobile' ? 'a phone' : 'a tablet'}.` : `Click anywhere on the ${figma ? 'page' : 'design'} to leave a comment.`}</p>
                 {figErr && <span className="rv-err" role="alert">{figErr}</span>}
               </div>
             );
           })()}
           <div ref={canvasRef} className="rv-canvas" data-tour="design"
-            onPointerMove={figma ? (e) => { if (e.pointerType !== 'mouse' || figDevice !== 'desktop' || locked || pop || !canvasRef.current) { setTip(null); return; } const b = canvasRef.current.getBoundingClientRect(); setTip({ x: e.clientX - b.left, y: e.clientY - b.top }); } : undefined}
-            onPointerLeave={figma ? () => setTip(null) : undefined}>
-            {figma && tip && figMode === 'comment' && <span className="fr-tip" style={{ left: tip.x + 16, top: tip.y + 18 }} aria-hidden>Click to comment</span>}
+            onPointerMove={!live ? (e) => { if (e.pointerType !== 'mouse' || (figma && figDevice !== 'desktop') || locked || pop || !canvasRef.current) { setTip(null); return; } const b = canvasRef.current.getBoundingClientRect(); setTip({ x: e.clientX - b.left, y: e.clientY - b.top }); } : undefined}
+            onPointerLeave={!live ? () => setTip(null) : undefined}>
+            {!live && tip && (!figma || figMode === 'comment') && <span className="fr-tip" style={{ left: tip.x + 16, top: tip.y + 18 }} aria-hidden>Click to comment</span>}
             {live && (
-              <LiveStage ref={liveRef} url={live} pins={livePins} readOnly={locked} focusId={focus} onPick={livePick} onShot={liveShot} onBridge={setBridge} onMode={setLiveMode} onPinClick={(id) => { setTab('sent'); setFocus(id); }}>
+              <LiveStage ref={liveRef} url={live} pins={livePins} readOnly={locked} focusId={focus} onPick={livePick} onShot={liveShot} onBridge={setBridge} onMode={setLiveMode} onPinClick={(id) => { showSent(); setFocus(id); }}>
                 {pop && newDraft && (
                   <div className="rv-pop" style={{ left: Math.min(Math.max(pop.flip ? pop.left - 300 - 22 : pop.left + 22, 8), Math.max(8, stage.w - 308)), top: Math.min(Math.max(pop.top - 24, 8), Math.max(8, stage.h - 260)) }}>
                     <div className="hd"><span className="rv-num">{draftPin(pop.tid)}</span>New comment</div>
@@ -737,8 +660,8 @@ export default function ReviewClient({ slug, title, client, status, approval, la
               <div ref={scrollRef} className="fg-scroll" onPointerDown={(e) => (down.current = { x: e.clientX, y: e.clientY })} onPointerUp={place}>
                 <div className="fg-sheet" style={{ width: Math.max(160, Math.min(img.fw || nat.w / 2, stage.w - 48)), cursor: locked || figDevice !== 'desktop' ? 'default' : 'crosshair' }}>
                   <img ref={imgRef} className="rv-img" src={`/files/${img.file}`} alt={`${title}, ${viewLabel(idx)}`} draggable={false} style={{ width: '100%', height: 'auto', display: 'block' }} />
-                  {sentHere.map((c) => <Pin key={c.id} n={c.pin!} kind={c.resolved ? 'done' : 'open'} x={c.x!} y={c.y!} scale={1} onClick={() => setTab('sent')} />)}
-                  {draftsHere.map((d) => <Pin key={d.tid} n={draftPin(d.tid)} kind="draft" x={d.x!} y={d.y!} scale={1} onClick={() => setTab('send')} />)}
+                  {sentHere.map((c) => <Pin key={c.id} n={c.pin!} kind={c.resolved ? 'done' : 'open'} x={c.x!} y={c.y!} scale={1} onClick={showSent} />)}
+                  {draftsHere.map((d) => <Pin key={d.tid} n={draftPin(d.tid)} kind="draft" x={d.x!} y={d.y!} scale={1} onClick={() => setPanelTab('comments')} />)}
                   {newDraft && <Pin key={`new-${newDraft.tid}`} n={draftPin(newDraft.tid)} kind="new" x={newDraft.x!} y={newDraft.y!} scale={1} />}
                 </div>
               </div>
@@ -756,10 +679,10 @@ export default function ReviewClient({ slug, title, client, status, approval, la
                   >
                     <img ref={imgRef} className="rv-img" src={`/files/${img.file}`} alt={`${title}, page ${idx + 1}`} draggable={false} style={size} />
                     {sentHere.map((c) => (
-                      <Pin key={c.id} n={c.pin!} kind={c.resolved ? 'done' : 'open'} x={c.x!} y={c.y!} scale={scale} onClick={() => setTab('sent')} />
+                      <Pin key={c.id} n={c.pin!} kind={c.resolved ? 'done' : 'open'} x={c.x!} y={c.y!} scale={scale} onClick={showSent} />
                     ))}
                     {draftsHere.map((d) => (
-                      <Pin key={d.tid} n={draftPin(d.tid)} kind="draft" x={d.x!} y={d.y!} scale={scale} onClick={() => setTab('send')} />
+                      <Pin key={d.tid} n={draftPin(d.tid)} kind="draft" x={d.x!} y={d.y!} scale={scale} onClick={() => setPanelTab('comments')} />
                     ))}
                     {newDraft && <Pin key={`new-${newDraft.tid}`} n={draftPin(newDraft.tid)} kind="new" x={newDraft.x!} y={newDraft.y!} scale={scale} />}
                   </div>
@@ -780,7 +703,7 @@ export default function ReviewClient({ slug, title, client, status, approval, la
               <button className="rv-ctl" aria-label="Zoom out" onClick={() => tw.current?.zoomOut()}>−</button>
               <button className="rv-ctl txt" onClick={() => tw.current?.resetTransform()}>Fit</button>
             </div>}
-            <div className={`rv-hint ${figma ? 'fg-hint' : ''}`}>{locked ? 'Approved · view only' : live ? (bridge === 'missing' ? 'Pinned comments are off for this site · use the general comment box' : liveMode === 'browse' ? 'Browse mode: use the links on the site, switch to Comment to leave notes' : 'Comment mode: click any part of the page') : figma ? (figMode === 'browse' ? 'Preview: click through the prototype, then press Back to comments' : 'Click the screen to pin a note') : `Page ${idx + 1} of ${images.length} · click to comment`}</div>
+            <div className={`rv-hint ${!live ? 'fg-hint' : ''}`}>{locked ? 'Approved · view only' : live ? (bridge === 'missing' ? 'Pinned comments are off for this site · use the general comment box' : liveMode === 'browse' ? 'Browse mode: use the links on the site, switch to Comment to leave notes' : 'Comment mode: click any part of the page') : figma ? (figMode === 'browse' ? 'Preview: click through the prototype, then press Back to comments' : 'Click the screen to pin a note') : `Page ${idx + 1} of ${images.length} · click to comment`}</div>
 
             {showImg && pop && newDraft && (
               <div
@@ -805,46 +728,20 @@ export default function ReviewClient({ slug, title, client, status, approval, la
           </div>
         </section>
 
-        <aside className={`rv-panel ${figma ? 'fr-panel' : ''}`} aria-label="Comments" data-tour="comments">
-          {figma ? <>{figProgress}{figTabs}{figBody}{figFoot}</> : <>{tabs}{list}{foot}</>}
+        <aside className="rv-panel fr-panel" aria-label="Comments" data-tour="comments">
+          {panelAll}
         </aside>
 
         {/* mobile bottom sheet */}
         <div className="rv-sheet">
           <button className="rv-handle" onClick={() => setSheet(!sheet)} aria-label={sheet ? 'Collapse comments' : 'Expand comments'} aria-expanded={sheet} />
           <div className="rv-sheet-row">
-            {figma ? (
-              <>
-                <b>{doneCount} of {pageStates.length} pages done</b>
-                <span>{locked ? 'Closed' : unsent ? `${unsent} to send` : 'None to send'}</span>
-                <span className="rev" style={{ color: outOfRevisions ? 'var(--yellow)' : undefined }}>{`Round ${roundNo} of ${revisions.included}`}</span>
-              </>
-            ) : (
-              <>
-                <b>Your comments</b>
-                <span>{locked ? 'Closed' : unsent ? `${unsent} to send` : 'None to send'}</span>
-                <span className="rev" style={{ color: outOfRevisions ? 'var(--yellow)' : undefined }}>{revLabel}</span>
-              </>
-            )}
+            {hasPages ? <b>{doneCount} of {pageStates.length} pages done</b> : <b>Your comments</b>}
+            <span>{locked ? 'Closed' : unsent ? `${unsent} to send` : 'None to send'}</span>
+            <span className="rev" style={{ color: outOfRevisions ? 'var(--yellow)' : undefined }}>{`Round ${roundNo} of ${revisions.included}`}</span>
           </div>
-          {sheet ? (
-            figma ? <>{figProgress}{figTabs}{figBody}{figFoot}</> : (
-              <>
-                {railCount > 1 && <div className="rv-strip">{images.map(pageThumb)}</div>}
-                {tabs}
-                {list}
-                {foot}
-              </>
-            )
-          ) : (
+          {sheet ? panelAll : (
             <>
-              {!figma && sendable[0] && (
-                <div className="rv-first">
-                  <span className="rv-num">{sendable[0].x == null ? 'G' : draftPin(sendable[0].tid)}</span>
-                  <span className="tx">{sendable[0].text}</span>
-                </div>
-              )}
-              {lastSent && !figma && <div className="rv-banner"><b>{lastSent}</b></div>}
               {locked ? (
                 <div className="rv-banner"><b>Approved by {approval!.by}</b></div>
               ) : (
@@ -852,74 +749,41 @@ export default function ReviewClient({ slug, title, client, status, approval, la
                   {outOfRevisions ? (
                     <div className="rv-warn">All {revisions.included} revisions used. Contact Reyal Design.</div>
                   ) : (
-                    <button className="rv-send" disabled={busy || !unsent} onClick={startSend}>{figma ? (unsent ? `Send ${plural(unsent)}` : 'Send comments') : `Send revision ${nextRev}${unsent ? ` (${unsent})` : ''}`}</button>
+                    <button className="rv-send" disabled={busy || !unsent} onClick={startSend}>{unsent ? `Send ${plural(unsent)}` : 'Send comments'}</button>
                   )}
-                  {canApprove && <button className="rv-approve" disabled={!!figma && unsent > 0} onClick={openTerms}>{figma ? 'Approve website' : 'Approve'}</button>}
+                  {canApprove && <button className="rv-approve" disabled={unsent > 0} onClick={openTerms}>{`Approve ${noun}`}</button>}
                 </div>
               )}
-              {figma && !locked && !outOfRevisions && !unsent && <span className="fr-reason">Leave at least one comment to send.</span>}
-              {figma && !locked && canApprove && unsent > 0 && <span className="fr-reason">You have unsent comments. Send them first.</span>}
+              {!locked && !outOfRevisions && !unsent && <span className="fr-reason">Leave at least one comment to send.</span>}
+              {!locked && canApprove && unsent > 0 && <span className="fr-reason">You have unsent comments. Send them first.</span>}
               {err && <p className="rv-err">{err}</p>}
             </>
           )}
         </div>
       </div>
 
-      {figma && guard && <GuardDialog open={openPages.map((p) => p.name)} last={roundNo >= revisions.included} onKeep={() => setGuard(false)} onSendAnyway={() => { setGuard(false); setConfirmSend(true); }} />}
+      {guard && <GuardDialog open={openPages.map((p) => p.name)} last={roundNo >= revisions.included} onKeep={() => setGuard(false)} onSendAnyway={() => { setGuard(false); setConfirmSend(true); }} />}
 
-      {confirmSend && (figma ? (
+      {confirmSend && (
         <SendDialog
           round={roundNo} included={revisions.included} comments={unsent} pages={new Set(sendable.filter((d) => d.imageId && d.x != null).map((d) => d.imageId)).size}
           whole={whole} setWhole={setWhole} wholeTooShort={!!whole.trim() && !real(whole)} name={name} setName={setName} busy={busy}
           onCancel={() => setConfirmSend(false)} onSend={send}
         />
-      ) : (
-        <div className="rv-overlay" role="dialog" aria-modal="true" aria-labelledby="rev-h" onKeyDown={(e) => { if (e.key === 'Escape' && !busy) setConfirmSend(false); }}>
-          <div className="rv-modal">
-            <h2 id="rev-h">{`Send revision ${nextRev} of ${revisions.included}?`}</h2>
-            <p className="fg-verline">Reviewing: <b>{versionName}</b> · This will be revision {nextRev} of {revisions.included}.</p>
-            <p>You&apos;re sending <b>{plural(unsent)}</b>. Make sure this is everything you want changed in this round. Anything you add later goes into the next revision.</p>
-            {nextRev === revisions.included && <div className="rv-warn">This is your last included revision.</div>}
-            <input className="rv-field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" aria-label="Your name" />
-            <div className="rv-actions">
-              <button className="rv-ghost" onClick={() => setConfirmSend(false)} disabled={busy}>Keep editing</button>
-              <button className="rv-primary" onClick={send} disabled={busy}>{busy ? 'Sending…' : `Send revision ${nextRev}`}</button>
-            </div>
-          </div>
-        </div>
-      ))}
+      )}
 
-      {terms && (figma ? (
-        <ApproveDialog name={aname} setName={setAname} agree={agree} setAgree={setAgree} busy={abusy} err={aerr} onCancel={() => setTerms(false)} onApprove={approve} />
-      ) : (
-        <div className="rv-overlay" role="dialog" aria-modal="true" aria-labelledby="terms-h" onKeyDown={(e) => { if (e.key === 'Escape' && !abusy) setTerms(false); }}>
-          <div className="rv-modal wide">
-            <h2 id="terms-h">Approve v{current.number} as final</h2>
-            <p>You confirm you&apos;ve reviewed every page and that the design, text, images and details are correct. <b>No more revisions can be made after approval.</b> Later changes become a new job.</p>
-            {unsent > 0 && <div className="rv-warn">You have {plural(unsent)} you haven&apos;t sent. They&apos;ll be discarded if you approve.</div>}
-            <input className="rv-field" value={aname} onChange={(e) => setAname(e.target.value)} placeholder="Your full name" autoComplete="name" aria-label="Your full name" />
-            <label className="rv-check">
-              <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
-              <i>{agree ? '✓' : ''}</i>
-              I&apos;ve reviewed this proof and agree to these terms.
-            </label>
-            {aerr && <p className="rv-err">{aerr}</p>}
-            <div className="rv-actions">
-              <button className="rv-ghost" onClick={() => setTerms(false)} disabled={abusy}>Cancel</button>
-              <button className="rv-go" disabled={abusy || !agree || aname.trim().length < 2} onClick={approve}>{abusy ? 'Approving…' : 'Approve and finalize'}</button>
-            </div>
-          </div>
-        </div>
-      ))}
+      {terms && (
+        <ApproveDialog noun={noun} name={aname} setName={setAname} agree={agree} setAgree={setAgree} busy={abusy} err={aerr} onCancel={() => setTerms(false)} onApprove={approve} />
+      )}
 
-      {figma && finalIntro && !tourOpen && !success && (
+      {finalIntro && !tourOpen && !success && (
         <FinalRoundDialog used={revisions.used} included={revisions.included} round={roundNo} onStart={() => { store.set(`rp:final:${slug}:${nextRev}`, '1'); setFinalIntro(false); }} />
       )}
-      {figma && success && (
+      {success && (
         <SuccessScreen
-          kind={success.kind} round={success.round} included={revisions.included} comments={success.comments} pages={success.pages}
+          noun={noun} kind={success.kind} round={success.round} included={revisions.included} comments={success.comments} pages={success.pages}
           date={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-          onClose={() => { if (success.kind === 'sent') { setPanelTab('comments'); setSentOpen(true); } setSuccess(null); }}
+          onClose={() => { if (success.kind === 'sent') showSent(); setSuccess(null); }}
         />
       )}
       {toast && (

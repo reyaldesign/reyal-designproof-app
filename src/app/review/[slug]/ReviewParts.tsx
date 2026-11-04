@@ -1,9 +1,9 @@
 'use client';
 
-// Pieces of the Figma website review page that only show things: the round indicator, progress, page list, dialogs and success screens.
+// Pieces of the client review page that only show things: the round indicator, progress, page list, dialogs and success screens.
 // The state they show lives in ReviewClient.
 
-export type PageState = { id: string; name: string; comments: number; good: boolean };
+export type PageState = { id: string; name: string; comments: number; good: boolean; thumb?: string };
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -38,6 +38,7 @@ export function PagesList({ pages, currentId, onGo }: { pages: PageState[]; curr
     <div className="fr-pages" role="list">
       {pages.map((p) => (
         <button key={p.id} role="listitem" className={`fr-prow ${p.id === currentId ? 'on' : ''}`} onClick={() => onGo(p.id)}>
+          {p.thumb && <img className="th" src={`/files/${p.thumb}?w=320`} alt="" loading="lazy" />}
           <span className="nm">{p.name}</span>
           {p.comments > 0 ? <span className="chip c">{plural(p.comments, 'comment')}</span> : p.good ? <span className="chip g">✓ Looks good</span> : <span className="chip">Not started</span>}
         </button>
@@ -107,43 +108,43 @@ export function FinalRoundDialog(p: { used: number; included: number; round: num
 }
 
 /** Approving is final, so it asks first. It keeps the name and the agreement the approval has always recorded. */
-export function ApproveDialog(p: { name: string; setName: (v: string) => void; agree: boolean; setAgree: (v: boolean) => void; busy: boolean; err: string; onCancel: () => void; onApprove: () => void }) {
+export function ApproveDialog(p: { noun: string; name: string; setName: (v: string) => void; agree: boolean; setAgree: (v: boolean) => void; busy: boolean; err: string; onCancel: () => void; onApprove: () => void }) {
   return (
     <Shell labelledBy="fr-app-h" onClose={p.busy ? undefined : p.onCancel}>
-      <h2 id="fr-app-h">Approve this website?</h2>
-      <p>You&apos;re approving this website as final. <b>No more revisions can be made after approval.</b> Later changes become a new job.</p>
+      <h2 id="fr-app-h">Approve this {p.noun}?</h2>
+      <p>You&apos;re approving this {p.noun} as final. <b>No more revisions can be made after approval.</b> Later changes become a new job.</p>
       <input className="rv-field" value={p.name} onChange={(e) => p.setName(e.target.value)} placeholder="Your full name" autoComplete="name" aria-label="Your full name" />
       <label className="rv-check">
         <input type="checkbox" checked={p.agree} onChange={(e) => p.setAgree(e.target.checked)} />
         <i>{p.agree ? '✓' : ''}</i>
-        I&apos;ve reviewed this website and agree to these terms.
+        I&apos;ve reviewed this {p.noun} and agree to these terms.
       </label>
       {p.err && <p className="rv-err">{p.err}</p>}
       <div className="rv-actions">
         <button className="rv-ghost" onClick={p.onCancel} disabled={p.busy}>Not yet</button>
-        <button className="rv-go" disabled={p.busy || !p.agree || p.name.trim().length < 2} onClick={p.onApprove}>{p.busy ? 'Approving…' : 'Approve website'}</button>
+        <button className="rv-go" disabled={p.busy || !p.agree || p.name.trim().length < 2} onClick={p.onApprove}>{p.busy ? 'Approving…' : `Approve ${p.noun}`}</button>
       </div>
     </Shell>
   );
 }
 
 /** Full-screen confirmation after a round is sent or the website is approved. */
-export function SuccessScreen(p: { kind: 'sent' | 'approved'; round: number; included: number; comments: number; pages: number; date: string; onClose: () => void }) {
+export function SuccessScreen(p: { noun: string; kind: 'sent' | 'approved'; round: number; included: number; comments: number; pages: number; date: string; onClose: () => void }) {
   const left = p.included - p.round;
   const used = Math.min(p.round, p.included);
   return (
     <div className="rv-overlay fr-success" role="dialog" aria-modal="true" aria-labelledby="fr-ok-h" onKeyDown={(e) => { if (e.key === 'Escape') p.onClose(); }}>
       <div className={`fr-ok ${p.kind}`}>
         <span className="tick" aria-hidden>✓</span>
-        <h2 id="fr-ok-h">{p.kind === 'sent' ? `Round ${p.round} sent` : 'Website approved'}</h2>
-        <p>{p.kind === 'sent' ? <>Thank you. We have your {plural(p.comments, 'comment')}{p.pages ? <> on {plural(p.pages, 'page')}</> : null}. Reyal Design has been notified and you&apos;ll get an email when the next version is ready.</> : 'Thank you. Your website is approved as final.'}</p>
+        <h2 id="fr-ok-h">{p.kind === 'sent' ? `Round ${p.round} sent` : `${p.noun[0].toUpperCase()}${p.noun.slice(1)} approved`}</h2>
+        <p>{p.kind === 'sent' ? <>Thank you. We have your {plural(p.comments, 'comment')}{p.pages ? <> on {plural(p.pages, 'page')}</> : null}. Reyal Design has been notified and you&apos;ll get an email when the next version is ready.</> : `Thank you. Your ${p.noun} is approved as final.`}</p>
         <div className="card">
           {p.kind === 'approved' && <div className="row"><span>Approved on</span><b>{p.date}</b></div>}
           <div className="row"><span>{p.kind === 'sent' ? 'Rounds used' : 'Revision rounds used'}</span><b>{used} of {p.included}</b></div>
           <span className="segs" aria-hidden>{Array.from({ length: Math.min(p.included, 6) }, (_, k) => <i key={k} className={k < used ? 'on' : ''} />)}</span>
           {p.kind === 'sent' && <small>{left > 0 ? `You have ${left === 1 ? 'one more round' : `${left} more rounds`} after this one.` : 'That was your last included round.'}</small>}
         </div>
-        <button className="rv-ghost big" autoFocus onClick={p.onClose}>{p.kind === 'sent' ? 'View sent comments' : 'View website'}</button>
+        <button className="rv-ghost big" autoFocus onClick={p.onClose}>{p.kind === 'sent' ? 'View sent comments' : `View ${p.noun}`}</button>
       </div>
     </div>
   );

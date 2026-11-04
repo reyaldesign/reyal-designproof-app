@@ -7,7 +7,7 @@ import { revisionInfo } from '@/lib/revisions';
 
 type In = {
   versionId?: string; name?: string; confirmed?: boolean;
-  marks?: { id?: string; name?: string; device?: string }[]; // pages marked Looks good (Figma proofs)
+  marks?: { id?: string; name?: string; device?: string }[]; // pages marked Looks good
   comments?: {
     imageId?: string | null; x?: number | null; y?: number | null; text?: string;
     // live website comments
@@ -74,7 +74,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     };
   });
   const number = rev.used + 1;
-  const marks = version.figma ? (body.marks ?? []).slice(0, 80).filter((m) => typeof m?.id === 'string' && typeof m?.name === 'string').map((m) => ({ id: m.id!.slice(0, 40), name: m.name!.slice(0, 120), device: isDevice(m.device) ? m.device : 'desktop' })) : [];
+  const imageIds = new Set(version.images.map((i) => i.id)); // an image proof marks its own pages; a Figma proof marks screens by their frame id
+  const marks = !version.liveUrl ? (body.marks ?? []).slice(0, 80).filter((m) => typeof m?.id === 'string' && typeof m?.name === 'string' && (version.figma || imageIds.has(m.id))).map((m) => ({ id: m.id!.slice(0, 40), name: m.name!.slice(0, 120), device: isDevice(m.device) ? m.device : 'desktop' })) : [];
   let submissionId = '';
   await db.$transaction(async (tx) => {
     const sub = await tx.submission.create({ data: { projectId: project.id, versionId: version.id, number, author, marks: JSON.stringify(marks) } });
