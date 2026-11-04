@@ -287,3 +287,6 @@
 /* Phone and Tablet: a reminder that Desktop changes carry over */
 .fg-carry { max-width: 620px; padding: 10px 14px; border-radius: 14px; border: 1px solid rgba(61,220,151,.4); background: rgba(61,220,151,.08); color: var(--ink-2); font-size: 13px; line-height: 1.45; text-align: center; }
 .fg-carry b { color: #fff; }
+
+.fg-carry-btn { margin-left: 8px; padding: 5px 12px; border-radius: 99px; border: 1px solid rgba(61,220,151,.5); background: none; color: #fff; font: 700 12px/1 var(--sans); cursor: pointer; white-space: nowrap; }
+.fg-carry-btn:hover { background: rgba(61,220,151,.18); }
