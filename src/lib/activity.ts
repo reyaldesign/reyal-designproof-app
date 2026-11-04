@@ -2,6 +2,9 @@ import { db } from './db';
 
 export type ActivityItem = { at: Date; kind: 'proof' | 'version' | 'revision' | 'reply' | 'approved'; text: string; projectId: string; projectTitle: string };
 
+// ", 2 pages marked Looks good" for a revision that carried page marks (Figma website proofs)
+const marked = (json: string) => { try { const n = (JSON.parse(json) as unknown[]).length; return n ? `, ${n} page${n === 1 ? '' : 's'} marked Looks good` : ''; } catch { return ''; } };
+
 /** A merged, newest-first timeline of what happened across one client's proofs. */
 export async function clientActivity(clientId: string, limit = 40): Promise<ActivityItem[]> {
   const projects = await db.project.findMany({
@@ -24,7 +27,7 @@ export async function clientActivity(clientId: string, limit = 40): Promise<Acti
     }
     const total = p.revisionsIncluded ?? p.client.revisionsIncluded;
     for (const s of p.submissions) {
-      items.push({ at: s.createdAt, kind: 'revision', projectId: p.id, projectTitle: p.title, text: `${s.author} sent revision ${s.number}${total ? ` of ${total}` : ''} with ${s._count.comments} comment${s._count.comments === 1 ? '' : 's'} on v${p.versions.find((v) => v.id === s.versionId)?.number ?? '?'}` });
+      items.push({ at: s.createdAt, kind: 'revision', projectId: p.id, projectTitle: p.title, text: `${s.author} sent revision ${s.number}${total ? ` of ${total}` : ''} with ${s._count.comments} comment${s._count.comments === 1 ? '' : 's'} on v${p.versions.find((v) => v.id === s.versionId)?.number ?? '?'}${marked(s.marks)}` });
     }
     if (p.approvedAt) items.push({ at: p.approvedAt, kind: 'approved', projectId: p.id, projectTitle: p.title, text: `${p.approvedBy} approved version ${p.approvedVersion}` });
   }

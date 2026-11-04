@@ -7,12 +7,15 @@ import { revisionInfo } from '@/lib/revisions';
 
 type In = {
   versionId?: string; name?: string; confirmed?: boolean;
+  marks?: { id?: string; name?: string; device?: string }[]; // pages marked Looks good (Figma proofs)
   comments?: {
     imageId?: string | null; x?: number | null; y?: number | null; text?: string;
     // live website comments
     pageUrl?: string; selector?: string; elementText?: string; rx?: number | null; ry?: number | null; vw?: number | null; device?: string; shot?: string | null;
   }[];
 };
+// A comment needs a real word: at least 2 characters with a letter or digit in it, so a lone "." is not saved.
+const real = (t: unknown) => typeof t === 'string' && t.trim().length >= 2 && /[\p{L}\p{N}]/u.test(t);
 const pct = (n: unknown) => (typeof n === 'number' && n >= 0 && n <= 100 ? n : null);
 const px = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 200_000 ? n : null);
 const ratio = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) && n >= -0.5 && n <= 1.5 ? n : null);
@@ -25,7 +28,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   const body = (await req.json().catch(() => ({}))) as In;
   const version = await db.version.findFirst({ where: { id: body.versionId, projectId: project.id }, include: { images: true } });
-  const items = (body.comments ?? []).slice(0, 100).filter((c) => c.text?.trim());
+  const items = (body.comments ?? []).slice(0, 100).filter((c) => real(c.text));
   if (!version || !items.length) return Response.json({ error: 'Nothing to send' }, { status: 400 });
   if (project.approvedVersion === version.number) return Response.json({ error: 'This version has been approved and is closed for revisions.' }, { status: 403 });
 
@@ -71,9 +74,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     };
   });
   const number = rev.used + 1;
+  const marks = version.figma ? (body.marks ?? []).slice(0, 80).filter((m) => typeof m?.id === 'string' && typeof m?.name === 'string').map((m) => ({ id: m.id!.slice(0, 40), name: m.name!.slice(0, 120), device: isDevice(m.device) ? m.device : 'desktop' })) : [];
   let submissionId = '';
   await db.$transaction(async (tx) => {
-    const sub = await tx.submission.create({ data: { projectId: project.id, versionId: version.id, number, author } });
+    const sub = await tx.submission.create({ data: { projectId: project.id, versionId: version.id, number, author, marks: JSON.stringify(marks) } });
     submissionId = sub.id;
     await tx.comment.createMany({ data: rows.map((r) => ({ ...r, submissionId: sub.id })) });
     await tx.project.update({ where: { id: project.id }, data: { status: 'Feedback Received' } });
@@ -90,7 +94,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   };
   await notify(
     `${author} sent revision ${number} of ${rev.included} (${rows.length} comment${rows.length === 1 ? '' : 's'}) on ${project.client.name} / ${project.title}`,
-    `${rows.map((r) => `${where(r)}: ${r.text}`).join('\n')}\n\nSee each change marked on the ${live ? 'site' : 'design'}: ${base}/admin/${project.id}`,
+    `${rows.map((r) => `${where(r)}: ${r.text}`).join('\n')}${marks.length ? `\n\nMarked Looks good: ${marks.map((m) => m.name).join(', ')}` : ''}\n\nSee each change marked on the ${live ? 'site' : 'design'}: ${base}/admin/${project.id}`,
   );
   return Response.json({ ok: true, count: rows.length });
 }

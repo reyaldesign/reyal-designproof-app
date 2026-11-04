@@ -77,6 +77,7 @@ model Submission {
   versionId String
   number    Int
   author    String
+  marks     String    @default("[]") // JSON: the pages the client marked Looks good in this revision, [{ id, name, device }]
   createdAt DateTime  @default(now())
   project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   version   Version   @relation(fields: [versionId], references: [id], onDelete: Cascade)

@@ -76,7 +76,7 @@ export default async function Review({
   const version = project.versions.find((x) => String(x.number) === v) ?? project.versions[0];
   const data = await db.version.findUniqueOrThrow({
     where: { id: version.id },
-    include: { images: { orderBy: { position: 'asc' } }, comments: { orderBy: { createdAt: 'asc' } } },
+    include: { images: { orderBy: { position: 'asc' } }, comments: { orderBy: { createdAt: 'asc' }, include: { submission: { select: { number: true } } } } },
   });
   const rev = await revisionInfo(project.id);
   const proof = parseFigma(data.figma);
@@ -99,6 +99,7 @@ export default async function Review({
       comments={data.comments.map((c) => ({
         id: c.id, imageId: c.imageId, parentId: c.parentId, author: c.author, text: c.text, x: c.x, y: c.y,
         pin: c.pin, resolved: c.resolved, fromDesigner: c.fromDesigner, createdAt: c.createdAt.toISOString(),
+        round: c.submission?.number ?? null,
         pageUrl: c.pageUrl, selector: c.selector, elementText: c.elementText, rx: c.rx, ry: c.ry, vw: c.vw, device: c.device, shot: c.shot,
       }))}
       live={data.liveUrl}
