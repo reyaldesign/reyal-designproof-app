@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import SubmitButton from '@/components/SubmitButton';
+import WsTabs from './WsTabs';
 import { CHECK_EVERY_MIN, FIELDS, STATE_LABEL, ago, hostOf, upClass, type FieldKey } from '@/lib/websitesShared';
 import { checkAll, checkOne, deleteWebsite, importCsv, saveWebsite, siteDetail, syncPluginsNow, type Detail } from './actions';
 
@@ -270,6 +271,7 @@ export default function WebsitesApp({ rows, days, options, mainwp }: { rows: Row
 
   return (
     <div className="page ws-page">
+      {mainwp && <WsTabs />}
       <div className="page-head">
         <div>
           <h1 className="h1">Websites <span className="count">{rows.length}</span></h1>
@@ -330,17 +332,6 @@ export default function WebsitesApp({ rows, days, options, mainwp }: { rows: Row
                 <button className="btn-ghost ws-edit" onClick={() => setEditing(r)}>Edit</button>
               </header>
               {r.url ? <a className="ws-host" href={r.url} target="_blank" rel="noreferrer">{hostOf(r.url)} ↗</a> : <span className="ws-host ws-dash">No link</span>}
-              {r.state === 'off' ? <div className="ws-bars ws-bars-off" aria-hidden="true">{r.strip.map((_, i) => <i key={i} />)}</div> : (
-                <div className="ws-bars" role="img" aria-label="Uptime for each of the last 30 days">
-                  {r.strip.map((p, i) => <i key={i} className={upClass(p)} title={`${days[i]}: ${p == null ? 'no checks' : `${p}%`}`} />)}
-                </div>
-              )}
-              <div className="ws-line">
-                <span className={`ws-s-${r.state}`} title={r.error ?? (r.lastAt ? `Last check ${ago(r.lastAt)}` : '')}>
-                  {r.state === 'up' ? 'Up' : r.state === 'down' ? `Down${r.error ? ` · ${r.error}` : ''}` : STATE_LABEL[r.state]}
-                </span>
-                {r.state !== 'off' && <span className={`ws-num ${upClass(r.up30)}`}>{r.up30 == null ? '·' : `${r.up30}%`}<small> 30 d</small></span>}
-              </div>
               <div className="ws-tags">
                 <Cell field="status" v={r.status} />
                 {r.server && r.server !== 'N/A' && <span className="ws-tag">{r.server}</span>}
