@@ -18,6 +18,7 @@ export default function PluginsApp({ rows }: { rows: SiteRow[] }) {
   const servers = useMemo(() => [...new Set(rows.map((r) => r.server).filter(Boolean))].sort(), [rows]);
   const [status, setStatus] = useState(() => (statuses.includes('Live') ? 'Live' : '')); // opens on the Live websites, like the Sites tab
   const [server, setServer] = useState('');
+  const [platform, setPlatform] = useState(() => (rows.some((r) => r.platform === 'WordPress') ? 'WordPress' : '')); // with Live, the page opens on the WordPress websites
   const [updates, setUpdates] = useState(false);
   const [sort, setSort] = useState<SortKey>('order');
   const [viewId, setViewId] = useState<string | null>(null);
@@ -29,11 +30,11 @@ export default function PluginsApp({ rows }: { rows: SiteRow[] }) {
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const list = rows.filter((r) =>
-      (!status || r.status === status) && (!server || r.server === server) && (!updates || r.plugins.some((p) => p.update)) &&
+      (!status || r.status === status) && (!server || r.server === server) && (!platform || r.platform === platform) && (!updates || r.plugins.some((p) => p.update)) &&
       (!needle || `${r.name} ${r.url}`.toLowerCase().includes(needle) || r.plugins.some((p) => p.name.toLowerCase().includes(needle))));
     if (sort === 'order') return list;
     return [...list].sort((a, b) => (sort === 'updates' ? count(b).updates - count(a).updates : sort === 'plugins' ? count(b).all - count(a).all : 0) || a.name.localeCompare(b.name));
-  }, [rows, q, status, server, updates, sort]);
+  }, [rows, q, status, server, platform, updates, sort]);
 
   const readSites = shown.filter((r) => r.readAt);
   const totals = readSites.reduce((t, r) => { const c = count(r); return { all: t.all + c.all, inactive: t.inactive + c.inactive, updates: t.updates + c.updates }; }, { all: 0, inactive: 0, updates: 0 });
@@ -65,6 +66,10 @@ export default function PluginsApp({ rows }: { rows: SiteRow[] }) {
         <select className="input" value={server} onChange={(e) => setServer(e.target.value)} aria-label="Server used">
           <option value="">All servers</option>
           {servers.map((s) => <option key={s}>{s}</option>)}
+        </select>
+        <select className="input" value={platform} onChange={(e) => setPlatform(e.target.value)} aria-label="Platform">
+          <option value="">All platforms</option>
+          {['WordPress', 'Other'].map((o) => <option key={o}>{o}</option>)}
         </select>
         <select className="input" value={updates ? 'updates' : ''} onChange={(e) => setUpdates(e.target.value === 'updates')} aria-label="Updates">
           <option value="">All websites</option>
