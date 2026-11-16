@@ -6,7 +6,6 @@
 .ws-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .ws-filters .input { width: auto; flex: 1 1 200px; max-width: 320px; }
 .ws-name { font-weight: 600; color: var(--ink); } .ws-name:hover { text-decoration: underline; }
-.ws-num { font-variant-numeric: tabular-nums; font-weight: 600; }
 .ws-dash { color: var(--muted); }
 .ws-empty { text-align: center; color: var(--muted); padding: 32px !important; }
 .ws-edit { padding: 6px 12px; }

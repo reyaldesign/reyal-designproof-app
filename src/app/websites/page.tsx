@@ -7,12 +7,12 @@ import WebsitesApp, { type Row } from './WebsitesApp';
 export default async function WebsitesPage() {
   const [sites, stats, strips, plugins] = await Promise.all([
     db.website.findMany({ orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] }), loadStats(), loadStrips(),
-    db.websitePlugin.findMany({ select: { websiteId: true, name: true, updateVersion: true } }),
+    db.websitePlugin.findMany({ select: { websiteId: true, updateVersion: true } }),
   ]);
-  const byId = new Map<string, { names: string[]; updates: number }>();
+  const byId = new Map<string, { count: number; updates: number }>();
   for (const p of plugins) {
-    const e = byId.get(p.websiteId) ?? { names: [], updates: 0 };
-    e.names.push(p.name);
+    const e = byId.get(p.websiteId) ?? { count: 0, updates: 0 };
+    e.count++;
     if (p.updateVersion) e.updates++;
     byId.set(p.websiteId, e);
   }
@@ -28,7 +28,7 @@ export default async function WebsitesPage() {
       error: st?.last?.error ?? null, lastAt: st?.last?.at.toISOString() ?? null,
       up1: pct(st?.d1), up7: pct(st?.d7), up30: pct(st?.d30),
       strip: strips.get(s.id) ?? Array<null>(30).fill(null),
-      plugins: byId.get(s.id)?.names ?? [], updates: byId.get(s.id)?.updates ?? 0, pluginsAt: s.pluginsAt?.toISOString() ?? null,
+      plugins: byId.get(s.id)?.count ?? 0, updates: byId.get(s.id)?.updates ?? 0, pluginsAt: s.pluginsAt?.toISOString() ?? null,
     };
   });
   // Suggestions for each dropdown field: the usual values plus whatever is already in the list.

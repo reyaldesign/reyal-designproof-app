@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import SubmitButton from '@/components/SubmitButton';
+import PluginList from './PluginList';
 import WsTabs from './WsTabs';
 import { CHECK_EVERY_MIN, FIELDS, STATE_LABEL, ago, hostOf, hue, initials, upClass, type FieldKey } from '@/lib/websitesShared';
 import { checkAll, checkOne, deleteWebsite, importCsv, saveWebsite, siteDetail, syncPluginsNow, type Detail } from './actions';
@@ -12,7 +13,7 @@ export type Row = Record<FieldKey, string> & {
   state: 'up' | 'down' | 'none' | 'off'; // up and down come from the latest check; none is not checked yet; off is not monitored
   error: string | null; lastAt: string | null;
   up1: number | null; up7: number | null; up30: number | null;
-  plugins: string[]; updates: number; pluginsAt: string | null; // plugin names from MainWP, how many have an update waiting, and when the list was read (null: never)
+  plugins: number; updates: number; pluginsAt: string | null; // plugins on the site per MainWP, how many have an update waiting, and when the list was read (null: never)
   strip: (number | null)[]; // uptime % for each of the last 30 days, oldest first; null when nothing was checked that day
 };
 
@@ -143,16 +144,7 @@ function SiteView({ row: r, days, mainwp, detail, rechecking, onCheck, onEdit, o
         <div className="card">
           {!r.pluginsAt ? <p className="muted">No plugin list yet. This website is not in MainWP, or the plugins have not been read since it was added.</p>
             : !detail ? <p className="muted">Loading…</p>
-            : <table className="ws-mini">
-                <thead><tr><th>Plugin</th><th>Version</th><th /></tr></thead>
-                <tbody>{detail.plugins.map((p) => (
-                  <tr key={p.name} className={p.active ? '' : 'ws-inactive'}>
-                    <td>{p.name}</td>
-                    <td>{p.version || '·'}</td>
-                    <td>{p.update ? <span className="ws-chip ws-c-wip">Update to {p.update}</span> : !p.active ? <span className="ws-chip ws-c-off">Inactive</span> : null}</td>
-                  </tr>
-                ))}</tbody>
-              </table>}
+            : <PluginList plugins={detail.plugins} />}
         </div>
       </>)}
 
@@ -318,7 +310,7 @@ export default function WebsitesApp({ rows, days, options, mainwp }: { rows: Row
               <div className="ws-tags">
                 {r.status.toLowerCase() !== 'live' && <Cell field="status" v={r.status} />}
                 {r.server && r.server !== 'N/A' && <span className="ws-tag">{r.server}</span>}
-                {r.pluginsAt && <span className="ws-tag">{r.plugins.length} plugins</span>}
+                {r.pluginsAt && <span className="ws-tag">{r.plugins} plugins</span>}
                 {r.updates > 0 && <span className="ws-chip ws-c-wip">{r.updates} update{r.updates === 1 ? '' : 's'}</span>}
               </div>
             </article>

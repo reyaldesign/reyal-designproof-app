@@ -58,11 +58,10 @@ export async function siteDetail(id: string): Promise<Detail> {
     db.websiteCheck.findMany({ where: { websiteId: id }, orderBy: { at: 'desc' }, select: { at: true, ok: true, error: true } }),
     db.websitePlugin.findMany({ where: { websiteId: id }, orderBy: { name: 'asc' } }),
   ]);
-  const rank = (p: { updateVersion: string | null; active: boolean }) => (p.updateVersion ? 0 : p.active ? 1 : 2); // updates first, then active, then inactive
   return {
     outages: outagesOf(checks).slice(0, 12).map((o) => ({ from: o.from.toISOString(), to: o.to?.toISOString() ?? null, error: o.error })),
     recent: checks.slice(0, 5).map((c) => ({ at: c.at.toISOString(), ok: c.ok, error: c.error })),
-    plugins: plugins.sort((a, b) => rank(a) - rank(b)).map((p) => ({ name: p.name, version: p.version, active: p.active, update: p.updateVersion })),
+    plugins: plugins.map((p) => ({ name: p.name, version: p.version, active: p.active, update: p.updateVersion })),
   };
 }
 

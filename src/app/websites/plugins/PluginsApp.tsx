@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ago, hostOf, hue, initials } from '@/lib/websitesShared';
+import PluginList, { type PluginRow } from '../PluginList';
 import WsTabs from '../WsTabs';
 
-type Plugin = { name: string; version: string; active: boolean; update: string | null };
-export type SiteRow = { id: string; name: string; url: string; status: string; readAt: string | null; plugins: Plugin[] };
+export type SiteRow = { id: string; name: string; url: string; status: string; readAt: string | null; plugins: PluginRow[] };
 
 const SORTS = { order: 'As listed', name: 'Name, A to Z', updates: 'Most updates first', plugins: 'Most plugins first' } as const;
 type SortKey = keyof typeof SORTS;
@@ -102,21 +102,7 @@ export default function PluginsApp({ rows }: { rows: SiteRow[] }) {
               </div>
               <button className="btn-ghost ws-x" onClick={() => setViewId(null)} aria-label="Close">✕</button>
             </header>
-            {!viewing.plugins.length ? <p className="muted">No plugins.</p> : (
-              <div className="card">
-                <table className="ws-mini">
-                  <thead><tr><th>Plugin</th><th>Version</th><th>Status</th><th /></tr></thead>
-                  <tbody>{[...viewing.plugins].sort((a, b) => Number(!!b.update) - Number(!!a.update) || Number(b.active) - Number(a.active)).map((p) => (
-                    <tr key={p.name} className={p.active ? '' : 'ws-inactive'}>
-                      <td>{p.name}</td>
-                      <td>{p.version || '·'}</td>
-                      <td>{p.active ? 'Active' : 'Inactive'}</td>
-                      <td>{p.update ? <span className="ws-chip ws-c-wip">Update to {p.update}</span> : null}</td>
-                    </tr>
-                  ))}</tbody>
-                </table>
-              </div>
-            )}
+            <div className="card"><PluginList plugins={viewing.plugins} /></div>
           </div>
         )}
       </dialog>
