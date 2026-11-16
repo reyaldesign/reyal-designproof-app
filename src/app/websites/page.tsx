@@ -1,10 +1,21 @@
 import { db } from '@/lib/db';
+import { mainwpConfigured } from '@/lib/mainwp';
 import { loadStats, loadStrips } from '@/lib/websiteMonitor';
 import { FIELDS, isMonitored, pct } from '@/lib/websitesShared';
 import WebsitesApp, { type Row } from './WebsitesApp';
 
 export default async function WebsitesPage() {
-  const [sites, stats, strips] = await Promise.all([db.website.findMany({ orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] }), loadStats(), loadStrips()]);
+  const [sites, stats, strips, plugins] = await Promise.all([
+    db.website.findMany({ orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] }), loadStats(), loadStrips(),
+    db.websitePlugin.findMany({ select: { websiteId: true, name: true, updateVersion: true } }),
+  ]);
+  const byId = new Map<string, { names: string[]; updates: number }>();
+  for (const p of plugins) {
+    const e = byId.get(p.websiteId) ?? { names: [], updates: 0 };
+    e.names.push(p.name);
+    if (p.updateVersion) e.updates++;
+    byId.set(p.websiteId, e);
+  }
   const days = Array.from({ length: 30 }, (_, i) => new Date(Date.now() - (29 - i) * 864e5).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
   const rows: Row[] = sites.map((s) => {
     const st = stats.get(s.id);
@@ -17,10 +28,11 @@ export default async function WebsitesPage() {
       error: st?.last?.error ?? null, lastAt: st?.last?.at.toISOString() ?? null,
       up1: pct(st?.d1), up7: pct(st?.d7), up30: pct(st?.d30),
       strip: strips.get(s.id) ?? Array<null>(30).fill(null),
+      plugins: byId.get(s.id)?.names ?? [], updates: byId.get(s.id)?.updates ?? 0, pluginsAt: s.pluginsAt?.toISOString() ?? null,
     };
   });
   // Suggestions for each dropdown field: the usual values plus whatever is already in the list.
   const options: Record<string, string[]> = {};
   for (const f of FIELDS) if ('list' in f) options[f.key] = [...new Set([...f.list, ...sites.map((s) => (s as unknown as Record<string, string>)[f.key]).filter(Boolean)])];
-  return <WebsitesApp rows={rows} days={days} options={options} />;
+  return <WebsitesApp rows={rows} days={days} options={options} mainwp={mainwpConfigured()} />;
 }

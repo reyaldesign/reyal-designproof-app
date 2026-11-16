@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireTool } from '@/lib/access';
 import { db } from '@/lib/db';
+import { mainwpConfigured, syncPlugins } from '@/lib/mainwp';
 import { outagesOf, runChecks } from '@/lib/websiteMonitor';
 import { FIELDS, cleanUrl, parseCsv, siteKey, type FieldKey } from '@/lib/websitesShared';
 
@@ -48,15 +49,34 @@ export async function deleteWebsite(f: FormData) {
 export type Detail = {
   outages: { from: string; to: string | null; error: string | null }[];
   recent: { at: string; ok: boolean; error: string | null }[];
+  plugins: { name: string; version: string; active: boolean; update: string | null }[];
 };
-/** What the site popup shows besides the numbers already on the card: its outages and its latest checks. */
+/** What the site popup shows besides the numbers already on the card: its outages, its latest checks and its plugins. */
 export async function siteDetail(id: string): Promise<Detail> {
   await requireTool('WEBSITES');
-  const checks = await db.websiteCheck.findMany({ where: { websiteId: id }, orderBy: { at: 'desc' }, select: { at: true, ok: true, error: true } });
+  const [checks, plugins] = await Promise.all([
+    db.websiteCheck.findMany({ where: { websiteId: id }, orderBy: { at: 'desc' }, select: { at: true, ok: true, error: true } }),
+    db.websitePlugin.findMany({ where: { websiteId: id }, orderBy: { name: 'asc' } }),
+  ]);
+  const rank = (p: { updateVersion: string | null; active: boolean }) => (p.updateVersion ? 0 : p.active ? 1 : 2); // updates first, then active, then inactive
   return {
     outages: outagesOf(checks).slice(0, 12).map((o) => ({ from: o.from.toISOString(), to: o.to?.toISOString() ?? null, error: o.error })),
     recent: checks.slice(0, 5).map((c) => ({ at: c.at.toISOString(), ok: c.ok, error: c.error })),
+    plugins: plugins.sort((a, b) => rank(a) - rank(b)).map((p) => ({ name: p.name, version: p.version, active: p.active, update: p.updateVersion })),
   };
+}
+
+/** Reads every site's plugins from MainWP now. The answer is a sentence for the page to show. */
+export async function syncPluginsNow(): Promise<string> {
+  await requireTool('WEBSITES');
+  if (!mainwpConfigured()) return 'MainWP is not set up on this server.';
+  try {
+    const r = await syncPlugins();
+    refresh();
+    return `Read the plugins of ${r.synced} website${r.synced === 1 ? '' : 's'}${r.notInMainwp ? `. ${r.notInMainwp} not in MainWP` : ''}${r.failed ? `. ${r.failed} failed` : ''}.`;
+  } catch (e) {
+    return `Could not read from MainWP (${e instanceof Error ? e.message : 'error'}).`;
+  }
 }
 
 /** One site now, and the answer is waiting when this returns. */

@@ -269,7 +269,9 @@ model Website {
   position         Int            @default(0)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+  pluginsAt        DateTime?      // when the plugin list was last read from MainWP; empty means never
   checks           WebsiteCheck[]
+  plugins          WebsitePlugin[]
 }
 
 model WebsiteCheck {
@@ -284,6 +286,20 @@ model WebsiteCheck {
 
   @@index([websiteId, at])
   @@index([at])
+}
+
+// One plugin on one website, as MainWP reports it. The list for a site is replaced on every sync.
+model WebsitePlugin {
+  id            String  @id @default(cuid())
+  websiteId     String
+  slug          String
+  name          String
+  version       String  @default("")
+  active        Boolean @default(true)
+  updateVersion String? // the newer version on offer, when there is one
+  website       Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@unique([websiteId, slug])
 }
 
 // Software, plugins, hosting and domains the studio pays for. Cost is for one whole term; renewal is a YYYY-MM-DD date.
