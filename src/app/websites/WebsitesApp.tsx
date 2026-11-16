@@ -320,7 +320,7 @@ export default function WebsitesApp({ rows, days, options, mainwp }: { rows: Row
               </header>
               {r.url ? <a className="ws-host" href={r.url} target="_blank" rel="noreferrer">{hostOf(r.url)} ↗</a> : <span className="ws-host ws-dash">No link</span>}
               <div className="ws-tags">
-                <Cell field="status" v={r.status} />
+                {r.status.toLowerCase() !== 'live' && <Cell field="status" v={r.status} />}
                 {r.server && r.server !== 'N/A' && <span className="ws-tag">{r.server}</span>}
                 {r.pluginsAt && <span className="ws-tag">{r.plugins.length} plugins</span>}
                 {r.updates > 0 && <span className="ws-chip ws-c-wip">{r.updates} update{r.updates === 1 ? '' : 's'}</span>}
