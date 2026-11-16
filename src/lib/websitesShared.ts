@@ -22,7 +22,7 @@ export type FieldKey = (typeof FIELDS)[number]['key'];
 export type SiteFields = Record<FieldKey, string>;
 
 /** Only sites with this status are checked. */
-export const MONITORED = 'Live';
+const MONITORED = 'Live';
 export const isMonitored = (s: { status: string; url: string }) => s.status.trim().toLowerCase() === MONITORED.toLowerCase() && !!s.url.trim();
 
 /** "example.com" becomes "https://example.com". Anything that is not a web address comes back empty. */

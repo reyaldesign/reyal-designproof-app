@@ -35,7 +35,7 @@ async function mainwpSites(): Promise<MainwpSite[]> {
   return out;
 }
 
-export type SyncResult = { synced: number; notInMainwp: number; failed: number };
+type SyncResult = { synced: number; notInMainwp: number; failed: number };
 
 const g = globalThis as unknown as { __pluginSync?: Promise<SyncResult>; __pluginSchedule?: boolean };
 
