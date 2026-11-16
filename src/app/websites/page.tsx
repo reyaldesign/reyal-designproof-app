@@ -23,7 +23,7 @@ export default async function WebsitesPage() {
     return {
       id: s.id, clientName: s.clientName, url: s.url, status: s.status, server: s.server, captcha: s.captcha, backup: s.backup,
       desktopStatus: s.desktopStatus, mobileStatus: s.mobileStatus, seo: s.seo,
-      formSubmission: s.formSubmission, emailUsed: s.emailUsed,
+      formSubmission: s.formSubmission, emailUsed: s.emailUsed, platform: s.platform,
       state: !monitored ? 'off' : !st?.last ? 'none' : st.last.ok ? 'up' : 'down',
       error: st?.last?.error ?? null, lastAt: st?.last?.at.toISOString() ?? null,
       up1: pct(st?.d1), up7: pct(st?.d7), up30: pct(st?.d30),

@@ -6,6 +6,7 @@ import { requireTool } from '@/lib/access';
 import { db } from '@/lib/db';
 import { mainwpConfigured, syncPlugins } from '@/lib/mainwp';
 import { outagesOf, runChecks } from '@/lib/websiteMonitor';
+import { scanPlatforms } from '@/lib/websitePlatform';
 import { FIELDS, cleanUrl, parseCsv, siteKey, type FieldKey } from '@/lib/websitesShared';
 
 export type FormState = { error?: string; ok?: string; values?: Record<string, string> } | null;
@@ -34,6 +35,7 @@ export async function saveWebsite(_: FormState, f: FormData): Promise<FormState>
     const last = await db.website.aggregate({ _max: { position: true } });
     const created = await db.website.create({ data: { ...data, position: (last._max.position ?? -1) + 1 } });
     if (data.status.toLowerCase() === 'live') runChecks([created.id]).catch(() => {}); // first reading right away
+    scanPlatforms([created.id]).catch(() => {});
   }
   refresh();
   return { ok: id ? 'Saved.' : 'Added.' };
@@ -120,6 +122,6 @@ export async function importCsv(_: FormState, f: FormData): Promise<FormState> {
   }
   if (batch.length) await db.$transaction(batch.map((data) => db.website.create({ data })));
   refresh();
-  if (added) runChecks().catch(() => {}); // first readings for the new Live sites
+  if (added) { runChecks().catch(() => {}); scanPlatforms().catch(() => {}); } // first readings for the new Live sites, and their platforms
   return { ok: `Added ${added} website${added === 1 ? '' : 's'}${skipped ? `, skipped ${skipped} already in the list` : ''}.` };
 }

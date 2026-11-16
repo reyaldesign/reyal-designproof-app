@@ -201,6 +201,7 @@ export default function WebsitesApp({ rows, days, options, mainwp }: { rows: Row
   const [q, setQ] = useState('');
   const [status, setStatus] = useState(() => (rows.some((r) => r.status === 'Live') ? 'Live' : '')); // the page opens on the Live sites; pick another status, or All statuses, to see the rest
   const [server, setServer] = useState('');
+  const [platform, setPlatform] = useState(() => (rows.some((r) => r.platform === 'WordPress') ? 'WordPress' : '')); // with Live, the page opens on the WordPress websites
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
   const [sort, setSort] = useState<SortKey>('order');
@@ -227,10 +228,10 @@ export default function WebsitesApp({ rows, days, options, mainwp }: { rows: Row
 
   const shown = useMemo(() => {
     const list = rows.filter((r) =>
-      (!status || r.status === status) && (!server || r.server === server) &&
+      (!status || r.status === status) && (!server || r.server === server) && (!platform || r.platform === platform) &&
       (!q.trim() || `${r.clientName} ${r.url}`.toLowerCase().includes(q.trim().toLowerCase())));
     return sort === 'order' ? list : [...list].sort(compare(sort));
-  }, [rows, q, status, server, sort]);
+  }, [rows, q, status, server, platform, sort]);
 
   const watched = rows.filter((r) => r.state !== 'off');
   const sum = { up: watched.filter((r) => r.state === 'up').length, down: watched.filter((r) => r.state === 'down').length };
@@ -287,6 +288,10 @@ export default function WebsitesApp({ rows, days, options, mainwp }: { rows: Row
           <option value="">All servers</option>
           {options.server?.map((o) => <option key={o}>{o}</option>)}
         </select>
+        <select className="input" value={platform} onChange={(e) => setPlatform(e.target.value)} aria-label="Platform">
+          <option value="">All platforms</option>
+          {options.platform?.map((o) => <option key={o}>{o}</option>)}
+        </select>
         <select className="input" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Sort by">
           {(Object.keys(SORTS) as SortKey[]).map((k) => <option key={k} value={k}>Sort: {SORTS[k]}</option>)}
         </select>
@@ -309,6 +314,7 @@ export default function WebsitesApp({ rows, days, options, mainwp }: { rows: Row
               {r.url ? <a className="ws-host" href={r.url} target="_blank" rel="noreferrer">{hostOf(r.url)} ↗</a> : <span className="ws-host ws-dash">No link</span>}
               <div className="ws-tags">
                 {r.status.toLowerCase() !== 'live' && <Cell field="status" v={r.status} />}
+                {r.platform && <span className="ws-tag">{r.platform}</span>}
                 {r.server && r.server !== 'N/A' && <span className="ws-tag">{r.server}</span>}
                 {r.pluginsAt && <span className="ws-tag">{r.plugins} plugins</span>}
                 {r.updates > 0 && <span className="ws-chip ws-c-wip">{r.updates} update{r.updates === 1 ? '' : 's'}</span>}
