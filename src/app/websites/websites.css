@@ -63,12 +63,6 @@
 .ws-tabs { display: inline-flex; gap: 2px; padding: 3px; margin-bottom: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 99px; }
 .ws-tabs a { padding: 8px 18px; border-radius: 99px; color: var(--muted); font: 600 13px/1 var(--sans); transition: background .2s, color .2s; }
 .ws-tabs a:hover { color: var(--ink-2); } .ws-tabs a.on { background: var(--surface-3); color: #fff; }
-.ws-pwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
-.ws-pt { width: 100%; border-collapse: collapse; font-size: 14.5px; }
-.ws-pt > thead th { text-align: left; padding: 11px 14px; font: 600 11.5px/1.2 var(--display); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border-bottom: 1px solid var(--line); white-space: nowrap; }
-.ws-pt > tbody > tr > td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; color: var(--ink-2); }
-.ws-pt > tbody > tr:last-child > td { border-bottom: 0; }
-.ws-pname { all: unset; cursor: pointer; display: inline-flex; gap: 8px; align-items: baseline; font-weight: 600; color: var(--ink); } .ws-pname:hover { text-decoration: underline; } .ws-pname:focus-visible { outline: 2px solid var(--line-2); outline-offset: 2px; } .ws-pname span { color: var(--muted); font-size: 11px; width: 10px; }
-.ws-pt .ws-prow > td { background: var(--surface-2); padding: 4px 14px 14px 36px; }
-.ws-psub { display: block; margin: 2px 0 0 18px; color: var(--muted); font-size: 12.5px; }
-.ws-pname-off { cursor: default; color: var(--ink-2); font-weight: 600; display: inline-flex; gap: 8px; } .ws-pname-off span { width: 10px; }
+.ws-pstats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+.ws-pstats div { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
+.ws-pstats b { font: 700 24px/1.1 var(--display); } .ws-pstats span { color: var(--muted); font-size: 12.5px; }

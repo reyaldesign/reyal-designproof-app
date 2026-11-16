@@ -73,3 +73,6 @@ export const ago = (iso: string | null) => {
 export const upClass = (p: number | null) => (p == null ? 'ws-none' : p >= 99.5 ? 'ws-good' : p >= 95 ? 'ws-warn' : 'ws-bad');
 export const STATE_LABEL = { up: 'Up', down: 'Down', none: 'Not checked yet', off: 'Not monitored' } as const;
 
+/** The letters shown in a website's icon, and a steady colour picked from its name. */
+export const initials = (name: string) => name.split(/[\s.]+/).filter((w) => /^[a-z0-9]/i.test(w)).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
+export const hue = (name: string) => [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);

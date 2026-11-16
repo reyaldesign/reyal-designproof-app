@@ -164,3 +164,5 @@ html.side-collapsed .side-top { display: flex; justify-content: center; }
 .studio .btn-danger { background: var(--bad); border-color: var(--bad); color: #fff; }
 .studio .btn-danger:hover { filter: brightness(1.1); background: var(--bad); }
 .studio .side-badge-late { background: #25252b; color: #ff8a96; }
+.side-sub { min-height: 34px; margin-top: -2px; padding: 7px 11px 7px 43px; font-weight: 500; font-size: 13.5px; }
+html.side-collapsed .side-sub { display: none; }

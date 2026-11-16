@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import SubmitButton from '@/components/SubmitButton';
 import WsTabs from './WsTabs';
-import { CHECK_EVERY_MIN, FIELDS, STATE_LABEL, ago, hostOf, upClass, type FieldKey } from '@/lib/websitesShared';
+import { CHECK_EVERY_MIN, FIELDS, STATE_LABEL, ago, hostOf, hue, initials, upClass, type FieldKey } from '@/lib/websitesShared';
 import { checkAll, checkOne, deleteWebsite, importCsv, saveWebsite, siteDetail, syncPluginsNow, type Detail } from './actions';
 
 export type Row = Record<FieldKey, string> & {
@@ -30,10 +30,6 @@ const compare = (key: SortKey) => (a: Row, b: Row) => {
   const x = a.state === 'off' ? null : a.up30, y = b.state === 'off' ? null : b.up30; // sites with no figure go last
   return x == null || y == null ? (x == null ? 1 : 0) - (y == null ? 1 : 0) : x - y;
 };
-
-/** The letters shown in a site's icon, and a steady colour picked from its name. */
-const initials = (name: string) => name.split(/[\s.]+/).filter((w) => /^[a-z0-9]/i.test(w)).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
-const hue = (name: string) => [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
 
 const statusChip = (s: string) => {
   const k = s.toLowerCase();
