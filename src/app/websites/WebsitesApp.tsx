@@ -213,7 +213,6 @@ export default function WebsitesApp({ rows, days, options, mainwp }: { rows: Row
   const [q, setQ] = useState('');
   const [status, setStatus] = useState(() => (rows.some((r) => r.status === 'Live') ? 'Live' : '')); // the page opens on the Live sites; pick another status, or All statuses, to see the rest
   const [server, setServer] = useState('');
-  const [plugin, setPlugin] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
   const [sort, setSort] = useState<SortKey>('order');
@@ -240,16 +239,10 @@ export default function WebsitesApp({ rows, days, options, mainwp }: { rows: Row
 
   const shown = useMemo(() => {
     const list = rows.filter((r) =>
-      (!status || r.status === status) && (!server || r.server === server) && (!plugin || r.plugins.includes(plugin)) &&
+      (!status || r.status === status) && (!server || r.server === server) &&
       (!q.trim() || `${r.clientName} ${r.url}`.toLowerCase().includes(q.trim().toLowerCase())));
     return sort === 'order' ? list : [...list].sort(compare(sort));
-  }, [rows, q, status, server, plugin, sort]);
-  // Every plugin name in use, with how many sites have it, for the Plugin filter.
-  const pluginOptions = useMemo(() => {
-    const n = new Map<string, number>();
-    for (const r of rows) for (const p of r.plugins) n.set(p, (n.get(p) ?? 0) + 1);
-    return [...n].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [rows]);
+  }, [rows, q, status, server, sort]);
 
   const watched = rows.filter((r) => r.state !== 'off');
   const sum = { up: watched.filter((r) => r.state === 'up').length, down: watched.filter((r) => r.state === 'down').length };
@@ -306,12 +299,6 @@ export default function WebsitesApp({ rows, days, options, mainwp }: { rows: Row
           <option value="">All servers</option>
           {options.server?.map((o) => <option key={o}>{o}</option>)}
         </select>
-        {mainwp && (
-          <select className="input" value={plugin} onChange={(e) => setPlugin(e.target.value)} aria-label="Plugin">
-            <option value="">All plugins</option>
-            {pluginOptions.map(([name, n]) => <option key={name} value={name}>{name} ({n})</option>)}
-          </select>
-        )}
         <select className="input" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Sort by">
           {(Object.keys(SORTS) as SortKey[]).map((k) => <option key={k} value={k}>Sort: {SORTS[k]}</option>)}
         </select>

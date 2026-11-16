@@ -70,3 +70,5 @@
 .ws-pt > tbody > tr:last-child > td { border-bottom: 0; }
 .ws-pname { all: unset; cursor: pointer; display: inline-flex; gap: 8px; align-items: baseline; font-weight: 600; color: var(--ink); } .ws-pname:hover { text-decoration: underline; } .ws-pname:focus-visible { outline: 2px solid var(--line-2); outline-offset: 2px; } .ws-pname span { color: var(--muted); font-size: 11px; width: 10px; }
 .ws-pt .ws-prow > td { background: var(--surface-2); padding: 4px 14px 14px 36px; }
+.ws-psub { display: block; margin: 2px 0 0 18px; color: var(--muted); font-size: 12.5px; }
+.ws-pname-off { cursor: default; color: var(--ink-2); font-weight: 600; display: inline-flex; gap: 8px; } .ws-pname-off span { width: 10px; }
