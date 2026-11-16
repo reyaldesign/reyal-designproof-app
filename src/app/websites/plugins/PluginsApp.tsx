@@ -5,7 +5,7 @@ import { ago, hostOf, hue, initials } from '@/lib/websitesShared';
 import PluginList, { type PluginRow } from '../PluginList';
 import WsTabs from '../WsTabs';
 
-export type SiteRow = { id: string; name: string; url: string; status: string; server: string; readAt: string | null; plugins: PluginRow[] };
+export type SiteRow = { id: string; name: string; url: string; status: string; server: string; platform: string; readAt: string | null; plugins: PluginRow[] };
 
 const SORTS = { order: 'As listed', name: 'Name, A to Z', updates: 'Most updates first', plugins: 'Most plugins first' } as const;
 type SortKey = keyof typeof SORTS;
@@ -85,7 +85,7 @@ export default function PluginsApp({ rows }: { rows: SiteRow[] }) {
                 <button className="ws-name" onClick={() => setViewId(r.id)}>{r.name}</button>
               </header>
               {r.url ? <a className="ws-host" href={r.url} target="_blank" rel="noreferrer">{hostOf(r.url)} ↗</a> : <span className="ws-host ws-dash">No link</span>}
-              {r.server && r.server !== 'N/A' && <div className="ws-tags"><span className="ws-tag">{r.server}</span></div>}
+              {(r.platform || (r.server && r.server !== 'N/A')) && <div className="ws-tags">{r.platform && <span className="ws-tag">{r.platform}</span>}{r.server && r.server !== 'N/A' && <span className="ws-tag">{r.server}</span>}</div>}
               {r.readAt ? (
                 <div className="ws-pstats">
                   <div><b>{c.all}</b><span>Plugins</span></div>

@@ -270,6 +270,7 @@ model Website {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   pluginsAt        DateTime?      // when the plugin list was last read from MainWP; empty means never
+  platform         String         @default("") // WordPress or Other. Found by a daily look at the site, or set by hand. Empty until known.
   checks           WebsiteCheck[]
   plugins          WebsitePlugin[]
 }

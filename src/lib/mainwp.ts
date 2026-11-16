@@ -56,7 +56,7 @@ async function run(): Promise<SyncResult> {
         await db.$transaction([
           db.websitePlugin.deleteMany({ where: { websiteId: q.websiteId } }),
           db.websitePlugin.createMany({ data: data.map((p) => ({ websiteId: q.websiteId, slug: p.slug, name: p.name, version: p.version ?? '', active: !!p.active, updateVersion: p.update_version || null })) }),
-          db.website.update({ where: { id: q.websiteId }, data: { pluginsAt: new Date() } }),
+          db.website.update({ where: { id: q.websiteId }, data: { pluginsAt: new Date(), platform: 'WordPress' } }),
         ]);
         result.synced++;
       } catch (e) {

@@ -16,6 +16,7 @@ export const FIELDS = [
   { key: 'seo', label: 'SEO', list: ['Running', 'Google Site Kit', 'Google Site Kit Only', 'Not Started', 'N/A'] },
   { key: 'formSubmission', label: 'Form Submission', list: ['Ok', 'To check'] },
   { key: 'emailUsed', label: 'E-mail Used' },
+  { key: 'platform', label: 'Platform', list: ['WordPress', 'Other'] },
 ] as const;
 export type FieldKey = (typeof FIELDS)[number]['key'];
 export type SiteFields = Record<FieldKey, string>;
