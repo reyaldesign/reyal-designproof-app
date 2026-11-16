@@ -3,14 +3,17 @@
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import SubmitButton from '@/components/SubmitButton';
-import { CHECK_EVERY_MIN, FIELDS, STATE_LABEL, ago, hostOf, upClass, type FieldKey } from '@/lib/websitesShared';
-import { checkAll, checkOne, deleteWebsite, importCsv, saveWebsite, siteDetail, type Detail } from './actions';
+import PluginList from './PluginList';
+import WsTabs from './WsTabs';
+import { CHECK_EVERY_MIN, FIELDS, STATE_LABEL, ago, hostOf, hue, initials, upClass, type FieldKey } from '@/lib/websitesShared';
+import { checkAll, checkOne, deleteWebsite, importCsv, saveWebsite, siteDetail, syncPluginsNow, type Detail } from './actions';
 
 export type Row = Record<FieldKey, string> & {
   id: string;
   state: 'up' | 'down' | 'none' | 'off'; // up and down come from the latest check; none is not checked yet; off is not monitored
   error: string | null; lastAt: string | null;
   up1: number | null; up7: number | null; up30: number | null;
+  plugins: number; updates: number; pluginsAt: string | null; // plugins on the site per MainWP, how many have an update waiting, and when the list was read (null: never)
   strip: (number | null)[]; // uptime % for each of the last 30 days, oldest first; null when nothing was checked that day
 };
 
@@ -28,10 +31,6 @@ const compare = (key: SortKey) => (a: Row, b: Row) => {
   const x = a.state === 'off' ? null : a.up30, y = b.state === 'off' ? null : b.up30; // sites with no figure go last
   return x == null || y == null ? (x == null ? 1 : 0) - (y == null ? 1 : 0) : x - y;
 };
-
-/** The letters shown in a site's icon, and a steady colour picked from its name. */
-const initials = (name: string) => name.split(/[\s.]+/).filter((w) => /^[a-z0-9]/i.test(w)).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
-const hue = (name: string) => [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
 
 const statusChip = (s: string) => {
   const k = s.toLowerCase();
@@ -109,7 +108,7 @@ const when = (iso: string) => new Date(iso).toLocaleString('en-US', { month: 'sh
 const span = (ms: number) => { const m = Math.round(ms / 60000); return m < 1 ? 'under a minute' : m < 90 ? `${m} min` : m < 2880 ? `${Math.round(m / 60)} h` : `${Math.round(m / 1440)} d`; };
 
 /** The popup for one site: how it is doing now, the last 30 days, its outages and its latest checks. */
-function SiteView({ row: r, days, detail, rechecking, onCheck, onEdit, onClose }: { row: Row; days: string[]; detail: Detail | null; rechecking: boolean; onCheck: () => void; onEdit: () => void; onClose: () => void }) {
+function SiteView({ row: r, days, mainwp, detail, rechecking, onCheck, onEdit, onClose }: { row: Row; days: string[]; mainwp: boolean; detail: Detail | null; rechecking: boolean; onCheck: () => void; onEdit: () => void; onClose: () => void }) {
   return (
     <div className="ws-view">
       <header className="ws-view-head">
@@ -139,6 +138,15 @@ function SiteView({ row: r, days, detail, rechecking, onCheck, onEdit, onClose }
           {FIELDS.slice(4).map((f) => <div key={f.key}><dt>{f.label}</dt><dd><Cell field={f.key} v={r[f.key]} /></dd></div>)}
         </dl>
       </div>
+
+      {mainwp && (<>
+        <h3 className="ws-h">Plugins{r.pluginsAt && <small className="muted"> · read {ago(r.pluginsAt)}</small>}</h3>
+        <div className="card">
+          {!r.pluginsAt ? <p className="muted">No plugin list yet. This website is not in MainWP, or the plugins have not been read since it was added.</p>
+            : !detail ? <p className="muted">Loading…</p>
+            : <PluginList plugins={detail.plugins} />}
+        </div>
+      </>)}
 
       <h3 className="ws-h">Last 30 days</h3>
       <div className="card">
@@ -188,11 +196,13 @@ function SiteView({ row: r, days, detail, rechecking, onCheck, onEdit, onClose }
   );
 }
 
-export default function WebsitesApp({ rows, days, options }: { rows: Row[]; days: string[]; options: Record<string, string[]> }) {
+export default function WebsitesApp({ rows, days, options, mainwp }: { rows: Row[]; days: string[]; options: Record<string, string[]>; mainwp: boolean }) {
   const router = useRouter();
   const [q, setQ] = useState('');
   const [status, setStatus] = useState(() => (rows.some((r) => r.status === 'Live') ? 'Live' : '')); // the page opens on the Live sites; pick another status, or All statuses, to see the rest
   const [server, setServer] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
   const [sort, setSort] = useState<SortKey>('order');
   const [viewId, setViewId] = useState<string | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
@@ -226,6 +236,13 @@ export default function WebsitesApp({ rows, days, options }: { rows: Row[]; days
   const sum = { up: watched.filter((r) => r.state === 'up').length, down: watched.filter((r) => r.state === 'down').length };
   const avg = (() => { const v = watched.map((r) => r.up30).filter((x): x is number => x != null); return v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : null; })();
 
+  async function syncAll() {
+    setSyncing(true); setSyncMsg('');
+    setSyncMsg(await syncPluginsNow());
+    router.refresh();
+    setSyncing(false);
+  }
+
   async function runAll() {
     setChecking(true);
     await checkAll();
@@ -235,6 +252,7 @@ export default function WebsitesApp({ rows, days, options }: { rows: Row[]; days
 
   return (
     <div className="page ws-page">
+      {mainwp && <WsTabs />}
       <div className="page-head">
         <div>
           <h1 className="h1">Websites <span className="count">{rows.length}</span></h1>
@@ -242,10 +260,13 @@ export default function WebsitesApp({ rows, days, options }: { rows: Row[]; days
         </div>
         <div className="head-actions">
           <button className="btn" onClick={() => setImporting(true)}>Import CSV</button>
+          {mainwp && <button className="btn" onClick={syncAll} disabled={syncing}>{syncing ? 'Reading plugins…' : 'Sync plugins'}</button>}
           <button className="btn" onClick={runAll} disabled={checking}>{checking ? 'Checking…' : 'Check all now'}</button>
           <button className="btn btn-primary" onClick={() => setEditing('new')}>+ Add website</button>
         </div>
       </div>
+
+      {syncMsg && <p className="muted" role="status" style={{ marginBottom: 12 }}>{syncMsg}</p>}
 
       <div className="ws-sum">
         <div className="card"><b>{watched.length}</b><span>Monitored</span></div>
@@ -253,6 +274,7 @@ export default function WebsitesApp({ rows, days, options }: { rows: Row[]; days
         <div className="card"><b className={sum.down ? 'ws-bad' : ''}>{sum.down}</b><span>Down now</span></div>
         <div className="card"><b className={upClass(avg)}>{avg == null ? 'No data yet' : `${avg}%`}</b><span>Uptime, last 30 days</span></div>
         <div className="card"><b>{rows.filter((r) => r.status.trim().toLowerCase() === 'discontinued').length}</b><span>Discontinued</span></div>
+        {mainwp && <div className="card"><b className={rows.some((r) => r.updates) ? 'ws-warn' : ''}>{rows.filter((r) => r.updates).length}</b><span>Sites with plugin updates</span></div>}
       </div>
 
       <div className="ws-filters">
@@ -285,20 +307,11 @@ export default function WebsitesApp({ rows, days, options }: { rows: Row[]; days
                 <button className="btn-ghost ws-edit" onClick={() => setEditing(r)}>Edit</button>
               </header>
               {r.url ? <a className="ws-host" href={r.url} target="_blank" rel="noreferrer">{hostOf(r.url)} ↗</a> : <span className="ws-host ws-dash">No link</span>}
-              {r.state === 'off' ? <div className="ws-bars ws-bars-off" aria-hidden="true">{r.strip.map((_, i) => <i key={i} />)}</div> : (
-                <div className="ws-bars" role="img" aria-label="Uptime for each of the last 30 days">
-                  {r.strip.map((p, i) => <i key={i} className={upClass(p)} title={`${days[i]}: ${p == null ? 'no checks' : `${p}%`}`} />)}
-                </div>
-              )}
-              <div className="ws-line">
-                <span className={`ws-s-${r.state}`} title={r.error ?? (r.lastAt ? `Last check ${ago(r.lastAt)}` : '')}>
-                  {r.state === 'up' ? 'Up' : r.state === 'down' ? `Down${r.error ? ` · ${r.error}` : ''}` : STATE_LABEL[r.state]}
-                </span>
-                {r.state !== 'off' && <span className={`ws-num ${upClass(r.up30)}`}>{r.up30 == null ? '·' : `${r.up30}%`}<small> 30 d</small></span>}
-              </div>
               <div className="ws-tags">
-                <Cell field="status" v={r.status} />
+                {r.status.toLowerCase() !== 'live' && <Cell field="status" v={r.status} />}
                 {r.server && r.server !== 'N/A' && <span className="ws-tag">{r.server}</span>}
+                {r.pluginsAt && <span className="ws-tag">{r.plugins} plugins</span>}
+                {r.updates > 0 && <span className="ws-chip ws-c-wip">{r.updates} update{r.updates === 1 ? '' : 's'}</span>}
               </div>
             </article>
           ))}
@@ -307,7 +320,7 @@ export default function WebsitesApp({ rows, days, options }: { rows: Row[]; days
       )}
 
       <dialog ref={view} className="dlg ws-dlg" onClose={() => setViewId(null)} onClick={(e) => { if (e.target === view.current) setViewId(null); }}>
-        {viewing && <SiteView row={viewing} days={days} detail={detail} rechecking={rechecking}
+        {viewing && <SiteView row={viewing} days={days} mainwp={mainwp} detail={detail} rechecking={rechecking}
           onCheck={() => recheck(viewing.id)} onEdit={() => { setViewId(null); setEditing(viewing); }} onClose={() => setViewId(null)} />}
       </dialog>
       <dialog ref={dlg} className="dlg ws-dlg" onClose={() => setEditing(null)} onClick={(e) => { if (e.target === dlg.current) setEditing(null); }}>

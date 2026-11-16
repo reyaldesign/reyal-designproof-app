@@ -6,7 +6,6 @@
 .ws-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .ws-filters .input { width: auto; flex: 1 1 200px; max-width: 320px; }
 .ws-name { font-weight: 600; color: var(--ink); } .ws-name:hover { text-decoration: underline; }
-.ws-num { font-variant-numeric: tabular-nums; font-weight: 600; }
 .ws-dash { color: var(--muted); }
 .ws-empty { text-align: center; color: var(--muted); padding: 32px !important; }
 .ws-edit { padding: 6px 12px; }
@@ -44,10 +43,6 @@
 .ws-card header .ws-name { flex: 1; min-width: 0; font-size: 16px; overflow-wrap: anywhere; }
 .ws-card .ws-state i { display: block; }
 .ws-host { color: var(--muted); font-size: 13.5px; overflow-wrap: anywhere; } a.ws-host:hover { color: var(--ink); text-decoration: underline; }
-.ws-card .ws-bars { height: 24px; gap: 2px; margin: 2px 0; } .ws-card .ws-bars i { border-radius: 3px; }
-.ws-card .ws-bars-off i { background: var(--surface-2); }
-.ws-line { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; font-weight: 600; }
-.ws-line small { font-weight: 500; color: var(--muted); }
 .ws-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .ws-tag { display: inline-flex; padding: 2px 9px; border-radius: 99px; font: 600 11px/1.5 var(--sans); background: var(--surface-3); color: var(--ink-2); }
 .ws-cards .ws-empty { grid-column: 1 / -1; }
@@ -62,3 +57,11 @@
 .ws-dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 28px; margin: 0; font-size: 14px; } .ws-dl div { display: flex; justify-content: space-between; gap: 12px; } .ws-dl dt { color: var(--muted); } .ws-dl dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
 @media (max-width: 700px) { .ws-dl { grid-template-columns: 1fr; } }
 .ws-other { display: flex; gap: 8px; align-items: center; } .ws-other .input { flex: 1; min-width: 0; }
+.ws-inactive td { color: var(--muted); }
+.ws-h small { font: 500 13px/1 var(--sans); }
+.ws-tabs { display: inline-flex; gap: 2px; padding: 3px; margin-bottom: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 99px; }
+.ws-tabs a { padding: 8px 18px; border-radius: 99px; color: var(--muted); font: 600 13px/1 var(--sans); transition: background .2s, color .2s; }
+.ws-tabs a:hover { color: var(--ink-2); } .ws-tabs a.on { background: var(--surface-3); color: #fff; }
+.ws-pstats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+.ws-pstats div { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
+.ws-pstats b { font: 700 24px/1.1 var(--display); } .ws-pstats span { color: var(--muted); font-size: 12.5px; }

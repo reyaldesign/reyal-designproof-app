@@ -15,7 +15,7 @@ const globe = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeW
 const coin = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M14.8 9.2c-.5-.8-1.5-1.2-2.8-1.2-1.6 0-2.7.8-2.7 2s1 1.7 2.7 2 2.7.8 2.7 2-1.1 2-2.7 2c-1.3 0-2.3-.4-2.8-1.2M12 6.5V8m0 8v1.5" /></svg>;
 const out = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 4.5H5.5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1H9" /><path d="m16 8 4 4-4 4M20 12H9" /></svg>;
 
-export default function Sidebar({ name, email, open, pending, cuDue, tools, home, signOut, ai }: { cuDue: number; name: string; email: string; open: number; pending: number; tools: string[]; home: string; signOut: () => Promise<void>; ai: boolean }) {
+export default function Sidebar({ name, email, open, pending, cuDue, tools, home, signOut, ai, plugins }: { cuDue: number; name: string; email: string; open: number; pending: number; tools: string[]; home: string; signOut: () => Promise<void>; ai: boolean; plugins: boolean }) {
   const path = usePathname();
   const [menu, setMenu] = useState(false); // the phone menu
   const onRequests = path.startsWith('/admin/requests');
@@ -23,6 +23,7 @@ export default function Sidebar({ name, email, open, pending, cuDue, tools, home
   const onTeam = path.startsWith('/admin/team');
   const onClickup = path.startsWith('/clickup');
   const onWebsites = path.startsWith('/websites');
+  const onPlugins = path.startsWith('/websites/plugins');
   const onCosts = path.startsWith('/costs');
   const has = (t: string) => tools.includes(t);
   const aiHref = has('AI_REVIEW') ? '/aireviewer' : '/aireviewer/clients';
@@ -56,7 +57,8 @@ export default function Sidebar({ name, email, open, pending, cuDue, tools, home
         )}
         {ai && (has('AI_REVIEW') || has('AI_CRITERIA')) && <Link href={aiHref} className={`side-item ${onAi ? 'on' : ''}`} title="AI Reviewer">{spark}<span className="side-label">AI Reviewer</span></Link>}
         {has('CLICKUP') && <Link href="/clickup" className={`side-item ${onClickup ? 'on' : ''}`} title="Tasks">{board}<span className="side-label">Tasks</span>{cuDue > 0 && <span className="side-badge side-badge-late" title="Overdue tasks">{cuDue}</span>}</Link>}
-        {has('WEBSITES') && <Link href="/websites" className={`side-item ${onWebsites ? 'on' : ''}`} title="Websites">{globe}<span className="side-label">Websites</span></Link>}
+        {has('WEBSITES') && <Link href="/websites" className={`side-item ${onWebsites && !onPlugins ? 'on' : ''}`} title="Websites">{globe}<span className="side-label">Websites</span></Link>}
+        {has('WEBSITES') && plugins && <Link href="/websites/plugins" className={`side-item side-sub ${onPlugins ? 'on' : ''}`} title="Plugins"><span className="side-label">Plugins</span></Link>}
         {has('COSTS') && <Link href="/costs" className={`side-item ${onCosts ? 'on' : ''}`} title="Stack costs">{coin}<span className="side-label">Stack costs</span></Link>}
         {has('TEAM') && (
           <>
